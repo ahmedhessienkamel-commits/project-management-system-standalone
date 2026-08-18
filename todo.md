@@ -39,7 +39,7 @@
 - [ ] Add configurable approval thresholds by project, transaction type, and amount
 - [x] Add notification center for pending approvals, budget breaches, and missing documents with generation rules and tests
 - [ ] Add smart recurring transaction templates and duplicate-transaction warnings
-- [ ] Add document completeness checks for contractors, certificates, and payment requests
+- [x] Add document completeness checks for contractors, certificates, and payment requests
 - [x] Add management comparison reports and project-detail reporting, export controls, and period-lock controls
 - [ ] Research and compare the lowest-cost hosting options with database persistence, backups, and multi-user access
 
@@ -372,7 +372,7 @@
 - [x] مراجعة RTL والاستجابة على الهاتف للداشبورد والمالية والمستخدمين دون تداخل واضح
 
 - [x] فحص المستخلصات الناقصة للمقاول أو المرفق الداعم داخل dashboard.summary وربطها بتنبيه المستندات التفصيلي
-- [ ] توسيع فحص طلبات الدفع والمرفقات المطلوبة حسب نوع المعاملة
+- [x] توسيع فحص طلبات الدفع والمرفقات المطلوبة حسب نوع المعاملة
 
 - [x] إضافة اختبار API تكاملي ينشئ بيع وحدة وتحصيلًا مستلمًا ثم يتحقق من dashboard.summary وfinancialSummary من نفس الحالة
 - [ ] إضافة اختبار واجهة فعلي لصفحة المبيعات والتحصيلات الموحدة يثبت تحديث بطاقات الداشبورد بعد الإدخال
@@ -389,3 +389,7 @@
 - [x] اختبار controls.trace من مسار API فعلي، ومراجعة بصرية لصفحة التشغيل RTL
 
 - [x] ربط نموذج الرواتب بملخص حضور شهري حسب المشروع والشهر والسنة مع عرض الحاضر والغائب والمتأخر
+
+- [x] توسيع اختبار التتبع التكاملي ليشمل المورد العام والمستخلص والعهدة والمرفق والحضور والمبيعات والتحصيلات والمصروفات والرواتب
+
+- [x] إضافة اختبار متصفح smoke للمسارات الأساسية ورسالة التسجيل مرة واحدة، مع توثيق توقف التفاعل الكامل عند شاشة تسجيل الدخول المحلية

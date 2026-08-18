@@ -187,6 +187,8 @@ export const erpRouter = router({
         const documentCompleteness = calculateDocumentCompleteness({ vendors: projectVendors, attachments: projectAttachments });
         const projectCertificates = certificateRows.filter((certificate) => certificate.projectId === project.id);
         const missingCertificateDocuments = projectCertificates.filter((certificate) => !certificate.vendorId || !projectAttachments.some((attachment) => attachment.entityType === "certificate" && attachment.entityId === certificate.id)).length;
+        const paymentRequests = approvalRows.filter((approval) => approval.projectId === project.id && ["expense", "collection"].includes(approval.entityType));
+        const missingPaymentDocuments = paymentRequests.filter((request) => !projectAttachments.some((attachment) => attachment.entityType === request.entityType && attachment.entityId === request.entityId)).length;
         const now = new Date();
         const approvalSlaMs = 3 * 24 * 60 * 60 * 1000;
         const overdueApprovals = projectApprovals.filter((approval) => approval.createdAt && now.getTime() - new Date(approval.createdAt).getTime() > approvalSlaMs).length;
@@ -237,7 +239,7 @@ export const erpRouter = router({
           reasons,
           stageCount: projectStages.length,
           delayedStages,
-          missingDocumentCount: documentCompleteness.missing.length + missingCertificateDocuments,
+          missingDocumentCount: documentCompleteness.missing.length + missingCertificateDocuments + missingPaymentDocuments,
         };
       });
       for (const item of summary) {
