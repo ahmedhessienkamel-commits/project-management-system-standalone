@@ -164,9 +164,9 @@
 - [ ] اختبار لوحة المؤشرات بعد إدخال بيع ودفعة محصلة في الصفحة الموحدة
 - [ ] تقليل ارتفاعات الصفوف والمساحات الفارغة في الصفحة الرئيسية
 - [ ] تظليل عناوين الأقسام وروابط فتح الصفحات بألوان واضحة
-- [ ] إضافة عداد الأيام المتبقية للمشروع في الصفحة الرئيسية اعتمادًا على تاريخ البدء والنهاية
-- [ ] اختبار حالات العداد: متبقي، منتهٍ، وتواريخ ناقصة
-- [ ] إضافة عداد الأيام المتبقية للمرحلة الحالية مع اسم المرحلة وحالتها
+- [x] إضافة عداد الأيام المتبقية للمشروع في الصفحة الرئيسية اعتمادًا على تاريخ البدء والنهاية
+- [x] اختبار حالات العداد: متبقي، منتهٍ، وتواريخ ناقصة
+- [x] إضافة عداد الأيام المتبقية للمرحلة الحالية مع اسم المرحلة وحالتها
 - [x] إضافة شريط علوي واضح لاختيار حالة المرحلة والمرحلة النشطة
 - [x] ربط العداد بالمرحلة المختارة في الشريط العلوي
 - [x] إصلاح قائمة المرحلة النشطة بحيث تعرض أسماء المراحل فعليًا
@@ -281,17 +281,17 @@
 - [x] إعادة بناء تخطيط جدول الرواتب بحيث يظهر المشروع بجوار تصنيف الراتب قبل بيانات المبلغ
 - [x] إعادة اختبار القائمة واختيار المورد وفصل وادي نمار عن القدية بعد إعادة الترتيب
 
-- [ ] Enforce single-entry data ownership: each expense, payroll, custody, certificate, sale, and collection is entered once in its designated source register and never re-entered in reports
-- [ ] Document the source-register-to-report map and label report sheets as read-only/calculated views
-- [ ] Test that one transaction propagates to all linked views exactly once without duplicate counting
+- [x] Enforce single-entry data ownership: each expense, payroll, custody, certificate, sale, and collection is entered once in its designated source register and never re-entered in reports
+- [x] Document the source-register-to-report map and label report sheets as read-only/calculated views
+- [x] Test that one transaction propagates to all linked views exactly once without duplicate counting
 
 - [x] Prepare and deliver the updated workbook with one-time source entry and linked calculated reports
 
 - [x] Hide legacy stage worksheets from normal user navigation and leave المراحل الموحدة as the single visible stage report
 - [x] Verify hidden stage worksheets remain intact as formula sources and do not break workbook calculations
 
-- [ ] Rename the unified stage report to مراحل البناء and hide every remaining individual construction-stage worksheet, including insulation through external works
-- [ ] Verify no individual construction-stage worksheet remains visible after the rename
+- [x] Superseded by user choice: keep the consolidated report name as المراحل الموحدة and hide every remaining individual construction-stage worksheet
+- [x] Verify no individual construction-stage worksheet remains visible after the final consolidated report choice
 
 - [x] Keep the consolidated report name as المراحل الموحدة while hiding all individual construction-stage worksheets
 
@@ -310,8 +310,8 @@
 
 - [x] Style the project and current-stage countdown shortcuts as compact circular clock-style widgets on الرئيسية
 
-- [x] Add a centralized project-materials register with material, unit, quantity, pre-tax amount, VAT, total, paid, outstanding, stage, cost center, supplier, and project classification
-- [x] Link material totals to project cost, stage cost, cost center, dashboard, and accrued expenses without duplicate counting
+- [x] Superseded by user decision: use تكلفة خامات inside التكاليف والمصروفات instead of a separate materials register; material, tax, payment, stage, cost-center, and project links are handled in the unified transaction row
+- [x] Link تكلفة خامات totals to project cost, stage cost, cost center, dashboard, and accrued expenses without duplicate counting
 - [x] Test material tax, payment, stage propagation, and total-cost calculations
 
 - [x] Rename المصروفات to التكاليف والمصروفات and add تكلفة خامات as a selectable transaction type
