@@ -212,7 +212,7 @@ export const erpRouter = router({
         };
       });
       for (const item of summary) {
-        const triggers = projectNotificationTriggers({ projectName: item.project.name, pendingApprovals: item.pendingApprovals, budgetUsage: item.budgetUsage, cashGap: item.cashGap, hasAttachments: attachmentRows.some((attachment) => attachment.projectId === item.project.id) });
+        const triggers = projectNotificationTriggers({ projectName: item.project.name, pendingApprovals: item.pendingApprovals, overdueApprovals: item.overdueApprovals, scheduleVariancePct: item.scheduleVariancePct, budgetUsage: item.budgetUsage, cashGap: item.cashGap, hasAttachments: attachmentRows.some((attachment) => attachment.projectId === item.project.id) });
         for (const trigger of triggers) await notifyOnce(db, ctx.user.id, trigger.type, trigger.title, trigger.message);
       }
       return summary;
@@ -220,9 +220,11 @@ export const erpRouter = router({
   }),
 
   expenses: router({
-    list: protectedProcedure.query(async () => {
+    list: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
-      return db.select().from(expenses).orderBy(expenses.createdAt);
+      const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
+      const rows = await db.select().from(expenses).orderBy(expenses.createdAt);
+      return allowed ? rows.filter((row) => allowed.has(row.projectId)) : rows;
     }),
     create: protectedProcedure
       .input(z.object({
@@ -275,9 +277,11 @@ export const erpRouter = router({
   }),
 
   sales: router({
-    list: protectedProcedure.query(async () => {
+    list: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
-      return db.select().from(sales).orderBy(sales.createdAt);
+      const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
+      const rows = await db.select().from(sales).orderBy(sales.createdAt);
+      return allowed ? rows.filter((row) => allowed.has(row.projectId)) : rows;
     }),
     create: protectedProcedure
       .input(z.object({ projectId: z.number().int().positive(), unitId: z.number().int().positive(), customerName: z.string().trim().min(2), customerPhone: z.string().max(64).optional(), saleDate: z.string().optional(), preTaxAmount: z.number().positive(), taxRate: z.number().min(0).max(100).default(15) }))
@@ -296,9 +300,11 @@ export const erpRouter = router({
   }),
 
   collections: router({
-    list: protectedProcedure.query(async () => {
+    list: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
-      return db.select().from(collections).orderBy(collections.createdAt);
+      const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
+      const rows = await db.select().from(collections).orderBy(collections.createdAt);
+      return allowed ? rows.filter((row) => allowed.has(row.projectId)) : rows;
     }),
     create: protectedProcedure
       .input(z.object({ projectId: z.number().int().positive(), saleId: z.number().int().positive(), amount: z.number().positive(), receiptReference: z.string().max(128).optional(), collectionDate: z.string().optional() }))
@@ -315,9 +321,11 @@ export const erpRouter = router({
   }),
 
   approvals: router({
-    list: protectedProcedure.query(async () => {
+    list: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
-      return db.select().from(approvalRequests).orderBy(approvalRequests.createdAt);
+      const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
+      const rows = await db.select().from(approvalRequests).orderBy(approvalRequests.createdAt);
+      return allowed ? rows.filter((row) => row.projectId === null || allowed.has(row.projectId)) : rows;
     }),
     decide: adminProcedure
       .input(z.object({ id: z.number().int().positive(), decision: z.enum(["approved", "rejected"]), note: z.string().max(1000).optional() }))
@@ -338,9 +346,11 @@ export const erpRouter = router({
   }),
 
   payroll: router({
-    list: protectedProcedure.query(async () => {
+    list: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
-      return db.select().from(payroll).orderBy(payroll.createdAt);
+      const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
+      const rows = await db.select().from(payroll).orderBy(payroll.createdAt);
+      return allowed ? rows.filter((row) => allowed.has(row.projectId)) : rows;
     }),
     create: protectedProcedure
       .input(z.object({
@@ -488,6 +498,10 @@ export const erpRouter = router({
   }),
 
   controls: router({
+    audit: adminProcedure.query(async () => {
+      const db = requireDb(await getDb());
+      return db.select().from(auditLogs).orderBy(auditLogs.createdAt);
+    }),
     notifications: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
       return db.select().from(notifications).where(eq(notifications.userId, ctx.user.id)).orderBy(notifications.createdAt);

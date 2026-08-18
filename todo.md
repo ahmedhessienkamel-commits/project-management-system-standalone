@@ -20,7 +20,7 @@
 - [x] Integrate approval health rules using pending and overdue approval counts and thresholds
 - [x] Expand schedule health rules using planned dates versus actual progress
 - [x] Surface all project health drivers in the dashboard summary
-- [ ] Automatically create approval requests when expenses, payroll, certificates, and collections are submitted
+- [x] Automatically create approval requests when expenses, payroll, certificates, and collections are submitted
 - [x] Calculate approval age and overdue SLA by project
 - [x] Include outstanding balances and explicit funding-gap thresholds in project health
 - [x] Add collection entry and cash-flow reporting so liquidity indicators are end-to-end
@@ -34,7 +34,7 @@
 - [ ] Verify responsive UI and end-to-end workflows before delivery
 - [x] Add approval workflows for expenses, payroll, certificates, and collections
 - [ ] Add audit trail for edits, approvals, reversals, and deletions
-- [ ] Add project health alerts for budget usage, schedule delay, cash gap, and overdue approvals
+- [x] Add project health alerts for budget usage, schedule delay, cash gap, and overdue approvals
 - [ ] Add project-level access boundaries for all reads/writes and cross-project comparison dashboards
 - [ ] Add configurable approval thresholds by project, transaction type, and amount
 - [x] Add notification center for pending approvals, budget breaches, and missing documents with generation rules and tests

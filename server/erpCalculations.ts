@@ -23,11 +23,13 @@ export function calculateFinancialSummaryTotals({ sales, collections, expenses, 
   return { revenue, collectionsReceived, expensesPreTax, expensesTax, expensesTotal, expensesPaid, payrollTotal, payrollPaid, payrollOutstanding: Math.max(payrollTotal - payrollPaid, 0) };
 }
 
-export function projectNotificationTriggers({ projectName, pendingApprovals, budgetUsage, cashGap, hasAttachments }: { projectName: string; pendingApprovals: number; budgetUsage: number; cashGap: number; hasAttachments: boolean }) {
+export function projectNotificationTriggers({ projectName, pendingApprovals, overdueApprovals = 0, scheduleVariancePct = 0, budgetUsage, cashGap, hasAttachments }: { projectName: string; pendingApprovals: number; overdueApprovals?: number; scheduleVariancePct?: number; budgetUsage: number; cashGap: number; hasAttachments: boolean }) {
   const triggers: Array<{ type: string; title: string; message: string }> = [];
   if (pendingApprovals > 0) triggers.push({ type: "approval", title: `موافقات معلقة — ${projectName}`, message: `يوجد ${pendingApprovals} طلب موافقة معلق في المشروع.` });
+  if (overdueApprovals > 0) triggers.push({ type: "approval_overdue", title: `موافقات متأخرة — ${projectName}`, message: `يوجد ${overdueApprovals} طلب موافقة تجاوز مدة المراجعة.` });
   if (budgetUsage >= 80) triggers.push({ type: "budget", title: `تنبيه ميزانية — ${projectName}`, message: `استخدام الميزانية وصل إلى ${budgetUsage}%.` });
   if (cashGap > 0) triggers.push({ type: "cash", title: `فجوة سيولة — ${projectName}`, message: `الفجوة النقدية الحالية ${cashGap} ر.س.` });
+  if (scheduleVariancePct >= 10) triggers.push({ type: "schedule", title: `تأخر زمني — ${projectName}`, message: `الانحراف عن الخطة الزمنية ${scheduleVariancePct}%.` });
   if (!hasAttachments) triggers.push({ type: "documents", title: `مستندات ناقصة — ${projectName}`, message: "لم يتم تسجيل مرفقات لهذا المشروع بعد." });
   return triggers;
 }
