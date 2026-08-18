@@ -19,8 +19,8 @@ export default function SalesCollections() {
   const { data: sales = [] } = trpc.erp.sales.list.useQuery();
   const { data: collections = [] } = trpc.erp.collections.list.useQuery();
   const createUnit = trpc.erp.units.create.useMutation({ onSuccess: () => utils.erp.units.list.invalidate() });
-  const createSale = trpc.erp.sales.create.useMutation({ onSuccess: () => { utils.erp.sales.list.invalidate(); utils.erp.units.list.invalidate(); utils.erp.dashboard.summary.invalidate(); } });
-  const createCollection = trpc.erp.collections.create.useMutation({ onSuccess: () => { utils.erp.collections.list.invalidate(); utils.erp.dashboard.summary.invalidate(); } });
+  const createSale = trpc.erp.sales.create.useMutation({ onSuccess: () => { utils.erp.sales.list.invalidate(); utils.erp.units.list.invalidate(); utils.erp.collections.list.invalidate(); utils.erp.dashboard.summary.invalidate(); utils.erp.reports.financialSummary.invalidate(); } });
+  const createCollection = trpc.erp.collections.create.useMutation({ onSuccess: () => { utils.erp.collections.list.invalidate(); utils.erp.dashboard.summary.invalidate(); utils.erp.reports.financialSummary.invalidate(); } });
   const [unit, setUnit] = useState({ projectId: "", code: "", name: "", type: "", listPrice: "" });
   const [sale, setSale] = useState({ projectId: "", unitId: "", customerName: "", customerPhone: "", saleDate: "", preTaxAmount: "", taxRate: "15" });
   const [collection, setCollection] = useState({ projectId: "", saleId: "", amount: "", receiptReference: "", collectionDate: "" });
