@@ -14,6 +14,7 @@ const statusLabels = {
 };
 
 const money = new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 0 });
+const classificationLabels: Record<string, string> = { operational: "تشغيلي", administrative: "إداري" };
 
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -82,7 +83,7 @@ export default function Home() {
                   return <div key={item.project.id} className="cursor-pointer rounded-2xl border border-slate-100 bg-white p-4 transition hover:border-[#b28a3b]/40 hover:shadow-sm" onClick={() => setLocation(`/projects/${item.project.id}`)}>
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
-                        <div className="flex items-center gap-2"><h3 className="font-bold text-[#18324b]">{item.project.name}</h3><Badge variant="outline" className={status.className}>{status.label}</Badge></div>
+                        <div className="flex flex-wrap items-center gap-2"><h3 className="font-bold text-[#18324b]">{item.project.name}</h3><Badge variant="outline" className={status.className}>{status.label}</Badge><Badge className={item.project.classification === "administrative" ? "bg-amber-100 text-amber-800" : "bg-blue-100 text-blue-800"}>{classificationLabels[item.project.classification] ?? item.project.classification}</Badge></div>
                         <p className="mt-1 text-xs text-slate-500">{item.project.code}{item.project.location ? ` · ${item.project.location}` : ""} · {item.stageCount} مراحل</p>
                       </div>
                       <div className="text-left"><p className="text-xs text-slate-500">استخدام الميزانية</p><p className={`text-xl font-bold ${item.budgetUsage >= 100 ? "text-rose-600" : item.budgetUsage >= 80 ? "text-amber-600" : "text-[#18324b]"}`}>{item.budgetUsage}%</p></div>
