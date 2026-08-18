@@ -139,7 +139,7 @@
 - [x] Add comprehensive end-to-end validation for all dropdown-driven links
 - [x] Run an end-to-end dropdown scenario covering expense, payroll, custody, receipt, certificate, contractor, employee, cost-center, contract-line, and schedule selections with downstream assertions
 - [x] Replace contractor XLOOKUP formulas with cross-engine-compatible lookup formulas and re-run end-to-end dropdown tests
-- [ ] Assert receipt-driven cash-flow or dashboard totals in the end-to-end scenario
+- [x] Assert receipt-driven cash-flow or dashboard totals in the end-to-end scenario
 - [ ] Assert employee-code propagation and payroll classification outcomes
 - [ ] Assert project versus administrative expense classification outcomes
 - [ ] Assert executive dashboard/report values update from the scenario
@@ -373,3 +373,6 @@
 
 - [x] فحص المستخلصات الناقصة للمقاول أو المرفق الداعم داخل dashboard.summary وربطها بتنبيه المستندات التفصيلي
 - [ ] توسيع فحص طلبات الدفع والمرفقات المطلوبة حسب نوع المعاملة
+
+- [x] إضافة اختبار API تكاملي ينشئ بيع وحدة وتحصيلًا مستلمًا ثم يتحقق من dashboard.summary وfinancialSummary من نفس الحالة
+- [ ] إضافة اختبار واجهة فعلي لصفحة المبيعات والتحصيلات الموحدة يثبت تحديث بطاقات الداشبورد بعد الإدخال
