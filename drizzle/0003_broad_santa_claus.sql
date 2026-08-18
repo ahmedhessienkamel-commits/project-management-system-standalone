@@ -1,0 +1,1 @@
+ALTER TABLE `approvalRequests` ADD `projectId` int;

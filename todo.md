@@ -1,5 +1,49 @@
 # Project TODO
 
+## ERP web application migration
+
+- [ ] Define the web ERP scope for up to 10 initial users, role-based permissions, approval workflows, unlimited projects, and Excel logic migration
+- [ ] Start the ERP MVP in a separate product scope without overwriting the existing Excel workbook
+- [ ] Build and validate the first online-capable ERP MVP before selecting final hosting
+- [ ] Build the ERP as a complete project-management operating system, not a spreadsheet viewer
+- [ ] Create an Excel-to-ERP traceability matrix covering every agreed workbook requirement
+- [ ] Preserve payroll tax exemption and pre-tax/tax/post-tax logic for non-payroll transactions
+- [ ] Preserve Wadi Namar versus Qiddiya project separation and administrative-only reporting for Qiddiya
+- [ ] Preserve unit sales, collections, recognized revenue, expenses, payments, due amounts, and supplier statements as linked workflows
+- [ ] Preserve stage budgets, actuals, schedule dates, progress, variance alerts, cash gaps, custody, attendance, certificates, attachments, and contractor master data
+- [x] Design database entities for projects, stages, units, sales, collections, expenses, payroll, contractors, certificates, custody, attachments, approvals, notifications, audit logs, and period locks
+- [x] Build Arabic RTL dashboard and navigation for the ERP
+- [x] Build an executive project-health dashboard showing plan versus actual at a glance
+- [ ] Add project status rules for budget, schedule, progress, cash flow, and approvals
+- [ ] Add drill-down explanations for every red or yellow project indicator
+- [ ] Integrate cash-flow health rules using collections, expenses, paid amounts, outstanding balances, and funding gaps
+- [ ] Integrate approval health rules using pending and overdue approval counts and thresholds
+- [ ] Expand schedule health rules using planned dates versus actual progress
+- [ ] Surface all project health drivers in the dashboard summary
+- [ ] Automatically create approval requests when expenses, payroll, certificates, and collections are submitted
+- [ ] Calculate approval age and overdue SLA by project
+- [ ] Include outstanding balances and explicit funding-gap thresholds in project health
+- [ ] Add collection entry and cash-flow reporting so liquidity indicators are end-to-end
+- [ ] Compare planned schedule progress with actual completion progress
+- [ ] Add clickable project health details for budget, cash, approvals, and schedule
+- [ ] Build centralized data-entry modules with validations and audit-friendly links
+- [ ] Build revenue, expense, payroll, tax, supplier statement, cash-flow, and project-performance reports
+- [ ] Import and reconcile legacy Excel data without duplicating transactions
+- [ ] Add collaborative access for administration, project managers, employees, approvers, and future users with role-specific permissions
+- [ ] Write backend and frontend tests for financial calculations and permissions
+- [ ] Verify responsive UI and end-to-end workflows before delivery
+- [ ] Add approval workflows for expenses, payroll, certificates, and collections
+- [ ] Add audit trail for edits, approvals, reversals, and deletions
+- [ ] Add project health alerts for budget usage, schedule delay, cash gap, and overdue approvals
+- [ ] Add project-level access boundaries and cross-project comparison dashboards
+- [ ] Add configurable approval thresholds by project, transaction type, and amount
+- [ ] Add notification center for pending approvals, budget breaches, and missing documents
+- [ ] Add smart recurring transaction templates and duplicate-transaction warnings
+- [ ] Add document completeness checks for contractors, certificates, and payment requests
+- [ ] Add exportable management reports and period-lock controls
+- [ ] Research and compare the lowest-cost hosting options with database persistence, backups, and multi-user access
+
+
 - [ ] Secure multi-account Meta Ads connection model with encrypted server-side access-token handling
 - [ ] Dashboard shell with responsive PWA-ready layout and Arabic/English terminology
 - [ ] Per-account KPI cards: impressions, clicks, purchases, spend, cost per purchase, CTR
