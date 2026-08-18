@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateDashboardShortcutTotals, calculateExpenseTotals, calculateFinancialSummaryTotals, calculatePayrollTotals, canAccessProject, projectHealthStatus, projectNotificationTriggers } from "./erpCalculations";
+import { calculateDashboardShortcutTotals, calculateDocumentCompleteness, calculateExpenseTotals, calculateFinancialSummaryTotals, calculatePayrollTotals, canAccessProject, projectHealthStatus, projectNotificationTriggers } from "./erpCalculations";
 
 describe("Excel parity financial rules", () => {
   it("calculates material cost before tax, tax, and after tax", () => {
@@ -26,6 +26,13 @@ describe("Excel parity financial rules", () => {
 
   it("aggregates homepage shortcut totals from project summaries", () => {
     expect(calculateDashboardShortcutTotals([{ plannedBudget: 1000, actualCost: 700, outstandingCost: 200, recognizedRevenue: 1500, collectionsReceived: 900, payrollOutstanding: 80, cashGap: 120, pendingApprovals: 2 }, { plannedBudget: 500, actualCost: 300, outstandingCost: 50, recognizedRevenue: 700, collectionsReceived: 400, payrollOutstanding: 20, cashGap: 0, pendingApprovals: 1 }])).toEqual({ plannedBudget: 1500, actualCost: 1000, outstandingCost: 250, recognizedRevenue: 2200, collectionsReceived: 1300, payrollOutstanding: 100, cashGap: 120, pendingApprovals: 3 });
+  });
+
+  it("flags missing contractor tax, registration, and official attachment documents", () => {
+    const result = calculateDocumentCompleteness({ vendors: [{ id: 1, name: "مقاول", taxNumber: "", commercialRegistration: null }], attachments: [] });
+    expect(result.complete).toBe(false);
+    expect(result.missing.map((item) => item.document)).toEqual(["الرقم الضريبي", "السجل التجاري", "مرفق رسمي"]);
+    expect(projectNotificationTriggers({ projectName: "وادي نمار", pendingApprovals: 0, budgetUsage: 20, cashGap: 0, hasAttachments: true, missingDocumentCount: result.missing.length }).some((item) => item.type === "documents_detail")).toBe(true);
   });
 
   it("enforces project access boundaries", () => {

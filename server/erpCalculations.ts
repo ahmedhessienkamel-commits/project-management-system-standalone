@@ -40,7 +40,17 @@ export function canAccessProject(role: string, allowedProjectIds: Set<number> | 
   return role === "admin" || allowedProjectIds === null || allowedProjectIds.has(projectId);
 }
 
-export function projectNotificationTriggers({ projectName, pendingApprovals, overdueApprovals = 0, scheduleVariancePct = 0, budgetUsage, cashGap, hasAttachments }: { projectName: string; pendingApprovals: number; overdueApprovals?: number; scheduleVariancePct?: number; budgetUsage: number; cashGap: number; hasAttachments: boolean }) {
+export function calculateDocumentCompleteness({ vendors, attachments }: { vendors: Array<{ id: number; name: string; taxNumber?: string | null; commercialRegistration?: string | null }>; attachments: Array<{ entityType: string; entityId: number; documentType: string }> }) {
+  const missing: Array<{ vendorId: number; vendorName: string; document: string }> = [];
+  for (const vendor of vendors) {
+    if (!vendor.taxNumber) missing.push({ vendorId: vendor.id, vendorName: vendor.name, document: "الرقم الضريبي" });
+    if (!vendor.commercialRegistration) missing.push({ vendorId: vendor.id, vendorName: vendor.name, document: "السجل التجاري" });
+    if (!attachments.some((item) => item.entityType === "vendor" && item.entityId === vendor.id && item.documentType)) missing.push({ vendorId: vendor.id, vendorName: vendor.name, document: "مرفق رسمي" });
+  }
+  return { complete: missing.length === 0, missing };
+}
+
+export function projectNotificationTriggers({ projectName, pendingApprovals, overdueApprovals = 0, scheduleVariancePct = 0, budgetUsage, cashGap, hasAttachments, missingDocumentCount = 0 }: { projectName: string; pendingApprovals: number; overdueApprovals?: number; scheduleVariancePct?: number; budgetUsage: number; cashGap: number; hasAttachments: boolean; missingDocumentCount?: number }) {
   const triggers: Array<{ type: string; title: string; message: string }> = [];
   if (pendingApprovals > 0) triggers.push({ type: "approval", title: `موافقات معلقة — ${projectName}`, message: `يوجد ${pendingApprovals} طلب موافقة معلق في المشروع.` });
   if (overdueApprovals > 0) triggers.push({ type: "approval_overdue", title: `موافقات متأخرة — ${projectName}`, message: `يوجد ${overdueApprovals} طلب موافقة تجاوز مدة المراجعة.` });
@@ -48,6 +58,7 @@ export function projectNotificationTriggers({ projectName, pendingApprovals, ove
   if (cashGap > 0) triggers.push({ type: "cash", title: `فجوة سيولة — ${projectName}`, message: `الفجوة النقدية الحالية ${cashGap} ر.س.` });
   if (scheduleVariancePct >= 10) triggers.push({ type: "schedule", title: `تأخر زمني — ${projectName}`, message: `الانحراف عن الخطة الزمنية ${scheduleVariancePct}%.` });
   if (!hasAttachments) triggers.push({ type: "documents", title: `مستندات ناقصة — ${projectName}`, message: "لم يتم تسجيل مرفقات لهذا المشروع بعد." });
+  else if (missingDocumentCount > 0) triggers.push({ type: "documents_detail", title: `استكمال ملفات المقاولين — ${projectName}`, message: `يوجد ${missingDocumentCount} مستند أو بيان إلزامي ناقص للمقاولين.` });
   return triggers;
 }
 

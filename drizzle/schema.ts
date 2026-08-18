@@ -74,6 +74,8 @@ export const expenses = mysqlTable("expenses", {
   vendorId: int("vendorId"),
   reference: varchar("reference", { length: 128 }),
   description: text("description").notNull(),
+  unit: varchar("unit", { length: 64 }),
+  quantity: decimal("quantity", { precision: 14, scale: 3 }).default("1").notNull(),
   expenseType: varchar("expenseType", { length: 64 }).default("operating").notNull(),
   classification: mysqlEnum("classification", ["project", "administrative"]).default("project").notNull(),
   preTaxAmount: decimal("preTaxAmount", { precision: 14, scale: 2 }).default("0").notNull(),

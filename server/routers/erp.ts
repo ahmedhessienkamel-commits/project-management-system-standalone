@@ -4,7 +4,7 @@ import { approvalRequests, auditLogs, attendance, attachments, certificates, col
 import { getDb } from "../db";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
-import { calculateExpenseTotals, calculateFinancialSummaryTotals, calculatePayrollTotals, canAccessProject, projectHealthReasons, projectHealthStatus, projectNotificationTriggers } from "../erpCalculations";
+import { calculateDocumentCompleteness, calculateExpenseTotals, calculateFinancialSummaryTotals, calculatePayrollTotals, canAccessProject, projectHealthReasons, projectHealthStatus, projectNotificationTriggers } from "../erpCalculations";
 
 const projectStatus = z.enum(["planning", "active", "paused", "completed", "archived"]);
 const projectClassification = z.enum(["operational", "administrative"]);
@@ -152,7 +152,7 @@ export const erpRouter = router({
     summary: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
-      const [allProjectRows, stageRows, expenseRows, collectionRows, approvalRows, attachmentRows, salesRows, payrollRows] = await Promise.all([
+      const [allProjectRows, stageRows, expenseRows, collectionRows, approvalRows, attachmentRows, salesRows, payrollRows, vendorRows] = await Promise.all([
         db.select().from(projects),
         db.select().from(stages),
         db.select().from(expenses),
@@ -161,6 +161,7 @@ export const erpRouter = router({
         db.select().from(attachments),
         db.select().from(sales),
         db.select().from(payroll),
+        db.select().from(vendors),
       ]);
       const projectRows = allowed ? allProjectRows.filter((row) => allowed.has(row.id)) : allProjectRows;
       const summary = projectRows.map((project) => {
@@ -170,6 +171,8 @@ export const erpRouter = router({
         const projectSales = salesRows.filter((sale) => sale.projectId === project.id && sale.status === "confirmed");
         const projectPayroll = payrollRows.filter((row) => row.projectId === project.id && ["approved", "posted"].includes(row.status));
         const projectApprovals = approvalRows.filter((approval) => approval.projectId === project.id && approval.status === "pending");
+        const projectVendors = vendorRows.filter((vendor) => vendor.projectId === null || vendor.projectId === project.id);
+        const documentCompleteness = calculateDocumentCompleteness({ vendors: projectVendors, attachments: attachmentRows.filter((attachment) => attachment.projectId === project.id) });
         const now = new Date();
         const approvalSlaMs = 3 * 24 * 60 * 60 * 1000;
         const overdueApprovals = projectApprovals.filter((approval) => approval.createdAt && now.getTime() - new Date(approval.createdAt).getTime() > approvalSlaMs).length;
@@ -219,10 +222,11 @@ export const erpRouter = router({
           reasons,
           stageCount: projectStages.length,
           delayedStages,
+          missingDocumentCount: documentCompleteness.missing.length,
         };
       });
       for (const item of summary) {
-        const triggers = projectNotificationTriggers({ projectName: item.project.name, pendingApprovals: item.pendingApprovals, overdueApprovals: item.overdueApprovals, scheduleVariancePct: item.scheduleVariancePct, budgetUsage: item.budgetUsage, cashGap: item.cashGap, hasAttachments: attachmentRows.some((attachment) => attachment.projectId === item.project.id) });
+        const triggers = projectNotificationTriggers({ projectName: item.project.name, pendingApprovals: item.pendingApprovals, overdueApprovals: item.overdueApprovals, scheduleVariancePct: item.scheduleVariancePct, budgetUsage: item.budgetUsage, cashGap: item.cashGap, hasAttachments: attachmentRows.some((attachment) => attachment.projectId === item.project.id), missingDocumentCount: item.missingDocumentCount });
         for (const trigger of triggers) await notifyOnce(db, ctx.user.id, trigger.type, trigger.title, trigger.message);
       }
       return summary;
@@ -242,6 +246,8 @@ export const erpRouter = router({
         stageId: z.number().int().positive().optional(),
         vendorId: z.number().int().positive().optional(),
         description: z.string().trim().min(2),
+        unit: z.string().trim().max(64).optional(),
+        quantity: z.number().nonnegative().default(1),
         expenseType: z.enum(["materials", "operating_tools", "equipment_rental", "contractor", "transport", "maintenance", "services", "operating", "administrative"]).default("operating"),
         classification: z.enum(["project", "administrative"]).default("project"),
         preTaxAmount: z.number().nonnegative(),
@@ -262,6 +268,8 @@ export const erpRouter = router({
           stageId: input.stageId || null,
           vendorId: input.vendorId || null,
           description: input.description,
+          unit: input.unit || null,
+          quantity: input.quantity.toFixed(3),
           expenseType: input.expenseType,
           classification: input.classification,
           preTaxAmount: input.preTaxAmount.toFixed(2),
