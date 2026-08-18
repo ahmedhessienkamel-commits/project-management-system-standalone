@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateExpenseTotals, calculatePayrollTotals, projectHealthStatus } from "./erpCalculations";
+import { calculateExpenseTotals, calculateFinancialSummaryTotals, calculatePayrollTotals, projectHealthStatus, projectNotificationTriggers } from "./erpCalculations";
 
 describe("Excel parity financial rules", () => {
   it("calculates material cost before tax, tax, and after tax", () => {
@@ -22,5 +22,19 @@ describe("Excel parity financial rules", () => {
 
   it("marks an 80-percent budget usage as warning", () => {
     expect(projectHealthStatus({ budgetUsage: 80, progress: 65, delayedStages: 0 })).toBe("warning");
+  });
+
+  it("creates notification triggers for project risks", () => {
+    expect(projectNotificationTriggers({ projectName: "وادي نمار", pendingApprovals: 2, budgetUsage: 85, cashGap: 300, hasAttachments: false }).map((trigger) => trigger.type)).toEqual(["approval", "budget", "cash", "documents"]);
+    expect(projectNotificationTriggers({ projectName: "وادي نمار", pendingApprovals: 0, budgetUsage: 50, cashGap: 0, hasAttachments: true })).toEqual([]);
+  });
+
+  it("reconciles explicit financial report totals without double counting", () => {
+    expect(calculateFinancialSummaryTotals({
+      sales: [{ recognizedRevenue: "5000" }],
+      collections: [{ amount: "1200", status: "received" }, { amount: "300", status: "pending" }],
+      expenses: [{ preTaxAmount: "1000", taxAmount: "150", totalAmount: "1150", paidAmount: "500" }],
+      payroll: [{ totalAmount: "800", paidAmount: "300" }],
+    })).toEqual({ revenue: 5000, collectionsReceived: 1200, expensesPreTax: 1000, expensesTax: 150, expensesTotal: 1150, expensesPaid: 500, payrollTotal: 800, payrollPaid: 300, payrollOutstanding: 500 });
   });
 });

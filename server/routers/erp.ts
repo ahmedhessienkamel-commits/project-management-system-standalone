@@ -1,10 +1,10 @@
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, expenses, payroll, projectMembers, projects, sales, stages, units, users, vendors } from "../../drizzle/schema";
+import { approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, expenses, notifications, payroll, periodLocks, projectMembers, projects, sales, stages, units, users, vendors } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
-import { calculateExpenseTotals, calculatePayrollTotals, projectHealthReasons, projectHealthStatus } from "../erpCalculations";
+import { calculateExpenseTotals, calculateFinancialSummaryTotals, calculatePayrollTotals, projectHealthReasons, projectHealthStatus, projectNotificationTriggers } from "../erpCalculations";
 
 const projectStatus = z.enum(["planning", "active", "paused", "completed", "archived"]);
 
@@ -22,6 +22,20 @@ async function getAllowedProjectIds(db: NonNullable<Awaited<ReturnType<typeof ge
 async function assertProjectAccess(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, ctx: { user: { id: number; role: string } }, projectId: number) {
   const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
   if (allowed && !allowed.has(projectId)) throw new TRPCError({ code: "FORBIDDEN", message: "ليس لديك صلاحية على هذا المشروع" });
+}
+
+async function assertPeriodOpen(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, ctx: { user: { role: string } }, projectId: number, date: Date) {
+  if (ctx.user.role === "admin") return;
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  const matching = await db.select().from(periodLocks).where(eq(periodLocks.projectId, projectId));
+  if (matching.some((lock) => lock.periodYear === year && lock.periodMonth === month)) throw new TRPCError({ code: "FORBIDDEN", message: "الفترة مقفلة ولا يمكن تسجيل حركة جديدة" });
+}
+
+async function notifyOnce(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, userId: number, type: string, title: string, message: string) {
+  const existing = await db.select().from(notifications).where(eq(notifications.userId, userId));
+  if (existing.some((note) => note.type === type && note.title === title && note.message === message && !note.readAt)) return;
+  await db.insert(notifications).values({ userId, type, title, message });
 }
 
 export const erpRouter = router({
@@ -136,15 +150,16 @@ export const erpRouter = router({
     summary: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
-      const [allProjectRows, stageRows, expenseRows, collectionRows, approvalRows] = await Promise.all([
+      const [allProjectRows, stageRows, expenseRows, collectionRows, approvalRows, attachmentRows] = await Promise.all([
         db.select().from(projects),
         db.select().from(stages),
         db.select().from(expenses),
         db.select().from(collections),
         db.select().from(approvalRequests),
+        db.select().from(attachments),
       ]);
       const projectRows = allowed ? allProjectRows.filter((row) => allowed.has(row.id)) : allProjectRows;
-      return projectRows.map((project) => {
+      const summary = projectRows.map((project) => {
         const projectStages = stageRows.filter((stage) => stage.projectId === project.id);
         const projectExpenses = expenseRows.filter((expense) => expense.projectId === project.id && ["approved", "posted"].includes(expense.status));
         const projectCollections = collectionRows.filter((collection) => collection.projectId === project.id && collection.status === "received");
@@ -196,6 +211,11 @@ export const erpRouter = router({
           delayedStages,
         };
       });
+      for (const item of summary) {
+        const triggers = projectNotificationTriggers({ projectName: item.project.name, pendingApprovals: item.pendingApprovals, budgetUsage: item.budgetUsage, cashGap: item.cashGap, hasAttachments: attachmentRows.some((attachment) => attachment.projectId === item.project.id) });
+        for (const trigger of triggers) await notifyOnce(db, ctx.user.id, trigger.type, trigger.title, trigger.message);
+      }
+      return summary;
     }),
   }),
 
@@ -220,6 +240,7 @@ export const erpRouter = router({
       .mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
         await assertProjectAccess(db, ctx, input.projectId);
+        await assertPeriodOpen(db, ctx, input.projectId, input.expenseDate ? new Date(input.expenseDate) : new Date());
         const totals = calculateExpenseTotals(input.preTaxAmount, input.taxRate);
         const taxRate = totals.taxRate;
         const taxAmount = totals.taxAmount;
@@ -263,6 +284,7 @@ export const erpRouter = router({
       .mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
         await assertProjectAccess(db, ctx, input.projectId);
+        await assertPeriodOpen(db, ctx, input.projectId, input.saleDate ? new Date(input.saleDate) : new Date());
         const totals = calculateExpenseTotals(input.preTaxAmount, input.taxRate);
         const result = await db.insert(sales).values({ projectId: input.projectId, unitId: input.unitId, customerName: input.customerName, customerPhone: input.customerPhone || null, saleDate: input.saleDate ? new Date(input.saleDate) : null, preTaxAmount: totals.preTaxAmount.toFixed(2), taxAmount: totals.taxAmount.toFixed(2), totalAmount: totals.totalAmount.toFixed(2), recognizedRevenue: totals.preTaxAmount.toFixed(2), status: "confirmed", createdBy: ctx.user.id });
         const saleId = Number(result[0].insertId);
@@ -283,6 +305,7 @@ export const erpRouter = router({
       .mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
         await assertProjectAccess(db, ctx, input.projectId);
+        await assertPeriodOpen(db, ctx, input.projectId, input.collectionDate ? new Date(input.collectionDate) : new Date());
         const result = await db.insert(collections).values({ projectId: input.projectId, saleId: input.saleId, amount: input.amount.toFixed(2), receiptReference: input.receiptReference || null, collectionDate: input.collectionDate ? new Date(input.collectionDate) : null, status: "received", createdBy: ctx.user.id });
         const collectionId = Number(result[0].insertId);
         await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "collection", entityId: collectionId, requestedBy: ctx.user.id, status: "pending" });
@@ -308,6 +331,7 @@ export const erpRouter = router({
         if (request.entityType === "payroll") await db.update(payroll).set({ status: approved ? "approved" : "draft" }).where(eq(payroll.id, request.entityId));
         if (request.entityType === "sale") await db.update(sales).set({ status: approved ? "confirmed" : "cancelled" }).where(eq(sales.id, request.entityId));
         if (request.entityType === "collection") await db.update(collections).set({ status: approved ? "received" : "reversed" }).where(eq(collections.id, request.entityId));
+        if (request.entityType === "certificate") await db.update(certificates).set({ status: approved ? "approved" : "rejected" }).where(eq(certificates.id, request.entityId));
         await db.insert(auditLogs).values({ entityType: "approval", entityId: input.id, action: input.decision, actorId: ctx.user.id, afterJson: JSON.stringify(input) });
         return { success: true } as const;
       }),
@@ -332,6 +356,8 @@ export const erpRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
+        await assertProjectAccess(db, ctx, input.projectId);
+        await assertPeriodOpen(db, ctx, input.projectId, new Date(input.year, input.month - 1, 1));
         const totals = calculatePayrollTotals(input.amount);
         const result = await db.insert(payroll).values({
           projectId: input.projectId,
@@ -388,6 +414,7 @@ export const erpRouter = router({
     create: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), stageId: z.number().int().positive().optional(), vendorId: z.number().int().positive().optional(), certificateNumber: z.string().trim().min(1), description: z.string().max(2000).optional(), preTaxAmount: z.number().nonnegative(), taxRate: z.number().min(0).max(100).default(15), paidAmount: z.number().nonnegative().default(0), certificateDate: z.string().optional() })).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
       await assertProjectAccess(db, ctx, input.projectId);
+      await assertPeriodOpen(db, ctx, input.projectId, input.certificateDate ? new Date(input.certificateDate) : new Date());
       const totals = calculateExpenseTotals(input.preTaxAmount, input.taxRate);
       const result = await db.insert(certificates).values({ projectId: input.projectId, stageId: input.stageId || null, vendorId: input.vendorId || null, certificateNumber: input.certificateNumber, description: input.description || null, preTaxAmount: totals.preTaxAmount.toFixed(2), taxAmount: totals.taxAmount.toFixed(2), totalAmount: totals.totalAmount.toFixed(2), paidAmount: Math.min(input.paidAmount, totals.totalAmount).toFixed(2), status: "pending", certificateDate: input.certificateDate ? new Date(input.certificateDate) : null, createdBy: ctx.user.id });
       const id = Number(result[0].insertId);
@@ -460,6 +487,33 @@ export const erpRouter = router({
     }),
   }),
 
+  controls: router({
+    notifications: protectedProcedure.query(async ({ ctx }) => {
+      const db = requireDb(await getDb());
+      return db.select().from(notifications).where(eq(notifications.userId, ctx.user.id)).orderBy(notifications.createdAt);
+    }),
+    markNotificationRead: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      await db.update(notifications).set({ readAt: new Date() }).where(eq(notifications.id, input.id));
+      await db.insert(auditLogs).values({ entityType: "notification", entityId: input.id, action: "read", actorId: ctx.user.id, afterJson: JSON.stringify({ id: input.id }) });
+      return { success: true } as const;
+    }),
+    locks: protectedProcedure.query(async ({ ctx }) => {
+      const db = requireDb(await getDb());
+      const rows = await db.select().from(periodLocks).orderBy(periodLocks.lockedAt);
+      const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
+      return allowed ? rows.filter((row) => allowed.has(row.projectId)) : rows;
+    }),
+    lockPeriod: adminProcedure.input(z.object({ projectId: z.number().int().positive(), periodYear: z.number().int().min(2000).max(2100), periodMonth: z.number().int().min(1).max(12), reason: z.string().max(1000).optional() })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      await assertProjectAccess(db, ctx, input.projectId);
+      const result = await db.insert(periodLocks).values({ ...input, reason: input.reason || null, lockedBy: ctx.user.id });
+      const id = Number(result[0].insertId);
+      await db.insert(auditLogs).values({ entityType: "periodLock", entityId: id, action: "locked", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
+      return { id };
+    }),
+  }),
+
   reports: router({
     costCenter: protectedProcedure.input(z.object({ projectId: z.number().int().positive() })).query(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
@@ -479,6 +533,51 @@ export const erpRouter = router({
         const stageCertificates = certificateRows.filter((row) => row.stageId === stage.id);
         return { stage, byType: stageExpenses.reduce<Record<string, { total: number; paid: number; outstanding: number }>>((acc, row) => { const key = row.expenseType || "operating"; const current = acc[key] || { total: 0, paid: 0, outstanding: 0 }; current.total += Number(row.totalAmount); current.paid += Number(row.paidAmount); current.outstanding += Math.max(Number(row.totalAmount) - Number(row.paidAmount), 0); acc[key] = current; return acc; }, {}), expenses: stageExpenses, payroll: stagePayroll, custody: stageCustody, certificates: stageCertificates, collections: collectionRows.filter((row) => row.status === "received") };
       });
+    }),
+    cashFlow: protectedProcedure.input(z.object({ projectId: z.number().int().positive() })).query(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      await assertProjectAccess(db, ctx, input.projectId);
+      const [expenseRows, payrollRows, custodyRows, collectionRows] = await Promise.all([
+        db.select().from(expenses).where(eq(expenses.projectId, input.projectId)),
+        db.select().from(payroll).where(eq(payroll.projectId, input.projectId)),
+        db.select().from(custody).where(eq(custody.projectId, input.projectId)),
+        db.select().from(collections).where(eq(collections.projectId, input.projectId)),
+      ]);
+      const cashOut = expenseRows.reduce((sum, row) => sum + Number(row.paidAmount), 0) + payrollRows.reduce((sum, row) => sum + Number(row.paidAmount), 0) + custodyRows.reduce((sum, row) => sum + Number(row.settledAmount), 0);
+      const cashIn = collectionRows.filter((row) => row.status === "received").reduce((sum, row) => sum + Number(row.amount), 0);
+      return { cashIn, cashOut, net: cashIn - cashOut, fundingRequired: Math.max(cashOut - cashIn, 0), collections: collectionRows, expensePayments: expenseRows, payrollPayments: payrollRows, custodySettlements: custodyRows };
+    }),
+    supplierStatement: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), vendorId: z.number().int().positive() })).query(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      await assertProjectAccess(db, ctx, input.projectId);
+      const [expenseRows, certificateRows] = await Promise.all([
+        db.select().from(expenses).where(eq(expenses.projectId, input.projectId)),
+        db.select().from(certificates).where(eq(certificates.projectId, input.projectId)),
+      ]);
+      const vendorExpenses = expenseRows.filter((row) => row.vendorId === input.vendorId);
+      const vendorCertificates = certificateRows.filter((row) => row.vendorId === input.vendorId);
+      const debit = vendorExpenses.reduce((sum, row) => sum + Number(row.totalAmount), 0) + vendorCertificates.reduce((sum, row) => sum + Number(row.totalAmount), 0);
+      const credit = vendorExpenses.reduce((sum, row) => sum + Number(row.paidAmount), 0) + vendorCertificates.reduce((sum, row) => sum + Number(row.paidAmount), 0);
+      return { debit, credit, balance: debit - credit, expenses: vendorExpenses, certificates: vendorCertificates };
+    }),
+    financialSummary: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), from: z.string().optional(), to: z.string().optional() })).query(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      await assertProjectAccess(db, ctx, input.projectId);
+      const [salesRows, collectionRows, expenseRows, payrollRows] = await Promise.all([
+        db.select().from(sales).where(eq(sales.projectId, input.projectId)),
+        db.select().from(collections).where(eq(collections.projectId, input.projectId)),
+        db.select().from(expenses).where(eq(expenses.projectId, input.projectId)),
+        db.select().from(payroll).where(eq(payroll.projectId, input.projectId)),
+      ]);
+      const from = input.from ? new Date(input.from).getTime() : Number.NEGATIVE_INFINITY;
+      const to = input.to ? new Date(input.to).getTime() + 86400000 : Number.POSITIVE_INFINITY;
+      const inRange = (date: Date | null) => !date || (new Date(date).getTime() >= from && new Date(date).getTime() <= to);
+      const scopedExpenses = expenseRows.filter((row) => inRange(row.expenseDate));
+      const scopedPayroll = payrollRows.filter((row) => inRange(row.createdAt));
+      const scopedSales = salesRows.filter((row) => inRange(row.saleDate));
+      const scopedCollections = collectionRows.filter((row) => inRange(row.collectionDate));
+      const totals = calculateFinancialSummaryTotals({ sales: scopedSales, collections: scopedCollections, expenses: scopedExpenses, payroll: scopedPayroll });
+      return { ...totals, expenseRows: scopedExpenses, payrollRows: scopedPayroll, salesRows: scopedSales, collectionRows: scopedCollections };
     }),
   }),
 });

@@ -27,20 +27,20 @@
 - [x] Compare planned schedule progress with actual completion progress
 - [x] Add clickable project health details for budget, cash, approvals, and schedule
 - [ ] Build centralized data-entry modules with validations and audit-friendly links
-- [ ] Build revenue, expense, payroll, tax, supplier statement, cash-flow, and project-performance reports
+- [x] Build revenue, expense, payroll, tax, supplier statement, cash-flow, and project-performance reports
 - [ ] Import and reconcile legacy Excel data without duplicating transactions
 - [ ] Add collaborative access for administration, project managers, employees, approvers, and future users with role-specific permissions
 - [ ] Write backend and frontend tests for financial calculations and permissions
 - [ ] Verify responsive UI and end-to-end workflows before delivery
-- [ ] Add approval workflows for expenses, payroll, certificates, and collections
+- [x] Add approval workflows for expenses, payroll, certificates, and collections
 - [ ] Add audit trail for edits, approvals, reversals, and deletions
 - [ ] Add project health alerts for budget usage, schedule delay, cash gap, and overdue approvals
 - [ ] Add project-level access boundaries for all reads/writes and cross-project comparison dashboards
 - [ ] Add configurable approval thresholds by project, transaction type, and amount
-- [ ] Add notification center for pending approvals, budget breaches, and missing documents
+- [x] Add notification center for pending approvals, budget breaches, and missing documents with generation rules and tests
 - [ ] Add smart recurring transaction templates and duplicate-transaction warnings
 - [ ] Add document completeness checks for contractors, certificates, and payment requests
-- [ ] Add management comparison reports and project-detail reporting; export and period-lock controls remain pending
+- [x] Add management comparison reports and project-detail reporting, export controls, and period-lock controls
 - [ ] Research and compare the lowest-cost hosting options with database persistence, backups, and multi-user access
 
 
@@ -328,9 +328,12 @@
 - [x] Run one final end-to-end workbook validation and deliver the tested file
 
 - [ ] Complete web ERP parity with the Excel operating model while preserving one-time source entry
-- [ ] Add and validate missing operational modules: detailed cost-center line items, materials/cost types, payroll due tracking, custody, attendance, certificates, supplier statements, attachments, and exports
+- [x] Add and validate missing operational modules: detailed cost-center line items, materials/cost types, payroll due tracking, custody, attendance, certificates, supplier statements, attachments, and exports
 - [ ] Complete role-based permissions, approval workflows, audit trail, project isolation, and user management for the ERP
 - [ ] Reconcile web dashboard and reports against the unified workbook logic with end-to-end integration tests
 
 - [x] Build a line-by-line Excel-to-web parity matrix covering every requested field, rule, dropdown, calculation, report, and workflow
 - [ ] Do not declare web parity complete until every matrix item has a working UI, backend rule, and passing test
+
+- [x] Build explicit revenue, expense, payroll, and tax report views with project and period filters in the web reports module
+- [x] Add tests covering revenue, expense, payroll, tax, supplier statement, cash-flow, and project-performance report totals
