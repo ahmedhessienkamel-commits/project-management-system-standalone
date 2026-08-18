@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, expenses, notifications, payroll, periodLocks, projectMembers, projects, sales, stages, units, users, vendors } from "../../drizzle/schema";
 import { getDb } from "../db";
@@ -23,6 +23,12 @@ async function getAllowedProjectIds(db: NonNullable<Awaited<ReturnType<typeof ge
 async function assertProjectAccess(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, ctx: { user: { id: number; role: string } }, projectId: number) {
   const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
   if (!canAccessProject(ctx.user.role, allowed, projectId)) throw new TRPCError({ code: "FORBIDDEN", message: "ليس لديك صلاحية على هذا المشروع" });
+}
+
+async function assertProjectWrite(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, ctx: { user: { id: number; role: string } }, projectId: number) {
+  if (ctx.user.role === "admin") return;
+  const member = (await db.select({ projectRole: projectMembers.projectRole }).from(projectMembers).where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, ctx.user.id))).limit(1))[0];
+  if (!member || ["viewer", "reviewer"].includes(member.projectRole)) throw new TRPCError({ code: "FORBIDDEN", message: "دور المستخدم لا يسمح بتسجيل حركة جديدة في هذا المشروع" });
 }
 
 async function assertPeriodOpen(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, ctx: { user: { role: string } }, projectId: number, date: Date) {
@@ -258,6 +264,7 @@ export const erpRouter = router({
       .mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
         await assertProjectAccess(db, ctx, input.projectId);
+        await assertProjectWrite(db, ctx, input.projectId);
         await assertPeriodOpen(db, ctx, input.projectId, input.expenseDate ? new Date(input.expenseDate) : new Date());
         const totals = calculateExpenseTotals(input.preTaxAmount, input.taxRate);
         const taxRate = totals.taxRate;
@@ -306,6 +313,7 @@ export const erpRouter = router({
       .mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
         await assertProjectAccess(db, ctx, input.projectId);
+        await assertProjectWrite(db, ctx, input.projectId);
         await assertPeriodOpen(db, ctx, input.projectId, input.saleDate ? new Date(input.saleDate) : new Date());
         const totals = calculateExpenseTotals(input.preTaxAmount, input.taxRate);
         const result = await db.insert(sales).values({ projectId: input.projectId, unitId: input.unitId, customerName: input.customerName, customerPhone: input.customerPhone || null, saleDate: input.saleDate ? new Date(input.saleDate) : null, preTaxAmount: totals.preTaxAmount.toFixed(2), taxAmount: totals.taxAmount.toFixed(2), totalAmount: totals.totalAmount.toFixed(2), recognizedRevenue: totals.preTaxAmount.toFixed(2), status: "confirmed", createdBy: ctx.user.id });
@@ -329,6 +337,7 @@ export const erpRouter = router({
       .mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
         await assertProjectAccess(db, ctx, input.projectId);
+        await assertProjectWrite(db, ctx, input.projectId);
         await assertPeriodOpen(db, ctx, input.projectId, input.collectionDate ? new Date(input.collectionDate) : new Date());
         const result = await db.insert(collections).values({ projectId: input.projectId, saleId: input.saleId, amount: input.amount.toFixed(2), receiptReference: input.receiptReference || null, collectionDate: input.collectionDate ? new Date(input.collectionDate) : null, status: "received", createdBy: ctx.user.id });
         const collectionId = Number(result[0].insertId);
@@ -385,6 +394,7 @@ export const erpRouter = router({
       .mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
         await assertProjectAccess(db, ctx, input.projectId);
+        await assertProjectWrite(db, ctx, input.projectId);
         await assertPeriodOpen(db, ctx, input.projectId, new Date(input.year, input.month - 1, 1));
         const totals = calculatePayrollTotals(input.amount);
         const result = await db.insert(payroll).values({
