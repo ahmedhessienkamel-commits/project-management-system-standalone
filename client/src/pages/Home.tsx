@@ -18,16 +18,26 @@ const money = new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 0 });
 export default function Home() {
   const [, setLocation] = useLocation();
   const { data: summaries = [], isLoading } = trpc.erp.dashboard.summary.useQuery();
-  const totalBudget = summaries.reduce((sum, item) => sum + item.plannedBudget, 0);
-  const totalActual = summaries.reduce((sum, item) => sum + item.actualCost, 0);
-  const totalOutstanding = summaries.reduce((sum, item) => sum + item.outstandingCost, 0);
+  const shortcutTotals = summaries.reduce((totals, item) => ({
+    plannedBudget: totals.plannedBudget + item.plannedBudget,
+    actualCost: totals.actualCost + item.actualCost,
+    outstandingCost: totals.outstandingCost + item.outstandingCost,
+    recognizedRevenue: totals.recognizedRevenue + item.recognizedRevenue,
+    collectionsReceived: totals.collectionsReceived + item.collectionsReceived,
+    payrollOutstanding: totals.payrollOutstanding + item.payrollOutstanding,
+    cashGap: totals.cashGap + item.cashGap,
+    pendingApprovals: totals.pendingApprovals + item.pendingApprovals,
+  }), { plannedBudget: 0, actualCost: 0, outstandingCost: 0, recognizedRevenue: 0, collectionsReceived: 0, payrollOutstanding: 0, cashGap: 0, pendingApprovals: 0 });
+  const totalBudget = shortcutTotals.plannedBudget;
+  const totalActual = shortcutTotals.actualCost;
+  const totalOutstanding = shortcutTotals.outstandingCost;
   const criticalCount = summaries.filter((item) => item.status === "critical").length;
   const warningCount = summaries.filter((item) => item.status === "warning").length;
-  const totalRevenue = summaries.reduce((sum, item) => sum + item.recognizedRevenue, 0);
-  const totalCollections = summaries.reduce((sum, item) => sum + item.collectionsReceived, 0);
-  const totalPayrollOutstanding = summaries.reduce((sum, item) => sum + item.payrollOutstanding, 0);
-  const totalCashGap = summaries.reduce((sum, item) => sum + item.cashGap, 0);
-  const totalPendingApprovals = summaries.reduce((sum, item) => sum + item.pendingApprovals, 0);
+  const totalRevenue = shortcutTotals.recognizedRevenue;
+  const totalCollections = shortcutTotals.collectionsReceived;
+  const totalPayrollOutstanding = shortcutTotals.payrollOutstanding;
+  const totalCashGap = shortcutTotals.cashGap;
+  const totalPendingApprovals = shortcutTotals.pendingApprovals;
 
   return (
     <DashboardLayout>

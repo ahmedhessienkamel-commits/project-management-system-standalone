@@ -23,6 +23,19 @@ export function calculateFinancialSummaryTotals({ sales, collections, expenses, 
   return { revenue, collectionsReceived, expensesPreTax, expensesTax, expensesTotal, expensesPaid, payrollTotal, payrollPaid, payrollOutstanding: Math.max(payrollTotal - payrollPaid, 0) };
 }
 
+export function calculateDashboardShortcutTotals(summaries: Array<{ plannedBudget: number; actualCost: number; outstandingCost: number; recognizedRevenue: number; collectionsReceived: number; payrollOutstanding: number; cashGap: number; pendingApprovals: number }>) {
+  return summaries.reduce((totals, item) => ({
+    plannedBudget: totals.plannedBudget + item.plannedBudget,
+    actualCost: totals.actualCost + item.actualCost,
+    outstandingCost: totals.outstandingCost + item.outstandingCost,
+    recognizedRevenue: totals.recognizedRevenue + item.recognizedRevenue,
+    collectionsReceived: totals.collectionsReceived + item.collectionsReceived,
+    payrollOutstanding: totals.payrollOutstanding + item.payrollOutstanding,
+    cashGap: totals.cashGap + item.cashGap,
+    pendingApprovals: totals.pendingApprovals + item.pendingApprovals,
+  }), { plannedBudget: 0, actualCost: 0, outstandingCost: 0, recognizedRevenue: 0, collectionsReceived: 0, payrollOutstanding: 0, cashGap: 0, pendingApprovals: 0 });
+}
+
 export function canAccessProject(role: string, allowedProjectIds: Set<number> | null, projectId: number) {
   return role === "admin" || allowedProjectIds === null || allowedProjectIds.has(projectId);
 }
