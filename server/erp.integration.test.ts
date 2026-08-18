@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { projects, stages, expenses, collections, approvalRequests, attachments, sales, payroll, vendors, certificates, projectMembers, units, periodLocks, notifications, auditLogs } from "../drizzle/schema";
+import { projects, stages, expenses, collections, approvalRequests, attachments, sales, payroll, vendors, certificates, projectMembers, units, periodLocks, notifications, auditLogs, attendance } from "../drizzle/schema";
 
 const state = {
   projects: [] as any[],
@@ -17,10 +17,11 @@ const state = {
   periodLocks: [] as any[],
   notifications: [] as any[],
   auditLogs: [] as any[],
+  attendance: [] as any[],
 };
 
 const tableState = new Map<any, keyof typeof state>([
-  [projects, "projects"], [stages, "stages"], [expenses, "expenses"], [collections, "collections"], [approvalRequests, "approvalRequests"], [attachments, "attachments"], [sales, "sales"], [payroll, "payroll"], [vendors, "vendors"], [certificates, "certificates"], [projectMembers, "projectMembers"], [units, "units"], [periodLocks, "periodLocks"], [notifications, "notifications"], [auditLogs, "auditLogs"],
+  [projects, "projects"], [stages, "stages"], [expenses, "expenses"], [collections, "collections"], [approvalRequests, "approvalRequests"], [attachments, "attachments"], [sales, "sales"], [payroll, "payroll"], [vendors, "vendors"], [certificates, "certificates"], [projectMembers, "projectMembers"], [units, "units"], [periodLocks, "periodLocks"], [notifications, "notifications"], [auditLogs, "auditLogs"], [attendance, "attendance"],
 ]);
 
 function rowsFor(table: any) {
@@ -85,6 +86,10 @@ describe("ERP sales and collections API flow", () => {
     const caller = appRouter.createCaller(context());
     const memberships = await caller.erp.members.mine();
     expect(memberships).toEqual(expect.arrayContaining([expect.objectContaining({ projectId: 1, userId: 1, projectRole: "finance" })]));
+    await caller.erp.attendance.create({ projectId: 1, employeeCode: "EMP-001", employeeName: "أحمد", attendanceDate: "2026-08-05", checkIn: "08:00", checkOut: "17:00", status: "present", notes: "" });
+    await caller.erp.attendance.create({ projectId: 1, employeeCode: "EMP-001", employeeName: "أحمد", attendanceDate: "2026-08-06", checkIn: "08:10", checkOut: "17:00", status: "late", notes: "" });
+    const attendanceSummary = await caller.erp.payroll.attendanceSummary({ projectId: 1, month: 8, year: 2026 });
+    expect(attendanceSummary).toEqual({ total: 2, present: 1, absent: 0, late: 1, leave: 0 });
     const vendor = await caller.erp.vendors.create({ name: "مورد عام", taxNumber: "TAX-001", commercialRegistration: "CR-001" });
     const vendorTrace = await caller.erp.controls.trace({ entityType: "vendor", entityId: vendor.id });
     expect(vendorTrace.audits.length).toBeGreaterThan(0);

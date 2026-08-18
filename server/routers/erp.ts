@@ -388,6 +388,17 @@ export const erpRouter = router({
       const rows = await db.select().from(payroll).orderBy(payroll.createdAt);
       return allowed ? rows.filter((row) => allowed.has(row.projectId)) : rows;
     }),
+    attendanceSummary: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), month: z.number().int().min(1).max(12), year: z.number().int().min(2000).max(2100) })).query(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      await assertProjectAccess(db, ctx, input.projectId);
+      const rows = await db.select().from(attendance);
+      const monthly = rows.filter((row) => {
+        if (row.projectId !== input.projectId) return false;
+        const date = new Date(row.attendanceDate);
+        return date.getUTCFullYear() === input.year && date.getUTCMonth() + 1 === input.month;
+      });
+      return { total: monthly.length, present: monthly.filter((row) => row.status === "present").length, absent: monthly.filter((row) => row.status === "absent").length, late: monthly.filter((row) => row.status === "late").length, leave: monthly.filter((row) => row.status === "leave").length };
+    }),
     create: protectedProcedure
       .input(z.object({
         projectId: z.number().int().positive(),
