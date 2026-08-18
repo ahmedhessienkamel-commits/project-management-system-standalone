@@ -13,6 +13,7 @@ import SalesCollections from "./pages/SalesCollections";
 import Reports from "./pages/Reports";
 import Users from "@/pages/Users";
 import Operations from "@/pages/Operations";
+import LegacyImport from "@/pages/LegacyImport";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -28,7 +29,7 @@ function Router() {
       <Route path={"/approvals"} component={Approvals} />
       <Route path={"/reports"} component={Reports} />
       <Route path={"/users"} component={Users} />
-      <Route path={"/settings"} component={Home} />
+      <Route path={"/settings"} component={LegacyImport} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
