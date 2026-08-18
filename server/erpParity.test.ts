@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateDashboardShortcutTotals, calculateDocumentCompleteness, calculateExpenseTotals, calculateFinancialSummaryTotals, calculatePayrollTotals, canAccessProject, projectHealthStatus, projectNotificationTriggers } from "./erpCalculations";
+import { calculateDashboardShortcutTotals, calculateDocumentCompleteness, calculateExpenseTotals, calculateFinancialSummaryTotals, calculatePayrollTotals, canAccessProject, canWriteProject, projectHealthStatus, projectNotificationTriggers } from "./erpCalculations";
 
 describe("Excel parity financial rules", () => {
   it("calculates material cost before tax, tax, and after tax", () => {
@@ -39,6 +39,16 @@ describe("Excel parity financial rules", () => {
     expect(canAccessProject("admin", new Set([1]), 99)).toBe(true);
     expect(canAccessProject("user", new Set([1]), 1)).toBe(true);
     expect(canAccessProject("user", new Set([1]), 2)).toBe(false);
+  });
+
+  it("enforces project write roles", () => {
+    expect(canWriteProject("admin", null)).toBe(true);
+    expect(canWriteProject("user", "manager")).toBe(true);
+    expect(canWriteProject("user", "finance")).toBe(true);
+    expect(canWriteProject("user", "input")).toBe(true);
+    expect(canWriteProject("user", "reviewer")).toBe(false);
+    expect(canWriteProject("user", "viewer")).toBe(false);
+    expect(canWriteProject("user", null)).toBe(false);
   });
 
   it("creates notification triggers for project risks", () => {

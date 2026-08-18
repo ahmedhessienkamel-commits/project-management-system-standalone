@@ -40,6 +40,11 @@ export function canAccessProject(role: string, allowedProjectIds: Set<number> | 
   return role === "admin" || allowedProjectIds === null || allowedProjectIds.has(projectId);
 }
 
+export function canWriteProject(role: string, projectRole?: string | null) {
+  if (role === "admin") return true;
+  return ["manager", "finance", "input"].includes(projectRole ?? "");
+}
+
 export function calculateDocumentCompleteness({ vendors, attachments }: { vendors: Array<{ id: number; name: string; taxNumber?: string | null; commercialRegistration?: string | null }>; attachments: Array<{ entityType: string; entityId: number; documentType: string }> }) {
   const missing: Array<{ vendorId: number; vendorName: string; document: string }> = [];
   for (const vendor of vendors) {

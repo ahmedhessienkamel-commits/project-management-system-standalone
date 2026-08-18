@@ -364,3 +364,5 @@
 
 - [x] توحيد dashboard.summary مع calculateFinancialSummaryTotals لضمان أن مبيعات الوحدات والتحصيلات والإيرادات المعترف بها تأتي من مصدر حسابي واحد
 - [ ] إضافة اختبار API/واجهة كامل ينشئ مشروعًا ووحدة وبيعًا وتحصيلًا ثم يقرأ dashboard.summary من نفس التدفق
+
+- [x] إضافة اختبار صلاحيات قابل للتشغيل يثبت وصول admin والكتابة لأدوار manager/finance/input ومنع reviewer/viewer
