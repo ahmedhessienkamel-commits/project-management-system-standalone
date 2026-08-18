@@ -1,0 +1,211 @@
+# Project TODO
+
+- [ ] Secure multi-account Meta Ads connection model with encrypted server-side access-token handling
+- [ ] Dashboard shell with responsive PWA-ready layout and Arabic/English terminology
+- [ ] Per-account KPI cards: impressions, clicks, purchases, spend, cost per purchase, CTR
+- [ ] Global date filters: last 7 days, last 30 days, and custom range
+- [ ] Age performance breakdown chart
+- [ ] Geographic performance table with country/region metrics
+- [ ] Campaign > Ad Set > Ad hierarchical drill-down view
+- [ ] Meta Insights API adapter for account and breakdown reports
+- [ ] Scheduled/background sync into database for cached offline reads
+- [ ] Settings page to add, remove, switch, and refresh ad accounts
+- [ ] Side-by-side comparison for two accounts or two campaigns with top-performer highlighting
+- [ ] PWA manifest/install affordance and mobile-responsive behavior
+- [ ] Unit tests for metric calculations, account isolation, sync normalization, and comparisons
+- [ ] Visual verification of desktop and mobile dashboard states
+- [ ] Final build/typecheck/test verification and checkpoint
+- [ ] Reuse the existing Meta app (App ID 223998126017300) after verifying App Secret, Marketing API product, OAuth redirect URI, and required permissions
+- [ ] Add secure Meta app credentials and token encryption key to the project environment
+
+## Spreadsheet enhancement history
+
+- [ ] Add monthly attendance and departure register with employee, stage, date, check-in, check-out, hours, status, and notes
+- [ ] Add stage-level cash flow page with cash in, cash out, net gap, cumulative gap, and funding required
+- [ ] Link stage cash out to expenses, entitlements, payroll, and collected payments where stage identifiers exist
+- [ ] Add management summary, filters, conditional alerts, and professional formatting for attendance and cash-flow pages
+- [ ] Validate formulas, empty-input behavior, and dashboard links in the enhanced workbook
+
+## Full project-control workbook rebuild
+
+- [x] Rebuild expense classification as project versus administrative/company expense
+- [x] Add payroll classification option for administrative salary versus project salary
+- [x] Link project payroll automatically into project expenses and project totals
+- [x] Split the main dashboard into project expenses and administrative expenses
+- [x] Add planned budget per contract line item in the main contract sheet
+- [x] Add actual cost per contract line item linked from expense entries by cost center and line item
+- [x] Add variance amount and variance percentage with red alert when actual exceeds planned
+- [x] Add professional stage performance monitoring sheet for planned, actual, variance, completion, and status
+- [x] Rebuild project-level and stage-level summaries without hardcoded budget values
+- [x] Validate end-to-end formulas with project/admin payroll and expense scenarios
+- [x] Add executive project-health indicator with clear green/yellow/red status
+- [x] Add dashboard risk matrix showing budget, schedule, cash-flow, and funding alerts
+- [x] Add stage ranking and worst-variance spotlight for management review
+- [x] Add concise executive summary cards so project performance is understandable at a glance
+- [x] Add a linked project-payroll ledger view inside المصروفات so project payroll is visible without double-counting
+- [x] Add explicit completion percentage metric to أداء المراحل and dashboard
+- [x] Add dashboard risk matrix for budget, schedule, cash-flow, and funding
+- [x] Add worst-variance stage spotlight and ranking for management review
+- [x] Link advances/employee custody settlements to project or administrative expense classification
+- [x] Add custody cost-center and contract-line fields with automatic reporting view and no double counting
+- [x] Add dropdown lists for cost-center codes, contract-line codes, expense classifications, payroll classifications, and custody classifications
+- [x] Validate dropdown sources and ensure linked formulas use selected codes consistently
+- [x] Define a single-source transaction map across expenses, payroll, custody, receipts, contract lines, cost centers, budgets, cash flow, and dashboard
+- [x] Add traceable linked reporting views so one source transaction appears in related reports without duplicate counting
+- [x] Add dropdown-driven keys and validation for all cross-sheet relationships
+- [x] Add reconciliation checks for unclassified, unmapped, and duplicated transactions
+- [x] Add a unified project employee master page with employee code, name, role, status, and cost center
+- [x] Add employee dropdowns to attendance and custody records
+- [x] Auto-populate employee name from selected employee code and validate custody ownership
+- [x] Link employee master records to payroll and project/admin classification
+- [x] Add planned start date, planned end date, duration, schedule progress, and schedule status per contract line
+- [x] Link contract-line schedule status to the weekly program and stage progress
+- [x] Add a home-page summary showing on-track, warning, delayed, and overdue contract lines
+- [x] Add clear contract input area for pre-tax value, VAT amount/rate, and post-tax contract value
+- [x] Add clear planned budget input per contract line and distinguish user inputs from calculated fields
+- [x] Verify all dashboard and variance formulas respond to contract and line-item inputs
+- [x] Add project profile fields for project name, owner, responsible engineer, consultant, main contractor, location, contract number, and project status
+- [x] Surface project profile fields on the home page and relevant reports
+- [x] Add contractor master fields: tax number, commercial registration, IBAN, bank, contact, contract type, and status
+- [x] Add contractor selection per contract line and stage with automatic contractor-detail lookup
+- [x] Surface contractor compliance details in contractor, contract, and payment-related views
+- [x] Add attachment register for contractor documents and financial-claim/supporting documents
+- [x] Link attachment records to contractor code, subcontract/contract line, certificate number, document type, date, and file path/link
+- [x] Add guidance that files are stored outside workbook and linked, keeping the workbook lightweight
+- [x] Add expense-classification and payroll-classification dropdown validations
+- [x] Add workbook reconciliation controls for unclassified rows, missing mappings, and duplicate transaction references
+- [x] Add distinct overdue schedule state and summary count
+- [x] Add contractor lookup and selection to payment certificates and stage-level views
+- [x] Add comprehensive end-to-end validation for all dropdown-driven links
+- [x] Run an end-to-end dropdown scenario covering expense, payroll, custody, receipt, certificate, contractor, employee, cost-center, contract-line, and schedule selections with downstream assertions
+- [x] Replace contractor XLOOKUP formulas with cross-engine-compatible lookup formulas and re-run end-to-end dropdown tests
+- [ ] Assert receipt-driven cash-flow or dashboard totals in the end-to-end scenario
+- [ ] Assert employee-code propagation and payroll classification outcomes
+- [ ] Assert project versus administrative expense classification outcomes
+- [ ] Assert executive dashboard/report values update from the scenario
+- [x] Auto-populate payroll employee name from selected employee code with a cross-engine-compatible lookup formula
+- [x] تعديل إجمالي الإيراد ليعتمد على الإيراد المعترف به من مبيعات الوحدات
+- [x] حصر صفحة المستخلصات في مستخلصات المقاولين
+- [x] دمج المستحقات داخل صفحة المصروفات عبر أعمدة المصروف والمدفوع فعليًا والمستحق
+- [x] إعادة توجيه التقارير والداشبورد واختبار الربط بعد تعديل الإيراد والمصروفات
+- [x] توحيد اتجاه جميع أوراق المصنف إلى اليمين لليسار
+- [x] إضافة حدود وتسطير واضح لجداول الإدخال والتقارير مع الحفاظ على التنسيق
+- [x] إزالة أو إخفاء أقسام العرض التلقائي غير المخصصة للإدخال من صفحات الموظف
+- [x] التحقق من بقاء الصيغ والروابط والتقارير سليمة بعد تبسيط الواجهة
+- [ ] عرض أسماء مراحل مركز التكلفة في القوائم المنسدلة بدل الأكواد مع الحفاظ على الأكواد الداخلية
+- [ ] اختبار القوائم المنسدلة والربط بالتقارير بعد تغيير قيم العرض
+- [ ] إظهار المورد أو المستفيد تلقائيًا من بيانات البند والمقاول المرتبط
+- [ ] دعم قائمة الموردين عند تعدد الموردين للبند والتحقق من الربط
+- [ ] إضافة مورد أساسي ومورد فرعي لكل بند أو مرحلة
+- [ ] إظهار المورد الأساسي تلقائيًا وإتاحة اختيار المورد الفرعي في الحركات
+- [x] إنشاء صفحة موحدة تربط مبيعات الوحدات بالدفعات المحصلة والإيراد المعترف به
+- [x] ربط الصفحة الموحدة بالداشبورد وقائمة الدخل واختبار التحصيل والمتبقي
+- [ ] ربط مؤشرات الإيراد والتحصيل في لوحة المؤشرات مباشرة بصفحة مبيعات وتحصيلات
+- [ ] اختبار لوحة المؤشرات بعد إدخال بيع ودفعة محصلة في الصفحة الموحدة
+- [ ] تقليل ارتفاعات الصفوف والمساحات الفارغة في الصفحة الرئيسية
+- [ ] تظليل عناوين الأقسام وروابط فتح الصفحات بألوان واضحة
+- [ ] إضافة عداد الأيام المتبقية للمشروع في الصفحة الرئيسية اعتمادًا على تاريخ البدء والنهاية
+- [ ] اختبار حالات العداد: متبقي، منتهٍ، وتواريخ ناقصة
+- [ ] إضافة عداد الأيام المتبقية للمرحلة الحالية مع اسم المرحلة وحالتها
+- [x] إضافة شريط علوي واضح لاختيار حالة المرحلة والمرحلة النشطة
+- [x] ربط العداد بالمرحلة المختارة في الشريط العلوي
+- [x] إصلاح قائمة المرحلة النشطة بحيث تعرض أسماء المراحل فعليًا
+- [x] اختبار ظهور أسماء المراحل في القائمة وربطها بالعداد
+- [x] حصر قائمة المرحلة النشطة في أسماء المراحل الفعلية واستبعاد إدارة ومصاريف عامة
+- [x] توحيد تصنيف المشروع مع نوع المصروف ومنع التعارض والتكرار في التقارير
+- [x] جعل المرحلة/البند في المصروفات قائمة أسماء مراحل بدل كتابة الكود
+- [x] إظهار كود مركز التكلفة تلقائيًا من اسم المرحلة المختار
+- [x] تثبيت قائمة نوع المصروف كمشروع/تشغيلي أو إداري للشركة واختبار الربط
+- [x] اختبار تكاملي يثبت عدم ازدواج المصروف في التقارير بعد مسار الإدخال الجديد
+- [x] مراجعة الصيغ والاختبارات القديمة التي تعتمد على Q/D يدويًا وإعادة تشغيل السيناريو الشامل
+- [x] تحديث اختبار end-to-end ليستخدم نوع المصروف واسم المرحلة بدل D/Q يدويًا
+- [x] إعادة تشغيل اختبار end-to-end بعد مسار الإدخال الجديد
+- [x] التحقق من قيم لوحة المؤشرات بعد إدخال مصروف مشروع وإداري دون ازدواج
+- [x] اختبار لوحة المؤشرات صراحةً بعد إدخال مصروف مشروع وإداري بمسار C/E الجديد
+- [x] مطابقة مؤشرات لوحة المؤشرات مع التقارير المصدرية دون ازدواج
+- [x] إنشاء صفحة كشف حساب موحدة للموردين والمقاولين مرتبطة بالحركات المالية
+- [x] إضافة اختصار واضح لكشف حساب الموردين في الصفحة الرئيسية
+- [x] اختبار رصيد المورد وتفاصيل الحركات والمدفوعات والمستخلصات
+- [x] توسيع تفاصيل كشف حساب الموردين لتغطي كامل نطاق المصروفات والمستخلصات
+- [x] اختبار كشف الحساب بعدة مصروفات ومستخلصات خارج الصفوف الأولى
+- [x] التحقق من شمول المدفوعات والتسويات المطلوبة في رصيد المورد
+- [x] مراجعة مصادر حركة المورد وتحديد أي تسويات إضافية مطلوبة في تصميم النظام
+- [x] فحص جميع أوراق حركة المورد وتوثيق المصادر الداخلة والمستبعدة من كشف الحساب
+- [x] اختبار عدم وجود مصدر إضافي للمورد خارج المصروفات والمستخلصات أو إضافته للكشف
+- [x] إضافة assertion آلي يثبت أن مصادر حركة المورد المستخدمة في الكشف تقتصر على المصروفات والمستخلصات
+- [x] تشغيل اختبار تغطية المصادر وتوثيق نجاحه قبل التسليم
+
+
+- [x] توثيق معادلة رصيد المورد واختبارها على حركة تسوية أو إثبات عدم وجود مصدر إضافي
+- [x] إضافة اختيار تقويم لخلايا إدخال التواريخ في جميع الصفحات المناسبة
+- [x] دمج مبيعات الوحدات ومبيعات وتحصيلات في صفحة واحدة للإدخال والمتابعة
+- [x] تحويل الخانات القابلة للاختيار إلى قوائم منسدلة مرتبطة بالبيانات الأساسية
+- [x] اختبار القوائم المنسدلة وعدم كسر الروابط والصيغ
+- [x] إعادة توجيه الإيراد والتحصيل والتقارير إلى الصفحة الموحدة دون تكرار
+- [x] اختبار البيع والتحصيل والإيراد والمتبقي بعد الدمج
+- [x] اختبار تحقق التاريخ وتنسيقه وعدم كسر الصيغ المرتبطة
+- [x] توثيق أن المصنف يضيف تحقق تاريخ وتنسيقًا موحدًا، مع التحقق من دعم التقويم الفعلي في بيئة Excel/LibreOffice
+- [x] تنفيذ اختبار إعادة حساب عبر LibreOffice بعد إدخال تواريخ واختيارات من القوائم والتحقق من النتائج downstream
+- [x] إعداد مصفوفة نهائية للحقول: قائمة منسدلة أو تاريخ أو كتابة حرة مع سبب التصنيف
+
+- [x] استكمال جرد الحقول المرجعية القابلة للاختيار وتغطيتها بقوائم منسدلة أو توثيق سبب إبقائها كتابة حرة
+- [x] إضافة اختبار شامل للقوائم والتواريخ والصيغ المرتبطة بعد إعادة الحساب
+- [x] تحسين التصميم البصري للداشبورد إلى بطاقات ومؤشرات احترافية
+- [x] مراجعة بصرية واختبار ثبات صيغ الداشبورد بعد التنسيق
+- [x] اختبار مصدر قائمة المرحلة النشطة ومحتواها المرحلي وربط الاختيار بالعداد
+- [x] تحسين الشكل الجمالي لشريط العدادات والاختيارات في أعلى الصفحة الرئيسية
+- [x] إضافة قائمة منسدلة لاختيار حالة المرحلة الحالية
+- [x] إضافة قائمة منسدلة لاختيار المرحلة النشطة وإعادة ربط العداد بها
+
+- [x] إصلاح عدم ظهور الموردين أو المقاولين المسجلين داخل قائمة المورد/المستفيد والتحقق من نطاق القائمة
+
+- [x] إعادة ضبط تناسق الصفحة الرئيسية: أحجام البطاقات، المحاذاة، المساحات، العناوين، وأزرار الوصول السريع مع الحفاظ على الروابط والصيغ
+
+- [x] فحص وإزالة أي روابط خارجية غير مقصودة تشير إلى مسارات محلية مثل input.xlsx مع الحفاظ على الروابط الداخلية
+
+- [x] إصلاح عدم انتقال مصروف الحفر إلى التكلفة الفعلية ومعالجة خلايا #REF و#ERROR في صفحة المصروفات
+
+- [x] إصلاح خلايا التصنيف الفارغة وأخطاء #REF و#ERROR الظاهرة في صفحة المصروفات وربط مصروف الحفر بالتكلفة الفعلية
+
+- [x] تكبير أبعاد الخلايا والصفوف والأعمدة بدرجة بسيطة ومتوازنة مع الحفاظ على وضوح الصفحات وعدم اتساعها المفرط
+
+- [x] توحيد عرض قبل الضريبة والضريبة وبعد الضريبة للتكاليف والمصروفات والمبيعات، وتوضيح أن مؤشرات المصروفات والإيراد في الواجهة الرئيسية بدون ضريبة
+
+- [x] التحقق من صفحة العقد الرئيسي وإظهار قيمة البند قبل الضريبة والضريبة وبعد الضريبة بوضوح في جدول البنود
+
+- [x] إعادة ترتيب أعمدة بند العقد لتظهر متجاورة: القيمة قبل الضريبة، الضريبة، القيمة بعد الضريبة بجوار قيمة البند
+
+- [x] إصلاح قائمة اختيار المورد في كشف حساب الموردين بعد إعادة ترتيب أعمدة العقد
+- [x] توضيح أن قيمة البند في العقد والبرنامج الزمني مسجلة قبل الضريبة وإظهار الضريبة والإجمالي عند الحاجة
+
+- [x] إظهار قيمة البند قبل الضريبة والضريبة والقيمة بعد الضريبة داخل صفحات المراحل مثل الحفر 01 وربطها بالعقد الرئيسي
+
+- [x] إصلاح سهم قائمة اختيار المورد/المقاول في كشف الحساب وإزالة أخطاء #REF من تفاصيل الكشف
+
+- [x] إعادة ربط قائمة المورد/المقاول مباشرة بخلايا أسماء المقاولين الفعلية في ورقة المقاولون والتحقق من ظهور الأسماء
+
+- [x] استبدال مصدر قائمة المورد/المقاول بمصدر محلي داخل ورقة كشف الحساب لا يعتمد على نطاق خارجي
+
+- [x] تصحيح بداية نطاق قائمة المقاولين ليقرأ أول صف أسماء فعلي بعد العناوين دون حذف الصفوف التمهيدية
+
+- [x] تصحيح بداية نطاق قائمة المقاولين ليقرأ أول صف أسماء فعلي بعد العناوين دون حذف الصفوف التمهيدية
+
+- [x] إصلاح الفاصل الأفقي أو إعداد التجميد الذي يجعل النص المكتوب فوقه غير واضح في صفحة المقاولين
+
+- [x] ضبط صفحة المقاولين RTL وإزالة فواصل العرض أو الحدود التي تجعل النص غير واضح
+
+- [x] إعادة إنشاء صفحتي المقاولين وكشف حساب الموردين من الصفر بتصميم RTL مع الحفاظ على البيانات والروابط
+
+- [x] إعادة إنشاء مصنف إدارة المشروع كاملًا من نسخة نظيفة مع الحفاظ على البيانات الأساسية وإعادة بناء كشف حساب الموردين والروابط والقوائم
+
+- [x] إضافة قائمة مشروع في الرواتب بخياري وادي نمار والقدية، مع فصل تقارير القدية عن مشروع نمار
+- [x] إظهار إجمالي رواتب/مصروفات القدية كاختصار مستقل في الرئيسية
+- [x] إضافة اختصارات في الرئيسية لكل الصفحات التي لا يوجد لها وصول مباشر
+- [x] إعادة بناء المصنف بالكامل من نسخة نظيفة وتسليم نسخة واحدة مستقرة
+
+- [x] التحقق فعليًا من أن سهم قائمة المورد/المقاول في كشف الحساب يظهر الأسماء المسجلة قبل تسليم النسخة
+- [x] إصلاح القائمة المنسدلة الفارغة في كشف حساب الموردين بحيث تعرض أسماء المقاولين الفعلية
+- [x] استبدال قائمة الموردين الفارغة بمصدر مسمى مباشر من ورقة المقاولين مع اختبار فتحها في Excel/LibreOffice
+- [x] نقل عمود المشروع المرتبط بالراتب إلى موضع مبكر في صفحة الرواتب مع الحفاظ على صيغ التقارير
+- [x] إعادة بناء تخطيط جدول الرواتب بحيث يظهر المشروع بجوار تصنيف الراتب قبل بيانات المبلغ
+- [x] إعادة اختبار القائمة واختيار المورد وفصل وادي نمار عن القدية بعد إعادة الترتيب
