@@ -258,3 +258,14 @@ export const periodLocks = mysqlTable("periodLocks", {
   lockedAt: timestamp("lockedAt").defaultNow().notNull(),
   reason: text("reason"),
 });
+
+export const approvalPolicies = mysqlTable("approvalPolicies", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: int("projectId").notNull(),
+  entityType: varchar("entityType", { length: 32 }).notNull(),
+  thresholdAmount: decimal("thresholdAmount", { precision: 14, scale: 2 }).notNull().default("0"),
+  createdBy: int("createdBy").notNull(),
+  updatedBy: int("updatedBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});

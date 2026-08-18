@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { projects, stages, expenses, collections, approvalRequests, attachments, sales, payroll, vendors, certificates, projectMembers, units, periodLocks, notifications, auditLogs, attendance } from "../drizzle/schema";
+import { projects, stages, expenses, collections, approvalRequests, attachments, sales, payroll, vendors, certificates, projectMembers, units, periodLocks, notifications, auditLogs, attendance, approvalPolicies } from "../drizzle/schema";
 
 const state = {
   projects: [] as any[],
@@ -18,10 +18,11 @@ const state = {
   notifications: [] as any[],
   auditLogs: [] as any[],
   attendance: [] as any[],
+  approvalPolicies: [] as any[],
 };
 
 const tableState = new Map<any, keyof typeof state>([
-  [projects, "projects"], [stages, "stages"], [expenses, "expenses"], [collections, "collections"], [approvalRequests, "approvalRequests"], [attachments, "attachments"], [sales, "sales"], [payroll, "payroll"], [vendors, "vendors"], [certificates, "certificates"], [projectMembers, "projectMembers"], [units, "units"], [periodLocks, "periodLocks"], [notifications, "notifications"], [auditLogs, "auditLogs"], [attendance, "attendance"],
+  [projects, "projects"], [stages, "stages"], [expenses, "expenses"], [collections, "collections"], [approvalRequests, "approvalRequests"], [attachments, "attachments"], [sales, "sales"], [payroll, "payroll"], [vendors, "vendors"], [certificates, "certificates"], [projectMembers, "projectMembers"], [units, "units"], [periodLocks, "periodLocks"], [notifications, "notifications"], [auditLogs, "auditLogs"], [attendance, "attendance"], [approvalPolicies, "approvalPolicies"],
 ]);
 
 function rowsFor(table: any) {
@@ -66,9 +67,9 @@ vi.mock("./db", () => ({ getDb: vi.fn(async () => fakeDb()) }));
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
 
-function context(userId = 1): TrpcContext {
+function context(userId = 1, role: "admin" | "user" = "user"): TrpcContext {
   return {
-    user: { id: userId, openId: `integration-user-${userId}`, email: `integration-${userId}@example.com`, name: "Integration User", loginMethod: "manus", role: "user", createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() },
+    user: { id: userId, openId: `integration-user-${userId}`, email: `integration-${userId}@example.com`, name: "Integration User", loginMethod: "manus", role, createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() },
     req: { protocol: "https", headers: {} } as TrpcContext["req"],
     res: {} as TrpcContext["res"],
   };
@@ -132,6 +133,50 @@ describe("ERP sales and collections API flow", () => {
     const cashFlow = await caller.erp.reports.cashFlow({ projectId: 1 });
     expect(cashFlow.stages.find((row) => row.stageId === 2)).toMatchObject({ stageName: "الحفر", cashIn: 75000, cashOut: 1500, net: 73500, cumulativeGap: -73500, fundingRequired: 0, allocation: "stage-linked-sales-and-outflows" });
     expect(cashFlow.stages.find((row) => row.stageId === null)).toBeUndefined();
+  });
+
+  it("persists configurable approval policy thresholds for administrators", async () => {
+    const caller = appRouter.createCaller(context(1, "admin"));
+    const created = await caller.erp.approvals.policies.upsert({ projectId: 1, entityType: "expense", thresholdAmount: 25000 });
+    expect(created.updated).toBe(false);
+    const policies = await caller.erp.approvals.policies.list({ projectId: 1 });
+    expect(policies).toHaveLength(1);
+    expect(policies[0]).toMatchObject({ projectId: 1, entityType: "expense", thresholdAmount: "25000.00" });
+    const updated = await caller.erp.approvals.policies.upsert({ projectId: 1, entityType: "expense", thresholdAmount: 50000 });
+    expect(updated.updated).toBe(true);
+    expect(state.approvalPolicies[0].thresholdAmount).toBe("50000.00");
+  });
+
+  it("applies approval thresholds differently by transaction amount", async () => {
+    const caller = appRouter.createCaller(context(1, "admin"));
+    await caller.erp.approvals.policies.upsert({ projectId: 1, entityType: "expense", thresholdAmount: 25000 });
+    const below = await caller.erp.expenses.create({ projectId: 1, description: "مصروف دون الحد", preTaxAmount: 10000, taxRate: 15, paidAmount: 0 });
+    const above = await caller.erp.expenses.create({ projectId: 1, description: "مصروف فوق الحد", preTaxAmount: 50000, taxRate: 15, paidAmount: 0 });
+    expect(state.expenses.find((row) => row.description === "مصروف دون الحد")).toMatchObject({ status: "approved" });
+    expect(state.expenses.find((row) => row.description === "مصروف فوق الحد")).toMatchObject({ status: "pending" });
+    expect(state.approvalRequests.find((row) => row.entityType === "expense" && row.status === "approved")).toBeTruthy();
+    expect(state.approvalRequests.find((row) => row.entityType === "expense" && row.status === "pending")).toBeTruthy();
+
+    await caller.erp.approvals.policies.upsert({ projectId: 1, entityType: "payroll", thresholdAmount: 25000 });
+    await caller.erp.approvals.policies.upsert({ projectId: 1, entityType: "certificate", thresholdAmount: 25000 });
+    await caller.erp.approvals.policies.upsert({ projectId: 1, entityType: "sale", thresholdAmount: 25000 });
+    await caller.erp.approvals.policies.upsert({ projectId: 1, entityType: "collection", thresholdAmount: 25000 });
+    await caller.erp.payroll.create({ projectId: 1, employeeName: "راتب دون الحد", month: 8, year: 2026, amount: 10000, paidAmount: 0 });
+    await caller.erp.payroll.create({ projectId: 1, employeeName: "راتب فوق الحد", month: 8, year: 2026, amount: 50000, paidAmount: 0 });
+    await caller.erp.certificates.create({ projectId: 1, certificateNumber: "CERT-BELOW", preTaxAmount: 10000, taxRate: 0, paidAmount: 0 });
+    await caller.erp.certificates.create({ projectId: 1, certificateNumber: "CERT-ABOVE", preTaxAmount: 50000, taxRate: 0, paidAmount: 0 });
+    await caller.erp.sales.create({ projectId: 1, unitId: 10, customerName: "بيع دون الحد", preTaxAmount: 10000, taxRate: 0 });
+    await caller.erp.sales.create({ projectId: 1, unitId: 10, customerName: "بيع فوق الحد", preTaxAmount: 50000, taxRate: 0 });
+    await caller.erp.collections.create({ projectId: 1, saleId: 101, amount: 10000 });
+    await caller.erp.collections.create({ projectId: 1, saleId: 102, amount: 50000 });
+    expect(state.payroll.find((row) => row.employeeName === "راتب دون الحد")).toMatchObject({ status: "approved" });
+    expect(state.payroll.find((row) => row.employeeName === "راتب فوق الحد")).toMatchObject({ status: "pending" });
+    expect(state.certificates.find((row) => row.certificateNumber === "CERT-BELOW")).toMatchObject({ status: "approved" });
+    expect(state.certificates.find((row) => row.certificateNumber === "CERT-ABOVE")).toMatchObject({ status: "pending" });
+    expect(state.sales.find((row) => row.customerName === "بيع دون الحد")).toMatchObject({ status: "confirmed", recognizedRevenue: "10000.00" });
+    expect(state.sales.find((row) => row.customerName === "بيع فوق الحد")).toMatchObject({ status: "reserved", recognizedRevenue: "0.00" });
+    expect(state.collections.find((row) => row.amount === "10000.00")).toMatchObject({ status: "received" });
+    expect(state.collections.find((row) => row.amount === "50000.00")).toMatchObject({ status: "draft" });
   });
 
   it("blocks read-only project roles from operational writes", async () => {

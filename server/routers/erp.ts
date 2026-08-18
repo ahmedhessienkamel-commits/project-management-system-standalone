@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
-import { approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, expenses, notifications, payroll, periodLocks, projectMembers, projects, sales, stages, units, users, vendors } from "../../drizzle/schema";
+import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, expenses, notifications, payroll, periodLocks, projectMembers, projects, sales, stages, units, users, vendors } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
@@ -43,6 +43,16 @@ async function notifyOnce(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, us
   const existing = await db.select().from(notifications).where(eq(notifications.userId, userId));
   if (existing.some((note) => note.type === type && note.title === title && note.message === message && !note.readAt)) return;
   await db.insert(notifications).values({ userId, type, title, message });
+}
+
+async function findApprovalPolicy(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, projectId: number, entityType: "expense" | "payroll" | "certificate" | "collection" | "sale") {
+  const rows = await db.select().from(approvalPolicies).where(eq(approvalPolicies.projectId, projectId));
+  return rows.find((row) => row.projectId === projectId && row.entityType === entityType) ?? null;
+}
+
+async function resolveApprovalStatus(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, projectId: number, entityType: "expense" | "payroll" | "certificate" | "collection" | "sale", amount: number) {
+  const policy = await findApprovalPolicy(db, projectId, entityType);
+  return policy && amount <= Number(policy.thresholdAmount) ? "approved" as const : "pending" as const;
 }
 
 export const erpRouter = router({
@@ -278,6 +288,7 @@ export const erpRouter = router({
         await assertProjectWrite(db, ctx, input.projectId);
         await assertPeriodOpen(db, ctx, input.projectId, input.expenseDate ? new Date(input.expenseDate) : new Date());
         const totals = calculateExpenseTotals(input.preTaxAmount, input.taxRate);
+        const approvalStatus = await resolveApprovalStatus(db, input.projectId, "expense", totals.preTaxAmount);
         const taxRate = totals.taxRate;
         const taxAmount = totals.taxAmount;
         const totalAmount = totals.totalAmount;
@@ -296,11 +307,11 @@ export const erpRouter = router({
           totalAmount: totalAmount.toFixed(2),
           paidAmount: input.paidAmount.toFixed(2),
           expenseDate: input.expenseDate ? new Date(input.expenseDate) : null,
-          status: "pending",
+          status: approvalStatus,
           createdBy: ctx.user.id,
         });
         const expenseId = Number(result[0].insertId);
-        await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "expense", entityId: expenseId, requestedBy: ctx.user.id, status: "pending" });
+        await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "expense", entityId: expenseId, requestedBy: ctx.user.id, status: approvalStatus });
         await db.insert(auditLogs).values({
           entityType: "expense",
           entityId: expenseId,
@@ -331,10 +342,13 @@ export const erpRouter = router({
           if (!stage || stage.projectId !== input.projectId) throw new TRPCError({ code: "BAD_REQUEST", message: "المرحلة لا تتبع المشروع المحدد" });
         }
         const totals = calculateExpenseTotals(input.preTaxAmount, input.taxRate);
-        const result = await db.insert(sales).values({ projectId: input.projectId, unitId: input.unitId, stageId: input.stageId || null, customerName: input.customerName, customerPhone: input.customerPhone || null, saleDate: input.saleDate ? new Date(input.saleDate) : null, preTaxAmount: totals.preTaxAmount.toFixed(2), taxAmount: totals.taxAmount.toFixed(2), totalAmount: totals.totalAmount.toFixed(2), recognizedRevenue: totals.preTaxAmount.toFixed(2), status: "confirmed", createdBy: ctx.user.id });
+        const approvalPolicy = await findApprovalPolicy(db, input.projectId, "sale");
+        const approvalStatus = approvalPolicy && totals.preTaxAmount <= Number(approvalPolicy.thresholdAmount) ? "approved" as const : "pending" as const;
+        const finalized = !approvalPolicy || approvalStatus === "approved";
+        const result = await db.insert(sales).values({ projectId: input.projectId, unitId: input.unitId, stageId: input.stageId || null, customerName: input.customerName, customerPhone: input.customerPhone || null, saleDate: input.saleDate ? new Date(input.saleDate) : null, preTaxAmount: totals.preTaxAmount.toFixed(2), taxAmount: totals.taxAmount.toFixed(2), totalAmount: totals.totalAmount.toFixed(2), recognizedRevenue: finalized ? totals.preTaxAmount.toFixed(2) : "0.00", status: finalized ? "confirmed" : "reserved", createdBy: ctx.user.id });
         const saleId = Number(result[0].insertId);
-        await db.update(units).set({ status: "sold" }).where(eq(units.id, input.unitId));
-        await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "sale", entityId: saleId, requestedBy: ctx.user.id, status: "pending" });
+        await db.update(units).set({ status: finalized ? "sold" : "reserved" }).where(eq(units.id, input.unitId));
+        await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "sale", entityId: saleId, requestedBy: ctx.user.id, status: approvalStatus });
         await db.insert(auditLogs).values({ entityType: "sale", entityId: saleId, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify({ ...input, ...totals, recognizedRevenue: totals.preTaxAmount }) });
         return { id: saleId, recognizedRevenue: totals.preTaxAmount, totalAmount: totals.totalAmount };
       }),
@@ -354,15 +368,40 @@ export const erpRouter = router({
         await assertProjectAccess(db, ctx, input.projectId);
         await assertProjectWrite(db, ctx, input.projectId);
         await assertPeriodOpen(db, ctx, input.projectId, input.collectionDate ? new Date(input.collectionDate) : new Date());
-        const result = await db.insert(collections).values({ projectId: input.projectId, saleId: input.saleId, amount: input.amount.toFixed(2), receiptReference: input.receiptReference || null, collectionDate: input.collectionDate ? new Date(input.collectionDate) : null, status: "received", createdBy: ctx.user.id });
+        const approvalPolicy = await findApprovalPolicy(db, input.projectId, "collection");
+        const approvalStatus = approvalPolicy && input.amount <= Number(approvalPolicy.thresholdAmount) ? "approved" as const : "pending" as const;
+        const finalized = !approvalPolicy || approvalStatus === "approved";
+        const result = await db.insert(collections).values({ projectId: input.projectId, saleId: input.saleId, amount: input.amount.toFixed(2), receiptReference: input.receiptReference || null, collectionDate: input.collectionDate ? new Date(input.collectionDate) : null, status: finalized ? "received" : "draft", createdBy: ctx.user.id });
         const collectionId = Number(result[0].insertId);
-        await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "collection", entityId: collectionId, requestedBy: ctx.user.id, status: "pending" });
+        await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "collection", entityId: collectionId, requestedBy: ctx.user.id, status: approvalStatus });
         await db.insert(auditLogs).values({ entityType: "collection", entityId: collectionId, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
         return { id: collectionId };
       }),
   }),
 
   approvals: router({
+    policies: router({
+      list: protectedProcedure.input(z.object({ projectId: z.number().int().positive() })).query(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        await assertProjectAccess(db, ctx, input.projectId);
+        const rows = await db.select().from(approvalPolicies).where(eq(approvalPolicies.projectId, input.projectId));
+        return rows.filter((row) => row.projectId === input.projectId);
+      }),
+      upsert: adminProcedure.input(z.object({ projectId: z.number().int().positive(), entityType: z.enum(["expense", "payroll", "certificate", "collection", "sale"]), thresholdAmount: z.number().nonnegative() })).mutation(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        const existingRows = await db.select().from(approvalPolicies).where(eq(approvalPolicies.projectId, input.projectId));
+        const existing = existingRows.find((row) => row.projectId === input.projectId && row.entityType === input.entityType);
+        if (existing) {
+          await db.update(approvalPolicies).set({ thresholdAmount: input.thresholdAmount.toFixed(2), updatedBy: ctx.user.id }).where(eq(approvalPolicies.id, existing.id));
+          await db.insert(auditLogs).values({ entityType: "approvalPolicy", entityId: existing.id, action: "updated", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
+          return { id: existing.id, updated: true } as const;
+        }
+        const result = await db.insert(approvalPolicies).values({ projectId: input.projectId, entityType: input.entityType, thresholdAmount: input.thresholdAmount.toFixed(2), createdBy: ctx.user.id, updatedBy: ctx.user.id });
+        const id = Number(result[0].insertId);
+        await db.insert(auditLogs).values({ entityType: "approvalPolicy", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
+        return { id, updated: false } as const;
+      }),
+    }),
     list: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
@@ -439,7 +478,9 @@ export const erpRouter = router({
           status: "pending",
         });
         const payrollId = Number(result[0].insertId);
-        await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "payroll", entityId: payrollId, requestedBy: ctx.user.id, status: "pending" });
+        const approvalStatus = await resolveApprovalStatus(db, input.projectId, "payroll", totals.totalAmount);
+        if (approvalStatus === "approved") await db.update(payroll).set({ status: "approved" }).where(eq(payroll.id, payrollId));
+        await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "payroll", entityId: payrollId, requestedBy: ctx.user.id, status: approvalStatus });
         await db.insert(auditLogs).values({
           entityType: "payroll",
           entityId: payrollId,
@@ -486,7 +527,9 @@ export const erpRouter = router({
       const totals = calculateExpenseTotals(input.preTaxAmount, input.taxRate);
       const result = await db.insert(certificates).values({ projectId: input.projectId, stageId: input.stageId || null, vendorId: input.vendorId || null, certificateNumber: input.certificateNumber, description: input.description || null, preTaxAmount: totals.preTaxAmount.toFixed(2), taxAmount: totals.taxAmount.toFixed(2), totalAmount: totals.totalAmount.toFixed(2), paidAmount: Math.min(input.paidAmount, totals.totalAmount).toFixed(2), status: "pending", certificateDate: input.certificateDate ? new Date(input.certificateDate) : null, createdBy: ctx.user.id });
       const id = Number(result[0].insertId);
-      await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "certificate", entityId: id, requestedBy: ctx.user.id, status: "pending" });
+      const approvalStatus = await resolveApprovalStatus(db, input.projectId, "certificate", totals.totalAmount);
+      if (approvalStatus === "approved") await db.update(certificates).set({ status: "approved" }).where(eq(certificates.id, id));
+      await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "certificate", entityId: id, requestedBy: ctx.user.id, status: approvalStatus });
       await db.insert(auditLogs).values({ entityType: "certificate", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify({ ...input, ...totals }) });
       return { id, totalAmount: totals.totalAmount };
     }),
@@ -569,7 +612,9 @@ export const erpRouter = router({
           : and(eq(approvalRequests.entityType, input.entityType), eq(approvalRequests.entityId, input.entityId))).orderBy(approvalRequests.createdAt),
         db.select().from(auditLogs).where(and(eq(auditLogs.entityType, input.entityType), eq(auditLogs.entityId, input.entityId))).orderBy(auditLogs.createdAt),
       ]);
-      return { approval: approvalRows[approvalRows.length - 1] || null, audits: auditRows };
+      const supportedEntity = ["expense", "payroll", "certificate", "collection", "sale"].includes(input.entityType) ? input.entityType as "expense" | "payroll" | "certificate" | "collection" | "sale" : null;
+      const policy = input.projectId && supportedEntity ? await findApprovalPolicy(db, input.projectId, supportedEntity) : null;
+      return { approval: approvalRows[approvalRows.length - 1] || null, audits: auditRows, approvalPolicy: policy ? { entityType: policy.entityType, thresholdAmount: policy.thresholdAmount } : null };
     }),
     audit: adminProcedure.query(async () => {
       const db = requireDb(await getDb());

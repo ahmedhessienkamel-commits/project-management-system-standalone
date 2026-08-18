@@ -36,7 +36,7 @@
 - [ ] Add audit trail for edits, approvals, reversals, and deletions
 - [x] Add project health alerts for budget usage, schedule delay, cash gap, and overdue approvals
 - [x] Add project-level access boundaries for all reads/writes and cross-project comparison dashboards
-- [ ] Add configurable approval thresholds by project, transaction type, and amount
+- [x] Add configurable approval thresholds by project, transaction type, and amount
 - [x] Add notification center for pending approvals, budget breaches, and missing documents with generation rules and tests
 - [ ] Add smart recurring transaction templates and duplicate-transaction warnings
 - [x] Add document completeness checks for contractors, certificates, and payment requests
@@ -397,3 +397,12 @@
 - [x] إضافة stageId اختياري إلى مبيعات الوحدات وترحيل قاعدة البيانات
 - [x] إظهار اختيار المرحلة في نموذج البيع وربط التحصيلات بها داخل cashFlow المرحلي
 - [x] اختبار API لتوزيع التحصيل على المرحلة عند وجود stageId، مع بقاء قاعدة غير المصنف للحالات القديمة
+
+- [x] إضافة جدول approval_policies لإعداد حد اعتماد مختلف لكل مشروع ونوع حركة ومبلغ
+- [x] إضافة إجراءات API إدارية لعرض وتعديل سياسات الاعتماد مع عزل المشروع
+- [x] إضافة واجهة إعدادات مبسطة لحدود الاعتماد الافتراضية وإضافة اختبار سياسة، وتطبيق الحد ديناميكيًا على إنشاء الحركات واختبار اختلاف النتيجة
+
+- [x] تطبيق حالة pending على المبيعات والتحصيلات الأعلى من حد الموافقة ومنعها من التأثير في التقارير قبل الاعتماد
+- [x] إضافة اختبارات حدود الموافقة للرواتب والمستخلصات والمبيعات والتحصيلات
+- [x] إظهار نتيجة الموافقة والحد الفعّال في واجهات الحركات أو التتبع
+
