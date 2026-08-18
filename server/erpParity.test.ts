@@ -35,6 +35,13 @@ describe("Excel parity financial rules", () => {
     expect(projectNotificationTriggers({ projectName: "وادي نمار", pendingApprovals: 0, budgetUsage: 20, cashGap: 0, hasAttachments: true, missingDocumentCount: result.missing.length }).some((item) => item.type === "documents_detail")).toBe(true);
   });
 
+  it("counts incomplete payment certificates as missing documents", () => {
+    const certificateDocuments = [{ id: 12, vendorId: null, attachments: [] }, { id: 13, vendorId: 4, attachments: [{ entityType: "certificate", entityId: 13, documentType: "claim" }] }];
+    const missing = certificateDocuments.filter((certificate) => !certificate.vendorId || !certificate.attachments.some((attachment) => attachment.entityType === "certificate" && attachment.entityId === certificate.id)).length;
+    expect(missing).toBe(1);
+    expect(projectNotificationTriggers({ projectName: "وادي نمار", pendingApprovals: 0, budgetUsage: 20, cashGap: 0, hasAttachments: true, missingDocumentCount: missing }).map((item) => item.type)).toEqual(["documents_detail"]);
+  });
+
   it("enforces project access boundaries", () => {
     expect(canAccessProject("admin", new Set([1]), 99)).toBe(true);
     expect(canAccessProject("user", new Set([1]), 1)).toBe(true);

@@ -158,7 +158,7 @@ export const erpRouter = router({
     summary: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
-      const [allProjectRows, stageRows, expenseRows, collectionRows, approvalRows, attachmentRows, salesRows, payrollRows, vendorRows] = await Promise.all([
+      const [allProjectRows, stageRows, expenseRows, collectionRows, approvalRows, attachmentRows, salesRows, payrollRows, vendorRows, certificateRows] = await Promise.all([
         db.select().from(projects),
         db.select().from(stages),
         db.select().from(expenses),
@@ -168,6 +168,7 @@ export const erpRouter = router({
         db.select().from(sales),
         db.select().from(payroll),
         db.select().from(vendors),
+        db.select().from(certificates),
       ]);
       const projectRows = allowed ? allProjectRows.filter((row) => allowed.has(row.id)) : allProjectRows;
       const summary = projectRows.map((project) => {
@@ -178,7 +179,10 @@ export const erpRouter = router({
         const projectPayroll = payrollRows.filter((row) => row.projectId === project.id && ["approved", "posted"].includes(row.status));
         const projectApprovals = approvalRows.filter((approval) => approval.projectId === project.id && approval.status === "pending");
         const projectVendors = vendorRows.filter((vendor) => vendor.projectId === null || vendor.projectId === project.id);
-        const documentCompleteness = calculateDocumentCompleteness({ vendors: projectVendors, attachments: attachmentRows.filter((attachment) => attachment.projectId === project.id) });
+        const projectAttachments = attachmentRows.filter((attachment) => attachment.projectId === project.id);
+        const documentCompleteness = calculateDocumentCompleteness({ vendors: projectVendors, attachments: projectAttachments });
+        const projectCertificates = certificateRows.filter((certificate) => certificate.projectId === project.id);
+        const missingCertificateDocuments = projectCertificates.filter((certificate) => !certificate.vendorId || !projectAttachments.some((attachment) => attachment.entityType === "certificate" && attachment.entityId === certificate.id)).length;
         const now = new Date();
         const approvalSlaMs = 3 * 24 * 60 * 60 * 1000;
         const overdueApprovals = projectApprovals.filter((approval) => approval.createdAt && now.getTime() - new Date(approval.createdAt).getTime() > approvalSlaMs).length;
@@ -229,7 +233,7 @@ export const erpRouter = router({
           reasons,
           stageCount: projectStages.length,
           delayedStages,
-          missingDocumentCount: documentCompleteness.missing.length,
+          missingDocumentCount: documentCompleteness.missing.length + missingCertificateDocuments,
         };
       });
       for (const item of summary) {
