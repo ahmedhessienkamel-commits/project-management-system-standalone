@@ -286,3 +286,6 @@
 - [ ] Test that one transaction propagates to all linked views exactly once without duplicate counting
 
 - [x] Prepare and deliver the updated workbook with one-time source entry and linked calculated reports
+
+- [x] Hide legacy stage worksheets from normal user navigation and leave المراحل الموحدة as the single visible stage report
+- [x] Verify hidden stage worksheets remain intact as formula sources and do not break workbook calculations
