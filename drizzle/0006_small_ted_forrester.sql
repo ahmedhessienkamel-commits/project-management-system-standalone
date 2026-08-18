@@ -1,0 +1,1 @@
+ALTER TABLE `projects` ADD `classification` enum('operational','administrative') DEFAULT 'operational' NOT NULL;

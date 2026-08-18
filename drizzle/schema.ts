@@ -26,6 +26,7 @@ export const projects = mysqlTable("projects", {
   code: varchar("code", { length: 64 }).notNull().unique(),
   name: varchar("name", { length: 255 }).notNull(),
   status: mysqlEnum("status", ["planning", "active", "paused", "completed", "archived"]).default("planning").notNull(),
+  classification: mysqlEnum("classification", ["operational", "administrative"]).default("operational").notNull(),
   location: varchar("location", { length: 255 }),
   plannedStart: date("plannedStart"),
   plannedEnd: date("plannedEnd"),

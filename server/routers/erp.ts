@@ -7,6 +7,7 @@ import { TRPCError } from "@trpc/server";
 import { calculateExpenseTotals, calculateFinancialSummaryTotals, calculatePayrollTotals, canAccessProject, projectHealthReasons, projectHealthStatus, projectNotificationTriggers } from "../erpCalculations";
 
 const projectStatus = z.enum(["planning", "active", "paused", "completed", "archived"]);
+const projectClassification = z.enum(["operational", "administrative"]);
 
 function requireDb(db: Awaited<ReturnType<typeof getDb>>) {
   if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة حاليًا" });
@@ -72,6 +73,7 @@ export const erpRouter = router({
         name: z.string().trim().min(2).max(255),
         location: z.string().trim().max(255).optional(),
         status: projectStatus.default("planning"),
+        classification: projectClassification.default("operational"),
         plannedStart: z.string().optional(),
         plannedEnd: z.string().optional(),
       }))
