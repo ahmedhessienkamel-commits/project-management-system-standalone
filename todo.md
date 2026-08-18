@@ -26,7 +26,7 @@
 - [x] Add collection entry and cash-flow reporting so liquidity indicators are end-to-end
 - [x] Compare planned schedule progress with actual completion progress
 - [x] Add clickable project health details for budget, cash, approvals, and schedule
-- [ ] Build centralized data-entry modules with validations and audit-friendly links
+- [x] Build centralized data-entry modules with validations and audit-friendly links
 - [x] Build revenue, expense, payroll, tax, supplier statement, cash-flow, and project-performance reports
 - [ ] Import and reconcile legacy Excel data without duplicating transactions
 - [ ] Add collaborative access for administration, project managers, employees, approvers, and future users with role-specific permissions
