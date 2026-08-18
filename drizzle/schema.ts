@@ -73,6 +73,7 @@ export const expenses = mysqlTable("expenses", {
   vendorId: int("vendorId"),
   reference: varchar("reference", { length: 128 }),
   description: text("description").notNull(),
+  expenseType: varchar("expenseType", { length: 64 }).default("operating").notNull(),
   classification: mysqlEnum("classification", ["project", "administrative"]).default("project").notNull(),
   preTaxAmount: decimal("preTaxAmount", { precision: 14, scale: 2 }).default("0").notNull(),
   taxRate: decimal("taxRate", { precision: 5, scale: 2 }).default("15").notNull(),
@@ -163,6 +164,7 @@ export const collections = mysqlTable("collections", {
 export const payroll = mysqlTable("payroll", {
   id: int("id").autoincrement().primaryKey(),
   projectId: int("projectId").notNull(),
+  stageId: int("stageId"),
   employeeName: varchar("employeeName", { length: 255 }).notNull(),
   employeeCode: varchar("employeeCode", { length: 64 }),
   month: int("month").notNull(),
@@ -171,6 +173,7 @@ export const payroll = mysqlTable("payroll", {
   preTaxAmount: decimal("preTaxAmount", { precision: 14, scale: 2 }).default("0").notNull(),
   taxAmount: decimal("taxAmount", { precision: 14, scale: 2 }).default("0").notNull(),
   totalAmount: decimal("totalAmount", { precision: 14, scale: 2 }).default("0").notNull(),
+  paidAmount: decimal("paidAmount", { precision: 14, scale: 2 }).default("0").notNull(),
   status: mysqlEnum("status", ["draft", "pending", "approved", "paid"]).default("draft").notNull(),
   createdBy: int("createdBy"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -196,6 +199,7 @@ export const certificates = mysqlTable("certificates", {
 export const custody = mysqlTable("custody", {
   id: int("id").autoincrement().primaryKey(),
   projectId: int("projectId").notNull(),
+  stageId: int("stageId"),
   holderName: varchar("holderName", { length: 255 }).notNull(),
   issueDate: date("issueDate"),
   issuedAmount: decimal("issuedAmount", { precision: 14, scale: 2 }).default("0").notNull(),
@@ -208,6 +212,8 @@ export const custody = mysqlTable("custody", {
 export const attendance = mysqlTable("attendance", {
   id: int("id").autoincrement().primaryKey(),
   projectId: int("projectId").notNull(),
+  stageId: int("stageId"),
+  employeeCode: varchar("employeeCode", { length: 64 }),
   employeeName: varchar("employeeName", { length: 255 }).notNull(),
   attendanceDate: date("attendanceDate").notNull(),
   checkIn: varchar("checkIn", { length: 16 }),

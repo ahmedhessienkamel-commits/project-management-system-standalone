@@ -326,3 +326,11 @@
 
 - [x] Complete the consolidated workbook pass covering renamed costs/expenses, payroll due tracking, unified stages, categorized cost center, and clock-style timers
 - [x] Run one final end-to-end workbook validation and deliver the tested file
+
+- [ ] Complete web ERP parity with the Excel operating model while preserving one-time source entry
+- [ ] Add and validate missing operational modules: detailed cost-center line items, materials/cost types, payroll due tracking, custody, attendance, certificates, supplier statements, attachments, and exports
+- [ ] Complete role-based permissions, approval workflows, audit trail, project isolation, and user management for the ERP
+- [ ] Reconcile web dashboard and reports against the unified workbook logic with end-to-end integration tests
+
+- [x] Build a line-by-line Excel-to-web parity matrix covering every requested field, rule, dropdown, calculation, report, and workflow
+- [ ] Do not declare web parity complete until every matrix item has a working UI, backend rule, and passing test

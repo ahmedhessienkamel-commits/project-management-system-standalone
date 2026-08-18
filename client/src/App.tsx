@@ -11,7 +11,8 @@ import Approvals from "./pages/Approvals";
 import ProjectDetails from "./pages/ProjectDetails";
 import SalesCollections from "./pages/SalesCollections";
 import Reports from "./pages/Reports";
-import Users from "./pages/Users";
+import Users from "@/pages/Users";
+import Operations from "@/pages/Operations";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -22,6 +23,7 @@ function Router() {
       <Route path={"/projects"} component={Projects} />
       <Route path={"/sales"} component={SalesCollections} />
       <Route path={"/transactions"} component={Finance} />
+      <Route path={"/operations"} component={Operations} />
       <Route path={"/approvals"} component={Approvals} />
       <Route path={"/reports"} component={Reports} />
       <Route path={"/users"} component={Users} />

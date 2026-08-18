@@ -32,6 +32,7 @@ const menuItems = [
   { icon: ClipboardList, label: "المشاريع والمراحل", path: "/projects" },
   { icon: WalletCards, label: "المبيعات والتحصيلات", path: "/sales" },
   { icon: WalletCards, label: "المعاملات المالية", path: "/transactions" },
+  { icon: ClipboardList, label: "الوحدات التشغيلية", path: "/operations" },
   { icon: FileText, label: "الموافقات والمستندات", path: "/approvals" },
   { icon: BarChart3, label: "التقارير", path: "/reports" },
   { icon: Users, label: "المستخدمون والصلاحيات", path: "/users" },
