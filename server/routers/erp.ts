@@ -4,7 +4,7 @@ import { approvalRequests, auditLogs, attendance, attachments, certificates, col
 import { getDb } from "../db";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
-import { calculateExpenseTotals, calculateFinancialSummaryTotals, calculatePayrollTotals, projectHealthReasons, projectHealthStatus, projectNotificationTriggers } from "../erpCalculations";
+import { calculateExpenseTotals, calculateFinancialSummaryTotals, calculatePayrollTotals, canAccessProject, projectHealthReasons, projectHealthStatus, projectNotificationTriggers } from "../erpCalculations";
 
 const projectStatus = z.enum(["planning", "active", "paused", "completed", "archived"]);
 
@@ -21,7 +21,7 @@ async function getAllowedProjectIds(db: NonNullable<Awaited<ReturnType<typeof ge
 
 async function assertProjectAccess(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, ctx: { user: { id: number; role: string } }, projectId: number) {
   const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
-  if (allowed && !allowed.has(projectId)) throw new TRPCError({ code: "FORBIDDEN", message: "ليس لديك صلاحية على هذا المشروع" });
+  if (!canAccessProject(ctx.user.role, allowed, projectId)) throw new TRPCError({ code: "FORBIDDEN", message: "ليس لديك صلاحية على هذا المشروع" });
 }
 
 async function assertPeriodOpen(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, ctx: { user: { role: string } }, projectId: number, date: Date) {
@@ -150,19 +150,23 @@ export const erpRouter = router({
     summary: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
-      const [allProjectRows, stageRows, expenseRows, collectionRows, approvalRows, attachmentRows] = await Promise.all([
+      const [allProjectRows, stageRows, expenseRows, collectionRows, approvalRows, attachmentRows, salesRows, payrollRows] = await Promise.all([
         db.select().from(projects),
         db.select().from(stages),
         db.select().from(expenses),
         db.select().from(collections),
         db.select().from(approvalRequests),
         db.select().from(attachments),
+        db.select().from(sales),
+        db.select().from(payroll),
       ]);
       const projectRows = allowed ? allProjectRows.filter((row) => allowed.has(row.id)) : allProjectRows;
       const summary = projectRows.map((project) => {
         const projectStages = stageRows.filter((stage) => stage.projectId === project.id);
         const projectExpenses = expenseRows.filter((expense) => expense.projectId === project.id && ["approved", "posted"].includes(expense.status));
         const projectCollections = collectionRows.filter((collection) => collection.projectId === project.id && collection.status === "received");
+        const projectSales = salesRows.filter((sale) => sale.projectId === project.id && sale.status === "confirmed");
+        const projectPayroll = payrollRows.filter((row) => row.projectId === project.id && ["approved", "posted"].includes(row.status));
         const projectApprovals = approvalRows.filter((approval) => approval.projectId === project.id && approval.status === "pending");
         const now = new Date();
         const approvalSlaMs = 3 * 24 * 60 * 60 * 1000;
@@ -186,6 +190,8 @@ export const erpRouter = router({
         const actual = projectExpenses.reduce((sum, expense) => sum + Number(expense.totalAmount || 0), 0);
         const paid = projectExpenses.reduce((sum, expense) => sum + Number(expense.paidAmount || 0), 0);
         const collectionsReceived = projectCollections.reduce((sum, collection) => sum + Number(collection.amount || 0), 0);
+        const recognizedRevenue = projectSales.reduce((sum, sale) => sum + Number(sale.recognizedRevenue || 0), 0);
+        const payrollOutstanding = projectPayroll.reduce((sum, row) => sum + Math.max(Number(row.totalAmount || 0) - Number(row.paidAmount || 0), 0), 0);
         const cashGap = Math.max(paid - collectionsReceived, 0);
         const budgetUsage = planned ? Math.round((actual / planned) * 100) : 0;
         const delayedStages = projectStages.filter((stage) => stage.status === "delayed").length + overdueStages.length;
@@ -198,6 +204,8 @@ export const erpRouter = router({
           paidCost: paid,
           outstandingCost: Math.max(actual - paid, 0),
           collectionsReceived,
+          recognizedRevenue,
+          payrollOutstanding,
           cashGap,
           pendingApprovals: projectApprovals.length,
           overdueApprovals,

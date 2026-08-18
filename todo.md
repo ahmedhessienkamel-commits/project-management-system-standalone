@@ -35,7 +35,7 @@
 - [x] Add approval workflows for expenses, payroll, certificates, and collections
 - [ ] Add audit trail for edits, approvals, reversals, and deletions
 - [x] Add project health alerts for budget usage, schedule delay, cash gap, and overdue approvals
-- [ ] Add project-level access boundaries for all reads/writes and cross-project comparison dashboards
+- [x] Add project-level access boundaries for all reads/writes and cross-project comparison dashboards
 - [ ] Add configurable approval thresholds by project, transaction type, and amount
 - [x] Add notification center for pending approvals, budget breaches, and missing documents with generation rules and tests
 - [ ] Add smart recurring transaction templates and duplicate-transaction warnings
@@ -337,3 +337,9 @@
 
 - [x] Build explicit revenue, expense, payroll, and tax report views with project and period filters in the web reports module
 - [x] Add tests covering revenue, expense, payroll, tax, supplier statement, cash-flow, and project-performance report totals
+
+- [x] Audit every ERP router read/write endpoint, including vendor and administrative queries, for consistent project-membership enforcement
+- [x] Add permission tests proving non-admin users cannot read or write outside assigned projects across ERP modules and comparison dashboards
+
+- [x] Redesign homepage shortcut cards with a polished visual hierarchy, balanced spacing, clear color states, icons, and clickable detail links
+- [x] Verify the redesigned shortcut cards remain readable and responsive in Arabic RTL desktop and mobile layouts

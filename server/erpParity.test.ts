@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateExpenseTotals, calculateFinancialSummaryTotals, calculatePayrollTotals, projectHealthStatus, projectNotificationTriggers } from "./erpCalculations";
+import { calculateExpenseTotals, calculateFinancialSummaryTotals, calculatePayrollTotals, canAccessProject, projectHealthStatus, projectNotificationTriggers } from "./erpCalculations";
 
 describe("Excel parity financial rules", () => {
   it("calculates material cost before tax, tax, and after tax", () => {
@@ -22,6 +22,12 @@ describe("Excel parity financial rules", () => {
 
   it("marks an 80-percent budget usage as warning", () => {
     expect(projectHealthStatus({ budgetUsage: 80, progress: 65, delayedStages: 0 })).toBe("warning");
+  });
+
+  it("enforces project access boundaries", () => {
+    expect(canAccessProject("admin", new Set([1]), 99)).toBe(true);
+    expect(canAccessProject("user", new Set([1]), 1)).toBe(true);
+    expect(canAccessProject("user", new Set([1]), 2)).toBe(false);
   });
 
   it("creates notification triggers for project risks", () => {

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { trpc } from "@/lib/trpc";
-import { ArrowLeft, CalendarClock, CheckCircle2, CircleDollarSign, FolderKanban, Plus, ShieldAlert, WalletCards } from "lucide-react";
+import { ArrowLeft, CalendarClock, CheckCircle2, CircleDollarSign, Clock3, FileCheck2, FolderKanban, HandCoins, Landmark, Plus, ReceiptText, ShieldAlert, WalletCards } from "lucide-react";
 import { useLocation } from "wouter";
 
 const statusLabels = {
@@ -23,6 +23,11 @@ export default function Home() {
   const totalOutstanding = summaries.reduce((sum, item) => sum + item.outstandingCost, 0);
   const criticalCount = summaries.filter((item) => item.status === "critical").length;
   const warningCount = summaries.filter((item) => item.status === "warning").length;
+  const totalRevenue = summaries.reduce((sum, item) => sum + item.recognizedRevenue, 0);
+  const totalCollections = summaries.reduce((sum, item) => sum + item.collectionsReceived, 0);
+  const totalPayrollOutstanding = summaries.reduce((sum, item) => sum + item.payrollOutstanding, 0);
+  const totalCashGap = summaries.reduce((sum, item) => sum + item.cashGap, 0);
+  const totalPendingApprovals = summaries.reduce((sum, item) => sum + item.pendingApprovals, 0);
 
   return (
     <DashboardLayout>
@@ -41,10 +46,15 @@ export default function Home() {
           </header>
 
           <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <MetricCard icon={FolderKanban} label="المشاريع النشطة" value={String(summaries.filter((item) => item.project.status === "active").length)} hint={`${summaries.length} إجمالي المشاريع`} tone="blue" />
-            <MetricCard icon={CircleDollarSign} label="الميزانية المخططة" value={`${money.format(totalBudget)} ر.س`} hint="مجموع مراحل المشاريع" tone="gold" />
-            <MetricCard icon={WalletCards} label="التكلفة الفعلية" value={`${money.format(totalActual)} ر.س`} hint={`${money.format(totalOutstanding)} ر.س مستحق`} tone="rose" />
-            <MetricCard icon={ShieldAlert} label="يحتاج متابعة" value={String(warningCount + criticalCount)} hint={`${criticalCount} حالة حرجة`} tone="amber" />
+            <MetricCard icon={FolderKanban} label="المشاريع النشطة" value={String(summaries.filter((item) => item.project.status === "active").length)} hint={`${summaries.length} إجمالي المشاريع`} tone="blue" onClick={() => setLocation("/projects")} />
+            <MetricCard icon={Landmark} label="الميزانية المخططة" value={`${money.format(totalBudget)} ر.س`} hint="من العقد والمراحل" tone="gold" onClick={() => setLocation("/reports")} />
+            <MetricCard icon={WalletCards} label="التكلفة الفعلية" value={`${money.format(totalActual)} ر.س`} hint={`${money.format(totalOutstanding)} ر.س مستحق`} tone="rose" onClick={() => setLocation("/finance")} />
+            <MetricCard icon={ReceiptText} label="المصروفات المستحقة" value={`${money.format(totalOutstanding + totalPayrollOutstanding)} ر.س`} hint="تكاليف ورواتب غير مدفوعة" tone="amber" onClick={() => setLocation("/finance")} />
+            <MetricCard icon={CircleDollarSign} label="الإيراد المعترف به" value={`${money.format(totalRevenue)} ر.س`} hint="من مبيعات الوحدات" tone="green" onClick={() => setLocation("/sales")} />
+            <MetricCard icon={HandCoins} label="التحصيلات" value={`${money.format(totalCollections)} ر.س`} hint="الدفعات المستلمة" tone="teal" onClick={() => setLocation("/sales")} />
+            <MetricCard icon={Clock3} label="رواتب مستحقة" value={`${money.format(totalPayrollOutstanding)} ر.س`} hint="غير مدفوعة حتى الآن" tone="violet" onClick={() => setLocation("/finance")} />
+            <MetricCard icon={WalletCards} label="فجوة السيولة" value={`${money.format(totalCashGap)} ر.س`} hint="تمويل مطلوب" tone="rose" onClick={() => setLocation("/reports")} />
+            <MetricCard icon={FileCheck2} label="موافقات معلقة" value={String(totalPendingApprovals)} hint={`${criticalCount} حالة حرجة`} tone="slate" onClick={() => setLocation("/approvals")} />
           </section>
 
           <section className="grid gap-5 lg:grid-cols-[1.4fr_0.6fr]">
@@ -84,9 +94,9 @@ export default function Home() {
   );
 }
 
-function MetricCard({ icon: Icon, label, value, hint, tone }: { icon: typeof FolderKanban; label: string; value: string; hint: string; tone: "blue" | "gold" | "rose" | "amber" }) {
-  const colors = { blue: "bg-blue-50 text-blue-700", gold: "bg-amber-50 text-amber-700", rose: "bg-rose-50 text-rose-700", amber: "bg-orange-50 text-orange-700" };
-  return <Card className="border-0 shadow-sm"><CardContent className="flex items-start justify-between p-5"><div><p className="text-sm text-slate-500">{label}</p><p className="mt-2 text-2xl font-bold tracking-tight text-[#18324b]">{value}</p><p className="mt-1 text-xs text-slate-400">{hint}</p></div><div className={`rounded-2xl p-3 ${colors[tone]}`}><Icon className="h-5 w-5" /></div></CardContent></Card>;
+function MetricCard({ icon: Icon, label, value, hint, tone, onClick }: { icon: typeof FolderKanban; label: string; value: string; hint: string; tone: "blue" | "gold" | "rose" | "amber" | "green" | "teal" | "violet" | "slate"; onClick?: () => void }) {
+  const colors = { blue: "bg-blue-50 text-blue-700", gold: "bg-amber-50 text-amber-700", rose: "bg-rose-50 text-rose-700", amber: "bg-orange-50 text-orange-700", green: "bg-emerald-50 text-emerald-700", teal: "bg-cyan-50 text-cyan-700", violet: "bg-violet-50 text-violet-700", slate: "bg-slate-100 text-slate-700" };
+  return <Card onClick={onClick} className={`group border-0 shadow-sm transition duration-200 ${onClick ? "cursor-pointer hover:-translate-y-0.5 hover:shadow-md" : ""}`}><CardContent className="flex min-h-[132px] items-start justify-between p-5"><div><p className="text-sm text-slate-500">{label}</p><p className="mt-2 text-2xl font-bold tracking-tight text-[#18324b]">{value}</p><p className="mt-1 text-xs text-slate-400">{hint}</p></div><div className={`rounded-2xl p-3 transition group-hover:scale-105 ${colors[tone]}`}><Icon className="h-5 w-5" /></div></CardContent></Card>;
 }
 
 function InsightRow({ icon: Icon, label, value, tone }: { icon: typeof CheckCircle2; label: string; value: string; tone: string }) {

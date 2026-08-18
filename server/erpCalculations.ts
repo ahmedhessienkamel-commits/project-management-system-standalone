@@ -23,6 +23,10 @@ export function calculateFinancialSummaryTotals({ sales, collections, expenses, 
   return { revenue, collectionsReceived, expensesPreTax, expensesTax, expensesTotal, expensesPaid, payrollTotal, payrollPaid, payrollOutstanding: Math.max(payrollTotal - payrollPaid, 0) };
 }
 
+export function canAccessProject(role: string, allowedProjectIds: Set<number> | null, projectId: number) {
+  return role === "admin" || allowedProjectIds === null || allowedProjectIds.has(projectId);
+}
+
 export function projectNotificationTriggers({ projectName, pendingApprovals, overdueApprovals = 0, scheduleVariancePct = 0, budgetUsage, cashGap, hasAttachments }: { projectName: string; pendingApprovals: number; overdueApprovals?: number; scheduleVariancePct?: number; budgetUsage: number; cashGap: number; hasAttachments: boolean }) {
   const triggers: Array<{ type: string; title: string; message: string }> = [];
   if (pendingApprovals > 0) triggers.push({ type: "approval", title: `موافقات معلقة — ${projectName}`, message: `يوجد ${pendingApprovals} طلب موافقة معلق في المشروع.` });
