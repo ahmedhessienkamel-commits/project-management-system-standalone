@@ -14,18 +14,18 @@
 - [x] Design database entities for projects, stages, units, sales, collections, expenses, payroll, contractors, certificates, custody, attachments, approvals, notifications, audit logs, and period locks
 - [x] Build Arabic RTL dashboard and navigation for the ERP
 - [x] Build an executive project-health dashboard showing plan versus actual at a glance
-- [ ] Add project status rules for budget, schedule, progress, cash flow, and approvals
-- [ ] Add drill-down explanations for every red or yellow project indicator
-- [ ] Integrate cash-flow health rules using collections, expenses, paid amounts, outstanding balances, and funding gaps
-- [ ] Integrate approval health rules using pending and overdue approval counts and thresholds
-- [ ] Expand schedule health rules using planned dates versus actual progress
-- [ ] Surface all project health drivers in the dashboard summary
+- [x] Add project status rules for budget, schedule, progress, cash flow, and approvals
+- [x] Add drill-down explanations for every red or yellow project indicator
+- [x] Integrate cash-flow health rules using collections, expenses, paid amounts, outstanding balances, and funding gaps
+- [x] Integrate approval health rules using pending and overdue approval counts and thresholds
+- [x] Expand schedule health rules using planned dates versus actual progress
+- [x] Surface all project health drivers in the dashboard summary
 - [ ] Automatically create approval requests when expenses, payroll, certificates, and collections are submitted
-- [ ] Calculate approval age and overdue SLA by project
-- [ ] Include outstanding balances and explicit funding-gap thresholds in project health
-- [ ] Add collection entry and cash-flow reporting so liquidity indicators are end-to-end
-- [ ] Compare planned schedule progress with actual completion progress
-- [ ] Add clickable project health details for budget, cash, approvals, and schedule
+- [x] Calculate approval age and overdue SLA by project
+- [x] Include outstanding balances and explicit funding-gap thresholds in project health
+- [x] Add collection entry and cash-flow reporting so liquidity indicators are end-to-end
+- [x] Compare planned schedule progress with actual completion progress
+- [x] Add clickable project health details for budget, cash, approvals, and schedule
 - [ ] Build centralized data-entry modules with validations and audit-friendly links
 - [ ] Build revenue, expense, payroll, tax, supplier statement, cash-flow, and project-performance reports
 - [ ] Import and reconcile legacy Excel data without duplicating transactions
@@ -35,12 +35,12 @@
 - [ ] Add approval workflows for expenses, payroll, certificates, and collections
 - [ ] Add audit trail for edits, approvals, reversals, and deletions
 - [ ] Add project health alerts for budget usage, schedule delay, cash gap, and overdue approvals
-- [ ] Add project-level access boundaries and cross-project comparison dashboards
+- [ ] Add project-level access boundaries for all reads/writes and cross-project comparison dashboards
 - [ ] Add configurable approval thresholds by project, transaction type, and amount
 - [ ] Add notification center for pending approvals, budget breaches, and missing documents
 - [ ] Add smart recurring transaction templates and duplicate-transaction warnings
 - [ ] Add document completeness checks for contractors, certificates, and payment requests
-- [ ] Add exportable management reports and period-lock controls
+- [ ] Add management comparison reports and project-detail reporting; export and period-lock controls remain pending
 - [ ] Research and compare the lowest-cost hosting options with database persistence, backups, and multi-user access
 
 
@@ -63,6 +63,22 @@
 - [ ] Add secure Meta app credentials and token encryption key to the project environment
 
 ## Spreadsheet enhancement history
+
+- [x] Verify whether stage sheets such as excavation are operationally linked to expense entries or only reference/data sheets
+- [x] Assess whether stage sheets can be consolidated into one central stages-and-budgets page without breaking expense/report links
+- [x] Create one central stages report sourced from the main contract and linked expense, payroll, custody, certificate, and collection data
+- [x] Keep legacy stage sheets hidden or preserved until the central report passes reconciliation
+- [x] Test that stage totals update from transaction entries without duplicate counting
+- [x] Add explicit certificate and collection metrics to the central stages report or document their scope clearly
+- [x] Run an end-to-end transaction test for expense, payroll, custody, certificate, and collection updates
+- [x] Verify all legacy stage sheets still exist or are intentionally hidden after reconciliation
+
+
+- [x] Fix tax-rate and tax-amount cells that are displayed as dates; preserve numeric values and formulas
+
+
+- [x] Verify whether approved budget input is pre-tax or tax-inclusive and document the linked calculation rule
+
 
 - [ ] Add monthly attendance and departure register with employee, stage, date, check-in, check-out, hours, status, and notes
 - [ ] Add stage-level cash flow page with cash in, cash out, net gap, cumulative gap, and funding required
@@ -264,3 +280,9 @@
 - [x] نقل عمود المشروع المرتبط بالراتب إلى موضع مبكر في صفحة الرواتب مع الحفاظ على صيغ التقارير
 - [x] إعادة بناء تخطيط جدول الرواتب بحيث يظهر المشروع بجوار تصنيف الراتب قبل بيانات المبلغ
 - [x] إعادة اختبار القائمة واختيار المورد وفصل وادي نمار عن القدية بعد إعادة الترتيب
+
+- [ ] Enforce single-entry data ownership: each expense, payroll, custody, certificate, sale, and collection is entered once in its designated source register and never re-entered in reports
+- [ ] Document the source-register-to-report map and label report sheets as read-only/calculated views
+- [ ] Test that one transaction propagates to all linked views exactly once without duplicate counting
+
+- [x] Prepare and deliver the updated workbook with one-time source entry and linked calculated reports

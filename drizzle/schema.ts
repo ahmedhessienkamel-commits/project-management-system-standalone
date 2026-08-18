@@ -51,6 +51,7 @@ export const stages = mysqlTable("stages", {
   plannedBudget: decimal("plannedBudget", { precision: 14, scale: 2 }).default("0").notNull(),
   plannedStart: date("plannedStart"),
   plannedEnd: date("plannedEnd"),
+  actualProgress: decimal("actualProgress", { precision: 5, scale: 2 }).default("0").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

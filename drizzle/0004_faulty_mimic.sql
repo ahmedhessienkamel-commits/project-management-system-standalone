@@ -1,0 +1,1 @@
+ALTER TABLE `stages` ADD `actualProgress` decimal(5,2) DEFAULT '0' NOT NULL;

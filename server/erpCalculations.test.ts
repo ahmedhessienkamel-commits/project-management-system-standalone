@@ -25,5 +25,6 @@ describe("ERP financial rules", () => {
   it("returns critical for a large cash gap or approval backlog", () => {
     expect(projectHealthStatus({ budgetUsage: 40, progress: 60, delayedStages: 0, cashGapRatio: 0.5 })).toBe("critical");
     expect(projectHealthStatus({ budgetUsage: 40, progress: 60, delayedStages: 0, pendingApprovals: 3 })).toBe("critical");
+    expect(projectHealthStatus({ budgetUsage: 40, progress: 60, delayedStages: 0, overdueApprovals: 1 })).toBe("critical");
   });
 });

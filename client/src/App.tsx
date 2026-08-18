@@ -9,6 +9,9 @@ import Projects from "./pages/Projects";
 import Finance from "./pages/Finance";
 import Approvals from "./pages/Approvals";
 import ProjectDetails from "./pages/ProjectDetails";
+import SalesCollections from "./pages/SalesCollections";
+import Reports from "./pages/Reports";
+import Users from "./pages/Users";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -17,10 +20,11 @@ function Router() {
       <Route path={"/"} component={Home} />
       <Route path={"/projects/:id"} component={ProjectDetails} />
       <Route path={"/projects"} component={Projects} />
+      <Route path={"/sales"} component={SalesCollections} />
       <Route path={"/transactions"} component={Finance} />
       <Route path={"/approvals"} component={Approvals} />
-      <Route path={"/reports"} component={Home} />
-      <Route path={"/users"} component={Home} />
+      <Route path={"/reports"} component={Reports} />
+      <Route path={"/users"} component={Users} />
       <Route path={"/settings"} component={Home} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}

@@ -30,6 +30,7 @@ import { Button } from "./ui/button";
 const menuItems = [
   { icon: LayoutDashboard, label: "لوحة التنفيذ", path: "/" },
   { icon: ClipboardList, label: "المشاريع والمراحل", path: "/projects" },
+  { icon: WalletCards, label: "المبيعات والتحصيلات", path: "/sales" },
   { icon: WalletCards, label: "المعاملات المالية", path: "/transactions" },
   { icon: FileText, label: "الموافقات والمستندات", path: "/approvals" },
   { icon: BarChart3, label: "التقارير", path: "/reports" },
