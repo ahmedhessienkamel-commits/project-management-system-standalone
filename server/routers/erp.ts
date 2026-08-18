@@ -54,6 +54,10 @@ export const erpRouter = router({
   }),
 
   members: router({
+    mine: protectedProcedure.query(async ({ ctx }) => {
+      const db = requireDb(await getDb());
+      return db.select().from(projectMembers).where(eq(projectMembers.userId, ctx.user.id));
+    }),
     list: adminProcedure.query(async () => {
       const db = requireDb(await getDb());
       return db.select().from(projectMembers).orderBy(projectMembers.createdAt);

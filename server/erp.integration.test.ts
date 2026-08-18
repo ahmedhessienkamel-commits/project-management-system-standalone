@@ -83,6 +83,8 @@ describe("ERP sales and collections API flow", () => {
 
   it("creates a confirmed unit sale, received collection, and dashboard summary from the same state", async () => {
     const caller = appRouter.createCaller(context());
+    const memberships = await caller.erp.members.mine();
+    expect(memberships).toEqual(expect.arrayContaining([expect.objectContaining({ projectId: 1, userId: 1, projectRole: "finance" })]));
     const sale = await caller.erp.sales.create({ projectId: 1, unitId: 10, customerName: "عميل الاختبار", preTaxAmount: 250000, taxRate: 15 });
     await caller.erp.collections.create({ projectId: 1, saleId: sale.id, amount: 75000, receiptReference: "RC-001" });
     await caller.erp.payroll.create({ projectId: 1, employeeName: "أحمد", employeeCode: "EMP-001", month: 8, year: 2026, classification: "project", amount: 12000, paidAmount: 0 });
