@@ -198,11 +198,12 @@ export const erpRouter = router({
         const expectedScheduleProgress = timeline.weight ? Math.round((timeline.expected / timeline.weight) * 100) : 0;
         const scheduleVariancePct = Math.max(expectedScheduleProgress - progress, 0);
         const planned = projectStages.reduce((sum, stage) => sum + Number(stage.plannedBudget || 0), 0);
-        const actual = projectExpenses.reduce((sum, expense) => sum + Number(expense.totalAmount || 0), 0);
-        const paid = projectExpenses.reduce((sum, expense) => sum + Number(expense.paidAmount || 0), 0);
-        const collectionsReceived = projectCollections.reduce((sum, collection) => sum + Number(collection.amount || 0), 0);
-        const recognizedRevenue = projectSales.reduce((sum, sale) => sum + Number(sale.recognizedRevenue || 0), 0);
-        const payrollOutstanding = projectPayroll.reduce((sum, row) => sum + Math.max(Number(row.totalAmount || 0) - Number(row.paidAmount || 0), 0), 0);
+        const financialTotals = calculateFinancialSummaryTotals({ sales: projectSales, collections: projectCollections, expenses: projectExpenses, payroll: projectPayroll });
+        const actual = financialTotals.expensesTotal + financialTotals.payrollTotal;
+        const paid = financialTotals.expensesPaid + financialTotals.payrollPaid;
+        const collectionsReceived = financialTotals.collectionsReceived;
+        const recognizedRevenue = financialTotals.revenue;
+        const payrollOutstanding = financialTotals.payrollOutstanding;
         const cashGap = Math.max(paid - collectionsReceived, 0);
         const budgetUsage = planned ? Math.round((actual / planned) * 100) : 0;
         const delayedStages = projectStages.filter((stage) => stage.status === "delayed").length + overdueStages.length;

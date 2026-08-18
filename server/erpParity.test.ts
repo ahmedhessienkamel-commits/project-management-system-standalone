@@ -54,4 +54,14 @@ describe("Excel parity financial rules", () => {
       payroll: [{ totalAmount: "800", paidAmount: "300" }],
     })).toEqual({ revenue: 5000, collectionsReceived: 1200, expensesPreTax: 1000, expensesTax: 150, expensesTotal: 1150, expensesPaid: 500, payrollTotal: 800, payrollPaid: 300, payrollOutstanding: 500 });
   });
+
+  it("propagates a unit sale and received collection into executive shortcut totals", () => {
+    const financial = calculateFinancialSummaryTotals({
+      sales: [{ recognizedRevenue: "250000" }],
+      collections: [{ amount: "75000", status: "received" }],
+      expenses: [{ preTaxAmount: "40000", taxAmount: "6000", totalAmount: "46000", paidAmount: "30000" }],
+      payroll: [{ totalAmount: "12000", paidAmount: "9000" }],
+    });
+    expect(calculateDashboardShortcutTotals([{ plannedBudget: 300000, actualCost: financial.expensesTotal + financial.payrollTotal, outstandingCost: financial.expensesTotal - financial.expensesPaid, recognizedRevenue: financial.revenue, collectionsReceived: financial.collectionsReceived, payrollOutstanding: financial.payrollOutstanding, cashGap: 0, pendingApprovals: 0 }])).toEqual({ plannedBudget: 300000, actualCost: 58000, outstandingCost: 16000, recognizedRevenue: 250000, collectionsReceived: 75000, payrollOutstanding: 3000, cashGap: 0, pendingApprovals: 0 });
+  });
 });
