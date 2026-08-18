@@ -289,3 +289,40 @@
 
 - [x] Hide legacy stage worksheets from normal user navigation and leave المراحل الموحدة as the single visible stage report
 - [x] Verify hidden stage worksheets remain intact as formula sources and do not break workbook calculations
+
+- [ ] Rename the unified stage report to مراحل البناء and hide every remaining individual construction-stage worksheet, including insulation through external works
+- [ ] Verify no individual construction-stage worksheet remains visible after the rename
+
+- [x] Keep the consolidated report name as المراحل الموحدة while hiding all individual construction-stage worksheets
+
+- [x] Delete individual construction-stage worksheets from the delivery workbook, leaving المراحل الموحدة as the only stage page
+- [x] Recalculate and verify formulas, hyperlinks, dropdown validations, and report references after deleting stage worksheets
+
+- [x] Apply direct contract-to-unified-stages linkage so stage identity and budget are entered once in العقد الرئيسي and reflected automatically
+- [x] Validate one-time entry propagation across expenses, payroll, custody, certificates, collections, and dashboard without duplicate totals
+
+- [x] Add payroll due/paid/outstanding calculations with tax-free treatment
+- [x] Link outstanding payroll to the home-page accrued-expenses shortcut without double counting
+- [x] Test paid and unpaid payroll scenarios across payroll, expenses, dashboard, and unified stages
+
+- [x] Set project timer dates to 2026-08-01 through 2029-01-31 for the 30-month project duration
+- [x] Set excavation stage timer dates to 2026-08-01 through 2026-08-31 and validate countdown edge cases
+
+- [x] Style the project and current-stage countdown shortcuts as compact circular clock-style widgets on الرئيسية
+
+- [x] Add a centralized project-materials register with material, unit, quantity, pre-tax amount, VAT, total, paid, outstanding, stage, cost center, supplier, and project classification
+- [x] Link material totals to project cost, stage cost, cost center, dashboard, and accrued expenses without duplicate counting
+- [x] Test material tax, payment, stage propagation, and total-cost calculations
+
+- [x] Rename المصروفات to التكاليف والمصروفات and add تكلفة خامات as a selectable transaction type
+- [x] Ensure material transactions use the same tax, payment, stage, cost-center, due, and dashboard paths without duplicate entry
+
+- [x] Expand the transaction-type dropdown to cover materials, operating tools, equipment rental, contractors, transport, labor, maintenance, services, operating, and administrative costs
+- [x] Verify each dropdown value maps to the correct project/company classification and reports
+
+- [x] Expand مركز التكلفة to show each contract/material cost line such as iron, cement, ceramic, insulation, tools, and equipment under its stage
+- [x] Link line-item budgets and actual costs from العقد الرئيسي and التكاليف والمصروفات without duplicate totals
+- [x] Test line-item cost-center propagation and variance calculations
+
+- [x] Complete the consolidated workbook pass covering renamed costs/expenses, payroll due tracking, unified stages, categorized cost center, and clock-style timers
+- [x] Run one final end-to-end workbook validation and deliver the tested file
