@@ -23,6 +23,7 @@ function Router() {
       <Route path={"/projects"} component={Projects} />
       <Route path={"/sales"} component={SalesCollections} />
       <Route path={"/transactions"} component={Finance} />
+      <Route path={"/finance"} component={Finance} />
       <Route path={"/operations"} component={Operations} />
       <Route path={"/approvals"} component={Approvals} />
       <Route path={"/reports"} component={Reports} />
