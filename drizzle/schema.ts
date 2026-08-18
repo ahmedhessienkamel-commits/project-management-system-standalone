@@ -140,6 +140,7 @@ export const sales = mysqlTable("sales", {
   id: int("id").autoincrement().primaryKey(),
   projectId: int("projectId").notNull(),
   unitId: int("unitId").notNull(),
+  stageId: int("stageId"),
   customerName: varchar("customerName", { length: 255 }).notNull(),
   customerPhone: varchar("customerPhone", { length: 64 }),
   saleDate: date("saleDate"),

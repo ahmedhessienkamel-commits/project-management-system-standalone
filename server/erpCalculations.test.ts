@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { calculateExpenseTotals, calculatePayrollTotals, projectHealthStatus } from "./erpCalculations";
-import { calculateAttendanceHours, filterAttendanceByMonth } from "../shared/attendance";
+import { calculateAttendanceHours, filterAttendanceByMonth, summarizeAttendanceExceptions } from "../shared/attendance";
 
 describe("ERP financial rules", () => {
   it("calculates pre-tax, VAT, and total for expenses", () => {
@@ -32,6 +32,7 @@ describe("ERP financial rules", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]).toEqual(expect.objectContaining({ id: 1, projectId: 1, attendanceDate: "2026-08-05", checkIn: "08:00", checkOut: "17:00", employeeName: "أحمد", stageId: 2, status: "present", notes: "" }));
     expect(calculateAttendanceHours(rows[0].checkIn, rows[0].checkOut)).toBe(9);
+    expect(summarizeAttendanceExceptions([{ projectId: 1, attendanceDate: "2026-08-05", status: "late" }, { projectId: 1, attendanceDate: "2026-08-06", status: "absent" }, { projectId: 2, attendanceDate: "2026-08-06", status: "late" }], 1)).toEqual({ total: 2, absent: 1, late: 1 });
   });
 
   it("returns critical for a large cash gap or approval backlog", () => {

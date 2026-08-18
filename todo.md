@@ -81,9 +81,9 @@
 
 
 - [x] Add monthly attendance and departure register with employee, stage, date, check-in, check-out, hours, status, and notes
-- [ ] Add stage-level cash flow page with cash in, cash out, net gap, cumulative gap, and funding required
-- [ ] Link stage cash out to expenses, entitlements, payroll, and collected payments where stage identifiers exist
-- [ ] Add management summary, filters, conditional alerts, and professional formatting for attendance and cash-flow pages
+- [x] Add stage-level cash flow page with cash in, cash out, net gap, cumulative gap, and funding required
+- [x] Link stage cash out to expenses, entitlements, payroll, and collected payments where stage identifiers exist
+- [x] Add management summary, filters, conditional alerts, and professional formatting for attendance and cash-flow pages
 - [ ] Validate formulas, empty-input behavior, and dashboard links in the enhanced workbook
 
 ## Full project-control workbook rebuild
@@ -358,7 +358,7 @@
 > ملاحظة: البنود القديمة الخاصة بملف Excel محفوظة كسجل تاريخي ولا تعني أن النسخة الحالية تحتاج إعادة تنفيذها.
 
 - [x] منع أدوار viewer/reviewer من إنشاء مصروفات ورواتب ومبيعات وتحصيلات، مع السماح للمدير والمالية والإدخال ضمن نطاق المشروع
-- [ ] توسيع حارس الصلاحيات إلى العهد والمستخلصات والمرفقات وتعديلات السجلات
+- [x] توسيع حارس الصلاحيات إلى العهد والمستخلصات والمرفقات وتعديلات السجلات
 
 - [x] إصلاح مسار صفحة المعاملات المالية الذي ظهر 404 عند فتح /finance والتحقق من الرابط الصحيح في التنقل
 
@@ -393,3 +393,7 @@
 - [x] توسيع اختبار التتبع التكاملي ليشمل المورد العام والمستخلص والعهدة والمرفق والحضور والمبيعات والتحصيلات والمصروفات والرواتب
 
 - [x] إضافة اختبار متصفح smoke للمسارات الأساسية ورسالة التسجيل مرة واحدة، مع توثيق توقف التفاعل الكامل عند شاشة تسجيل الدخول المحلية
+
+- [x] إضافة stageId اختياري إلى مبيعات الوحدات وترحيل قاعدة البيانات
+- [x] إظهار اختيار المرحلة في نموذج البيع وربط التحصيلات بها داخل cashFlow المرحلي
+- [x] اختبار API لتوزيع التحصيل على المرحلة عند وجود stageId، مع بقاء قاعدة غير المصنف للحالات القديمة

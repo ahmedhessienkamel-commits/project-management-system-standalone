@@ -18,6 +18,11 @@ export function filterAttendanceByMonth(rows: AttendanceRegisterRow[], projectId
   });
 }
 
+export function summarizeAttendanceExceptions(rows: AttendanceRegisterRow[], projectId: number | undefined) {
+  const exceptions = rows.filter((row) => row.projectId === projectId && (row.status === "late" || row.status === "absent"));
+  return { total: exceptions.length, absent: exceptions.filter((row) => row.status === "absent").length, late: exceptions.filter((row) => row.status === "late").length };
+}
+
 export function calculateAttendanceHours(checkIn?: string | null, checkOut?: string | null) {
   if (!checkIn || !checkOut) return null;
   const [inHour, inMinute] = checkIn.split(":").map(Number);

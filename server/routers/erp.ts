@@ -320,14 +320,18 @@ export const erpRouter = router({
       return allowed ? rows.filter((row) => allowed.has(row.projectId)) : rows;
     }),
     create: protectedProcedure
-      .input(z.object({ projectId: z.number().int().positive(), unitId: z.number().int().positive(), customerName: z.string().trim().min(2), customerPhone: z.string().max(64).optional(), saleDate: z.string().optional(), preTaxAmount: z.number().positive(), taxRate: z.number().min(0).max(100).default(15) }))
+      .input(z.object({ projectId: z.number().int().positive(), unitId: z.number().int().positive(), stageId: z.number().int().positive().optional(), customerName: z.string().trim().min(2), customerPhone: z.string().max(64).optional(), saleDate: z.string().optional(), preTaxAmount: z.number().positive(), taxRate: z.number().min(0).max(100).default(15) }))
       .mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
         await assertProjectAccess(db, ctx, input.projectId);
         await assertProjectWrite(db, ctx, input.projectId);
         await assertPeriodOpen(db, ctx, input.projectId, input.saleDate ? new Date(input.saleDate) : new Date());
+        if (input.stageId) {
+          const stage = (await db.select().from(stages).where(eq(stages.id, input.stageId)).limit(1))[0];
+          if (!stage || stage.projectId !== input.projectId) throw new TRPCError({ code: "BAD_REQUEST", message: "المرحلة لا تتبع المشروع المحدد" });
+        }
         const totals = calculateExpenseTotals(input.preTaxAmount, input.taxRate);
-        const result = await db.insert(sales).values({ projectId: input.projectId, unitId: input.unitId, customerName: input.customerName, customerPhone: input.customerPhone || null, saleDate: input.saleDate ? new Date(input.saleDate) : null, preTaxAmount: totals.preTaxAmount.toFixed(2), taxAmount: totals.taxAmount.toFixed(2), totalAmount: totals.totalAmount.toFixed(2), recognizedRevenue: totals.preTaxAmount.toFixed(2), status: "confirmed", createdBy: ctx.user.id });
+        const result = await db.insert(sales).values({ projectId: input.projectId, unitId: input.unitId, stageId: input.stageId || null, customerName: input.customerName, customerPhone: input.customerPhone || null, saleDate: input.saleDate ? new Date(input.saleDate) : null, preTaxAmount: totals.preTaxAmount.toFixed(2), taxAmount: totals.taxAmount.toFixed(2), totalAmount: totals.totalAmount.toFixed(2), recognizedRevenue: totals.preTaxAmount.toFixed(2), status: "confirmed", createdBy: ctx.user.id });
         const saleId = Number(result[0].insertId);
         await db.update(units).set({ status: "sold" }).where(eq(units.id, input.unitId));
         await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "sale", entityId: saleId, requestedBy: ctx.user.id, status: "pending" });
@@ -620,15 +624,31 @@ export const erpRouter = router({
     cashFlow: protectedProcedure.input(z.object({ projectId: z.number().int().positive() })).query(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
       await assertProjectAccess(db, ctx, input.projectId);
-      const [expenseRows, payrollRows, custodyRows, collectionRows] = await Promise.all([
+      const [expenseRows, payrollRows, custodyRows, collectionRows, stageRows, salesRows, certificateRows] = await Promise.all([
         db.select().from(expenses).where(eq(expenses.projectId, input.projectId)),
         db.select().from(payroll).where(eq(payroll.projectId, input.projectId)),
         db.select().from(custody).where(eq(custody.projectId, input.projectId)),
         db.select().from(collections).where(eq(collections.projectId, input.projectId)),
+        db.select().from(stages).where(eq(stages.projectId, input.projectId)),
+        db.select().from(sales).where(eq(sales.projectId, input.projectId)),
+        db.select().from(certificates).where(eq(certificates.projectId, input.projectId)),
       ]);
-      const cashOut = expenseRows.reduce((sum, row) => sum + Number(row.paidAmount), 0) + payrollRows.reduce((sum, row) => sum + Number(row.paidAmount), 0) + custodyRows.reduce((sum, row) => sum + Number(row.settledAmount), 0);
-      const cashIn = collectionRows.filter((row) => row.status === "received").reduce((sum, row) => sum + Number(row.amount), 0);
-      return { cashIn, cashOut, net: cashIn - cashOut, fundingRequired: Math.max(cashOut - cashIn, 0), collections: collectionRows, expensePayments: expenseRows, payrollPayments: payrollRows, custodySettlements: custodyRows };
+      const cashOut = expenseRows.reduce((sum, row) => sum + (row.classification === "project" ? Number(row.paidAmount) : 0), 0) + payrollRows.reduce((sum, row) => sum + (row.classification === "project" ? Number(row.paidAmount) : 0), 0) + custodyRows.reduce((sum, row) => sum + Number(row.settledAmount), 0) + certificateRows.reduce((sum, row) => sum + Number(row.paidAmount), 0);
+      const receivedCollections = collectionRows.filter((row) => row.status === "received");
+      const cashIn = receivedCollections.reduce((sum, row) => sum + Number(row.amount), 0);
+      let cumulativeGap = 0;
+      const stageCashFlow: Array<{ stageId: number | null; stageName: string; cashIn: number; cashOut: number; net: number; cumulativeGap: number; fundingRequired: number; allocation: string }> = stageRows.map((stage) => {
+        const stageOut = expenseRows.filter((row) => row.stageId === stage.id && row.classification === "project").reduce((sum, row) => sum + Number(row.paidAmount), 0) + payrollRows.filter((row) => row.stageId === stage.id && row.classification === "project").reduce((sum, row) => sum + Number(row.paidAmount), 0) + custodyRows.filter((row) => row.stageId === stage.id).reduce((sum, row) => sum + Number(row.settledAmount), 0) + certificateRows.filter((row) => row.stageId === stage.id).reduce((sum, row) => sum + Number(row.paidAmount), 0);
+        const stageIn = receivedCollections.filter((collection) => salesRows.some((sale) => sale.id === collection.saleId && sale.stageId === stage.id)).reduce((sum, collection) => sum + Number(collection.amount), 0);
+        cumulativeGap += stageOut - stageIn;
+        return { stageId: stage.id, stageName: stage.name, cashIn: stageIn, cashOut: stageOut, net: stageIn - stageOut, cumulativeGap, fundingRequired: Math.max(cumulativeGap, 0), allocation: stageIn > 0 ? "stage-linked-sales-and-outflows" : "stage-linked-outflow" };
+      });
+      const unallocatedCashIn = receivedCollections.filter((collection) => !salesRows.some((sale) => sale.id === collection.saleId && sale.stageId)).reduce((sum, collection) => sum + Number(collection.amount), 0);
+      if (unallocatedCashIn) {
+        cumulativeGap -= unallocatedCashIn;
+        stageCashFlow.push({ stageId: null, stageName: "غير مصنف — يحتاج ربطًا بمرحلة", cashIn: unallocatedCashIn, cashOut: 0, net: unallocatedCashIn, cumulativeGap, fundingRequired: Math.max(cumulativeGap, 0), allocation: "collections-unallocated-because-sales-unlinked-to-stage" });
+      }
+      return { cashIn, cashOut, net: cashIn - cashOut, fundingRequired: Math.max(cashOut - cashIn, 0), collections: collectionRows, expensePayments: expenseRows, payrollPayments: payrollRows, custodySettlements: custodyRows, certificatePayments: certificateRows, stages: stageCashFlow };
     }),
     supplierStatement: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), vendorId: z.number().int().positive() })).query(async ({ ctx, input }) => {
       const db = requireDb(await getDb());

@@ -57,6 +57,13 @@
       "when": 1787081532930,
       "tag": "0007_tired_darkhawk",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1787085170443,
+      "tag": "0008_careless_killraven",
+      "breakpoints": true
     }
   ]
 }

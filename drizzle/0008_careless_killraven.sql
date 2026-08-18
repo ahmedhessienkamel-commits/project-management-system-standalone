@@ -1,0 +1,1 @@
+ALTER TABLE `sales` ADD `stageId` int;
