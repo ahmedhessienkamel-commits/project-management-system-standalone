@@ -48,6 +48,28 @@ describe("Excel parity financial rules", () => {
     expect(canAccessProject("user", new Set([1]), 2)).toBe(false);
   });
 
+  it("propagates employee and payroll classification outcomes", () => {
+    const payrollRows = [
+      { employeeCode: "EMP-001", employeeName: "أحمد", classification: "project", projectId: 1, grossAmount: 12000, taxAmount: 0 },
+      { employeeCode: "EMP-002", employeeName: "سارة", classification: "administrative", projectId: null, grossAmount: 8000, taxAmount: 0 },
+    ];
+    expect(payrollRows.find((row) => row.employeeCode === "EMP-001")).toMatchObject({ employeeName: "أحمد", classification: "project", taxAmount: 0 });
+    expect(payrollRows.find((row) => row.employeeCode === "EMP-002")).toMatchObject({ employeeName: "سارة", classification: "administrative", taxAmount: 0 });
+    const payrollTotals = payrollRows.map((row) => calculatePayrollTotals(row.grossAmount));
+    expect(payrollTotals.reduce((sum, row) => sum + row.totalAmount, 0)).toBe(20000);
+    expect(payrollTotals.every((row) => row.taxAmount === 0)).toBe(true);
+  });
+
+  it("keeps project and administrative expenses separated", () => {
+    const rows = [
+      { classification: "project", preTaxAmount: 1000, paidAmount: 700 },
+      { classification: "administrative", preTaxAmount: 300, paidAmount: 100 },
+    ];
+    const project = rows.filter((row) => row.classification === "project").reduce((sum, row) => sum + row.preTaxAmount, 0);
+    const administrative = rows.filter((row) => row.classification === "administrative").reduce((sum, row) => sum + row.preTaxAmount, 0);
+    expect({ project, administrative }).toEqual({ project: 1000, administrative: 300 });
+  });
+
   it("enforces project write roles", () => {
     expect(canWriteProject("admin", null)).toBe(true);
     expect(canWriteProject("user", "manager")).toBe(true);

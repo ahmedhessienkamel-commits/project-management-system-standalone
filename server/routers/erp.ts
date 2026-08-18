@@ -173,10 +173,10 @@ export const erpRouter = router({
       const projectRows = allowed ? allProjectRows.filter((row) => allowed.has(row.id)) : allProjectRows;
       const summary = projectRows.map((project) => {
         const projectStages = stageRows.filter((stage) => stage.projectId === project.id);
-        const projectExpenses = expenseRows.filter((expense) => expense.projectId === project.id && ["approved", "posted"].includes(expense.status));
+        const projectExpenses = expenseRows.filter((expense) => expense.projectId === project.id && expense.classification !== "administrative" && ["approved", "posted"].includes(expense.status));
         const projectCollections = collectionRows.filter((collection) => collection.projectId === project.id && collection.status === "received");
         const projectSales = salesRows.filter((sale) => sale.projectId === project.id && sale.status === "confirmed");
-        const projectPayroll = payrollRows.filter((row) => row.projectId === project.id && ["approved", "posted"].includes(row.status));
+        const projectPayroll = payrollRows.filter((row) => row.projectId === project.id && row.classification !== "administrative" && ["approved", "posted"].includes(row.status));
         const projectApprovals = approvalRows.filter((approval) => approval.projectId === project.id && approval.status === "pending");
         const projectVendors = vendorRows.filter((vendor) => vendor.projectId === null || vendor.projectId === project.id);
         const projectAttachments = attachmentRows.filter((attachment) => attachment.projectId === project.id);
@@ -627,8 +627,8 @@ export const erpRouter = router({
       const from = input.from ? new Date(input.from).getTime() : Number.NEGATIVE_INFINITY;
       const to = input.to ? new Date(input.to).getTime() + 86400000 : Number.POSITIVE_INFINITY;
       const inRange = (date: Date | null) => !date || (new Date(date).getTime() >= from && new Date(date).getTime() <= to);
-      const scopedExpenses = expenseRows.filter((row) => inRange(row.expenseDate));
-      const scopedPayroll = payrollRows.filter((row) => inRange(row.createdAt));
+      const scopedExpenses = expenseRows.filter((row) => row.classification !== "administrative" && inRange(row.expenseDate));
+      const scopedPayroll = payrollRows.filter((row) => row.classification !== "administrative" && inRange(row.createdAt));
       const scopedSales = salesRows.filter((row) => inRange(row.saleDate));
       const scopedCollections = collectionRows.filter((row) => inRange(row.collectionDate));
       const totals = calculateFinancialSummaryTotals({ sales: scopedSales, collections: scopedCollections, expenses: scopedExpenses, payroll: scopedPayroll });

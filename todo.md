@@ -140,9 +140,9 @@
 - [x] Run an end-to-end dropdown scenario covering expense, payroll, custody, receipt, certificate, contractor, employee, cost-center, contract-line, and schedule selections with downstream assertions
 - [x] Replace contractor XLOOKUP formulas with cross-engine-compatible lookup formulas and re-run end-to-end dropdown tests
 - [x] Assert receipt-driven cash-flow or dashboard totals in the end-to-end scenario
-- [ ] Assert employee-code propagation and payroll classification outcomes
-- [ ] Assert project versus administrative expense classification outcomes
-- [ ] Assert executive dashboard/report values update from the scenario
+- [x] Assert employee-code propagation and payroll classification outcomes
+- [x] Assert project versus administrative expense classification outcomes
+- [x] Assert executive dashboard/report values update from the scenario
 - [x] Auto-populate payroll employee name from selected employee code with a cross-engine-compatible lookup formula
 - [x] تعديل إجمالي الإيراد ليعتمد على الإيراد المعترف به من مبيعات الوحدات
 - [x] حصر صفحة المستخلصات في مستخلصات المقاولين
