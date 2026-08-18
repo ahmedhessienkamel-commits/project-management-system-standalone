@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { calculateExpenseTotals, calculatePayrollTotals, projectHealthStatus } from "./erpCalculations";
+import { calculateAttendanceHours, filterAttendanceByMonth } from "../shared/attendance";
 
 describe("ERP financial rules", () => {
   it("calculates pre-tax, VAT, and total for expenses", () => {
@@ -20,6 +21,17 @@ describe("ERP financial rules", () => {
     expect(projectHealthStatus({ budgetUsage: 40, progress: 10, delayedStages: 0 })).toBe("warning");
     expect(projectHealthStatus({ budgetUsage: 40, progress: 60, delayedStages: 0, cashGapRatio: 0.1 })).toBe("warning");
     expect(projectHealthStatus({ budgetUsage: 40, progress: 60, delayedStages: 0, pendingApprovals: 1 })).toBe("warning");
+  });
+
+  it("filters the monthly attendance register and calculates hours", () => {
+    const rows = filterAttendanceByMonth([
+      { id: 1, projectId: 1, attendanceDate: "2026-08-05", checkIn: "08:00", checkOut: "17:00", employeeName: "أحمد", stageId: 2, status: "present", notes: "" },
+      { id: 2, projectId: 1, attendanceDate: "2026-09-05", checkIn: "08:00", checkOut: "16:00", employeeName: "أحمد", stageId: 2, status: "present", notes: "" },
+      { id: 3, projectId: 2, attendanceDate: "2026-08-05", checkIn: "08:00", checkOut: "17:00", employeeName: "سارة", stageId: 3, status: "late", notes: "" },
+    ], 1, 8, 2026);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toEqual(expect.objectContaining({ id: 1, projectId: 1, attendanceDate: "2026-08-05", checkIn: "08:00", checkOut: "17:00", employeeName: "أحمد", stageId: 2, status: "present", notes: "" }));
+    expect(calculateAttendanceHours(rows[0].checkIn, rows[0].checkOut)).toBe(9);
   });
 
   it("returns critical for a large cash gap or approval backlog", () => {

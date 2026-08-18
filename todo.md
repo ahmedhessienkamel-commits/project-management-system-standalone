@@ -80,7 +80,7 @@
 - [x] Verify whether approved budget input is pre-tax or tax-inclusive and document the linked calculation rule
 
 
-- [ ] Add monthly attendance and departure register with employee, stage, date, check-in, check-out, hours, status, and notes
+- [x] Add monthly attendance and departure register with employee, stage, date, check-in, check-out, hours, status, and notes
 - [ ] Add stage-level cash flow page with cash in, cash out, net gap, cumulative gap, and funding required
 - [ ] Link stage cash out to expenses, entitlements, payroll, and collected payments where stage identifiers exist
 - [ ] Add management summary, filters, conditional alerts, and professional formatting for attendance and cash-flow pages
@@ -162,8 +162,8 @@
 - [x] ربط الصفحة الموحدة بالداشبورد وقائمة الدخل واختبار التحصيل والمتبقي
 - [x] ربط مؤشرات الإيراد والتحصيل في لوحة المؤشرات مباشرة بصفحة مبيعات وتحصيلات
 - [ ] اختبار لوحة المؤشرات بعد إدخال بيع ودفعة محصلة في الصفحة الموحدة
-- [ ] تقليل ارتفاعات الصفوف والمساحات الفارغة في الصفحة الرئيسية
-- [ ] تظليل عناوين الأقسام وروابط فتح الصفحات بألوان واضحة
+- [x] تقليل ارتفاعات الصفوف والمساحات الفارغة في الصفحة الرئيسية
+- [x] تظليل عناوين الأقسام وروابط فتح الصفحات بألوان واضحة
 - [x] إضافة عداد الأيام المتبقية للمشروع في الصفحة الرئيسية اعتمادًا على تاريخ البدء والنهاية
 - [x] اختبار حالات العداد: متبقي، منتهٍ، وتواريخ ناقصة
 - [x] إضافة عداد الأيام المتبقية للمرحلة الحالية مع اسم المرحلة وحالتها
