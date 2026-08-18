@@ -89,8 +89,11 @@ describe("ERP sales and collections API flow", () => {
     await caller.erp.collections.create({ projectId: 1, saleId: sale.id, amount: 75000, receiptReference: "RC-001" });
     await caller.erp.payroll.create({ projectId: 1, employeeName: "أحمد", employeeCode: "EMP-001", month: 8, year: 2026, classification: "project", amount: 12000, paidAmount: 0 });
     await caller.erp.payroll.create({ projectId: 1, employeeName: "سارة", employeeCode: "EMP-002", month: 8, year: 2026, classification: "administrative", amount: 8000, paidAmount: 0 });
-    await caller.erp.expenses.create({ projectId: 1, description: "حديد", unit: "طن", quantity: 2, expenseType: "materials", classification: "project", preTaxAmount: 1000, taxRate: 15, paidAmount: 500 });
+    const projectExpense = await caller.erp.expenses.create({ projectId: 1, description: "حديد", unit: "طن", quantity: 2, expenseType: "materials", classification: "project", preTaxAmount: 1000, taxRate: 15, paidAmount: 500 });
     await caller.erp.expenses.create({ projectId: 1, description: "إدارة", unit: "شهر", quantity: 1, expenseType: "administrative", classification: "administrative", preTaxAmount: 300, taxRate: 15, paidAmount: 300 });
+    const trace = await caller.erp.controls.trace({ projectId: 1, entityType: "expense", entityId: projectExpense.id });
+    expect(trace.approval).not.toBeNull();
+    expect(trace.audits.length).toBeGreaterThan(0);
     state.payroll.forEach((row) => { row.status = "approved"; });
     state.expenses.forEach((row) => { row.status = "approved"; });
     const summary = await caller.erp.dashboard.summary();

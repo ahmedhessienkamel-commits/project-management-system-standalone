@@ -543,6 +543,15 @@ export const erpRouter = router({
   }),
 
   controls: router({
+    trace: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), entityType: z.string().trim().min(1), entityId: z.number().int().positive() })).query(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      await assertProjectAccess(db, ctx, input.projectId);
+      const [approvalRows, auditRows] = await Promise.all([
+        db.select().from(approvalRequests).where(and(eq(approvalRequests.projectId, input.projectId), eq(approvalRequests.entityType, input.entityType), eq(approvalRequests.entityId, input.entityId))).orderBy(approvalRequests.createdAt),
+        db.select().from(auditLogs).where(and(eq(auditLogs.entityType, input.entityType), eq(auditLogs.entityId, input.entityId))).orderBy(auditLogs.createdAt),
+      ]);
+      return { approval: approvalRows[approvalRows.length - 1] || null, audits: auditRows };
+    }),
     audit: adminProcedure.query(async () => {
       const db = requireDb(await getDb());
       return db.select().from(auditLogs).orderBy(auditLogs.createdAt);

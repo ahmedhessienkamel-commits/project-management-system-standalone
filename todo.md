@@ -2,15 +2,15 @@
 
 ## ERP web application migration
 
-- [ ] Define the web ERP scope for up to 10 initial users, role-based permissions, approval workflows, unlimited projects, and Excel logic migration
-- [ ] Start the ERP MVP in a separate product scope without overwriting the existing Excel workbook
-- [ ] Build and validate the first online-capable ERP MVP before selecting final hosting
-- [ ] Build the ERP as a complete project-management operating system, not a spreadsheet viewer
-- [ ] Create an Excel-to-ERP traceability matrix covering every agreed workbook requirement
-- [ ] Preserve payroll tax exemption and pre-tax/tax/post-tax logic for non-payroll transactions
-- [ ] Preserve Wadi Namar versus Qiddiya project separation and administrative-only reporting for Qiddiya
-- [ ] Preserve unit sales, collections, recognized revenue, expenses, payments, due amounts, and supplier statements as linked workflows
-- [ ] Preserve stage budgets, actuals, schedule dates, progress, variance alerts, cash gaps, custody, attendance, certificates, attachments, and contractor master data
+- [x] Define the web ERP scope for up to 10 initial users, role-based permissions, approval workflows, unlimited projects, and Excel logic migration
+- [x] Start the ERP MVP in a separate product scope without overwriting the existing Excel workbook
+- [x] Build and validate the first online-capable ERP MVP before selecting final hosting
+- [x] Build the ERP as a complete project-management operating system, not a spreadsheet viewer
+- [x] Create an Excel-to-ERP traceability matrix covering every agreed workbook requirement
+- [x] Preserve payroll tax exemption and pre-tax/tax/post-tax logic for non-payroll transactions
+- [x] Preserve Wadi Namar versus Qiddiya project separation and administrative-only reporting for Qiddiya
+- [x] Preserve unit sales, collections, recognized revenue, expenses, payments, due amounts, and supplier statements as linked workflows
+- [x] Preserve stage budgets, actuals, schedule dates, progress, variance alerts, cash gaps, custody, attendance, certificates, attachments, and contractor master data
 - [x] Design database entities for projects, stages, units, sales, collections, expenses, payroll, contractors, certificates, custody, attachments, approvals, notifications, audit logs, and period locks
 - [x] Build Arabic RTL dashboard and navigation for the ERP
 - [x] Build an executive project-health dashboard showing plan versus actual at a glance
@@ -384,3 +384,6 @@
 - [x] إظهار رسالة داخل صفحة المبيعات والتحصيلات تؤكد أن الإدخال مرة واحدة وينعكس تلقائيًا على الداشبورد والتقارير
 
 - [x] إضافة members.mine وربط صفحة المبيعات والتحصيلات بإخفاء نماذج الإدخال عن viewer/reviewer مع اختبار عضوية finance
+
+- [x] إضافة trace للموافقات وسجل التدقيق إلى سجلات المبيعات والتحصيلات والمصروفات والرواتب والموردين والمستخلصات والعهد والحضور والمرفقات
+- [x] اختبار controls.trace من مسار API فعلي، ومراجعة بصرية لصفحة التشغيل RTL
