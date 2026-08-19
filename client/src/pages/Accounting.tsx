@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { ArrowRight, Banknote, BarChart3, BookOpen, ClipboardPenLine, FileCheck2, FilePlus2, Landmark, Pencil, Plus, Receipt, ShoppingCart, WalletCards } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -40,7 +40,7 @@ function AccountSelect({ label, value, accounts, onChange }: { label: string; va
 }
 
 export default function Accounting() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const [documentType, setDocumentType] = useState<DocumentType>("payment_voucher");
   const [partyName, setPartyName] = useState("");
   const [amount, setAmount] = useState("");
@@ -52,6 +52,7 @@ export default function Accounting() {
   const [creditAccountId, setCreditAccountId] = useState("");
   const initialReportType = (() => { const value = new URLSearchParams(window.location.search).get("report"); return reportTypes.some((report) => report.key === value) ? value as ReportType : "trial"; })();
   const [reportType, setReportType] = useState<ReportType>(initialReportType);
+  useEffect(() => { const value = new URLSearchParams(location.split("?")[1] || "").get("report"); if (reportTypes.some((report) => report.key === value)) setReportType(value as ReportType); }, [location]);
   const [reportParty, setReportParty] = useState("");
   const [reportFrom, setReportFrom] = useState("");
   const [reportTo, setReportTo] = useState("");

@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
 import { ArrowRight, Download, Printer, ReceiptText, RefreshCw, WalletCards } from "lucide-react";
 import * as XLSX from "xlsx";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 
 const months = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
@@ -24,6 +24,7 @@ export default function Finance() {
   const { data: payroll = [], isLoading: loadingPayroll } = trpc.erp.payroll.list.useQuery();
   const { data: administrativePayroll = [], isLoading: loadingAdministrativePayroll } = trpc.erp.payroll.administrativeList.useQuery();
   const [tab, setTab] = useState<"expenses" | "payroll">(location === "/payroll" ? "payroll" : "expenses");
+  useEffect(() => { setTab(location === "/payroll" ? "payroll" : "expenses"); }, [location]);
   const [expense, setExpense] = useState({ projectId: "", stageId: "", costItemId: "", description: "", unit: "", quantity: "1", expenseType: "operating" as "materials" | "operating_tools" | "equipment_rental" | "contractor" | "transport" | "maintenance" | "services" | "operating" | "administrative", classification: "project" as "project" | "administrative", preTaxAmount: "", taxRate: "15", paidAmount: "", expenseDate: "" });
   const [salary, setSalary] = useState({ projectId: "", stageId: "", employeeName: "", employeeCode: "", month: String(new Date().getMonth() + 1), year: String(new Date().getFullYear()), classification: "project" as "project" | "administrative", amount: "", paidAmount: "" });
   const [adminSalary, setAdminSalary] = useState({ employeeName: "", employeeCode: "", month: String(new Date().getMonth() + 1), year: String(new Date().getFullYear()), amount: "", paidAmount: "" });
