@@ -28,7 +28,7 @@ type TabKey = (typeof tabs)[number]["key"];
 
 export default function Operations() {
   const [location, setLocation] = useLocation();
-  const [tab, setTab] = useState<TabKey>(location === "/certificates" ? "certificates" : location === "/attendance" ? "attendance" : "cost");
+  const [tab, setTab] = useState<TabKey>(location === "/certificates" ? "certificates" : location === "/attendance" ? "attendance" : location === "/custody" ? "custody" : "cost");
   const { data: projects = [] } = trpc.erp.projects.list.useQuery();
   const { data: stages = [] } = trpc.erp.stages.list.useQuery();
   const [selectedProjectId, setSelectedProjectId] = useState<number | undefined>(undefined);
