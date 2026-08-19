@@ -225,6 +225,7 @@ export const erpRouter = router({
         const expectedScheduleProgress = timeline.weight ? Math.round((timeline.expected / timeline.weight) * 100) : 0;
         const scheduleVariancePct = Math.max(expectedScheduleProgress - progress, 0);
         const planned = projectStages.reduce((sum, stage) => sum + Number(stage.plannedBudget || 0), 0);
+        const activeStage = [...projectStages].sort((a, b) => (a.plannedStart ? new Date(a.plannedStart).getTime() : Number.MAX_SAFE_INTEGER) - (b.plannedStart ? new Date(b.plannedStart).getTime() : Number.MAX_SAFE_INTEGER)).find((stage) => stage.status !== "completed" && Number(stage.actualProgress || 0) < 100) ?? null;
         const financialTotals = calculateFinancialSummaryTotals({ sales: projectSales, collections: projectCollections, expenses: projectExpenses, payroll: [...projectPayroll, ...projectAdministrativePayroll.map((row) => ({ preTaxAmount: row.allocatedAmount, totalAmount: row.allocatedAmount, paidAmount: "0", status: "approved" as const }))] });
         const actual = financialTotals.expensesTotal + financialTotals.payrollTotal;
         const paid = financialTotals.expensesPaid + financialTotals.payrollPaid;
@@ -257,6 +258,7 @@ export const erpRouter = router({
           stageCount: projectStages.length,
           delayedStages,
           missingDocumentCount: documentCompleteness.missing.length + missingCertificateDocuments + missingPaymentDocuments,
+          activeStage: activeStage ? { id: activeStage.id, code: activeStage.code, name: activeStage.name, status: activeStage.status, plannedStart: activeStage.plannedStart, plannedEnd: activeStage.plannedEnd, actualProgress: Number(activeStage.actualProgress || 0) } : null,
         };
       });
       for (const item of summary) {

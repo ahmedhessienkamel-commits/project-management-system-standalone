@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { trpc } from "@/lib/trpc";
 import { ArrowLeft, CalendarClock, CheckCircle2, CircleDollarSign, Clock3, FileCheck2, FolderKanban, HandCoins, Landmark, Plus, ReceiptText, ShieldAlert, WalletCards } from "lucide-react";
 import { useLocation } from "wouter";
+import { useMemo, useState } from "react";
 
 const statusLabels = {
   on_track: { label: "على المسار", className: "bg-emerald-50 text-emerald-700 border-emerald-200" },
@@ -19,6 +20,8 @@ const classificationLabels: Record<string, string> = { operational: "تشغيل�
 export default function Home() {
   const [, setLocation] = useLocation();
   const { data: summaries = [], isLoading } = trpc.erp.dashboard.summary.useQuery();
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const selectedSummary = useMemo(() => summaries.find((item) => item.project.id === selectedProjectId) ?? summaries[0] ?? null, [summaries, selectedProjectId]);
   const shortcutTotals = summaries.reduce((totals, item) => ({
     plannedBudget: totals.plannedBudget + item.plannedBudget,
     actualCost: totals.actualCost + item.actualCost,
@@ -45,6 +48,7 @@ export default function Home() {
       <div dir="rtl" className="min-h-screen bg-[#f7f8fa] px-4 py-6 sm:px-8 lg:px-10">
         <div className="mx-auto max-w-7xl space-y-8">
           <header className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="w-full lg:order-2 lg:w-72"><label className="mb-2 block text-xs font-semibold text-slate-500">المشروع المعروض في المؤشرات</label><select value={selectedSummary ? String(selectedSummary.project.id) : ""} onChange={(event) => setSelectedProjectId(Number(event.target.value))} className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-[#18324b] shadow-sm outline-none focus:border-[#b28a3b]"><option value="" disabled>اختر مشروعًا</option>{summaries.map((item) => <option key={item.project.id} value={item.project.id}>{item.project.name}</option>)}</select></div>
             <div>
               <p className="mb-2 text-sm font-semibold tracking-wide text-[#b28a3b]">مركز القيادة التنفيذية</p>
               <h1 className="text-3xl font-bold tracking-tight text-[#18324b] sm:text-4xl">صورة المشروع في لحظة</h1>
@@ -55,6 +59,8 @@ export default function Home() {
               إضافة مشروع
             </Button>
           </header>
+
+          {selectedSummary && <section className="grid gap-4 rounded-3xl bg-[#18324b] p-5 text-white shadow-sm lg:grid-cols-[1.3fr_1fr_1fr]"><TimeGauge title="عداد المشروع" start={selectedSummary.project.plannedStart} end={selectedSummary.project.plannedEnd} /><TimeGauge title="عداد المرحلة النشطة" start={selectedSummary.activeStage?.plannedStart ?? null} end={selectedSummary.activeStage?.plannedEnd ?? null} /><div className="grid grid-cols-2 gap-3"><Indicator label="إنجاز المشروع" value={`${selectedSummary.progress}%`} /><Indicator label="إنجاز المرحلة" value={`${selectedSummary.activeStage?.actualProgress ?? 0}%`} /><Indicator label="الميزانية" value={`${money.format(selectedSummary.plannedBudget)} ر.س`} /><Indicator label="المنصرف" value={`${money.format(selectedSummary.actualCost)} ر.س`} /></div></section>}
 
           <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <MetricCard icon={FolderKanban} label="المشاريع النشطة" value={String(summaries.filter((item) => item.project.status === "active").length)} hint={`${summaries.length} إجمالي المشاريع`} tone="blue" onClick={() => setLocation("/projects")} />
@@ -104,6 +110,18 @@ export default function Home() {
     </DashboardLayout>
   );
 }
+
+function TimeGauge({ title, start, end }: { title: string; start?: string | Date | null; end?: string | Date | null }) {
+  const startDate = start ? new Date(start) : null;
+  const endDate = end ? new Date(end) : null;
+  const now = Date.now();
+  const totalDays = startDate && endDate ? Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / 86400000)) : 0;
+  const remainingDays = endDate ? Math.max(0, Math.ceil((endDate.getTime() - now) / 86400000)) : null;
+  const elapsed = startDate && endDate ? Math.min(100, Math.max(0, ((now - startDate.getTime()) / Math.max(1, endDate.getTime() - startDate.getTime())) * 100)) : 0;
+  return <div className="rounded-2xl bg-white/10 p-4"><div className="flex items-center justify-between"><p className="text-sm font-semibold text-slate-200">{title}</p><Clock3 className="h-5 w-5 text-[#e0b95c]" /></div><p className="mt-3 text-3xl font-bold">{remainingDays === null ? "—" : `${remainingDays} يوم`}</p><p className="mt-1 text-xs text-slate-300">{startDate && endDate ? `${startDate.toLocaleDateString("ar-SA")} → ${endDate.toLocaleDateString("ar-SA")} · ${totalDays} يوم` : "أدخل تاريخي البداية والنهاية"}</p><div className="mt-3 h-2 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-[#e0b95c]" style={{ width: `${elapsed}%` }} /></div></div>;
+}
+
+function Indicator({ label, value }: { label: string; value: string }) { return <div className="rounded-xl bg-white/10 p-3"><p className="text-[11px] text-slate-300">{label}</p><p className="mt-1 text-sm font-bold text-white">{value}</p></div>; }
 
 function MetricCard({ icon: Icon, label, value, hint, tone, onClick }: { icon: typeof FolderKanban; label: string; value: string; hint: string; tone: "blue" | "gold" | "rose" | "amber" | "green" | "teal" | "violet" | "slate"; onClick?: () => void }) {
   const colors = { blue: "bg-blue-50 text-blue-700", gold: "bg-amber-50 text-amber-700", rose: "bg-rose-50 text-rose-700", amber: "bg-orange-50 text-orange-700", green: "bg-emerald-50 text-emerald-700", teal: "bg-cyan-50 text-cyan-700", violet: "bg-violet-50 text-violet-700", slate: "bg-slate-100 text-slate-700" };
