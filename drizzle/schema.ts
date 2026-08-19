@@ -424,3 +424,47 @@ export const approvalPolicies = mysqlTable("approvalPolicies", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
+
+
+export const accounts = mysqlTable("accounts", {
+  id: int("id").autoincrement().primaryKey(),
+  code: varchar("code", { length: 32 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  accountType: mysqlEnum("accountType", ["asset", "liability", "equity", "revenue", "expense"]).notNull(),
+  parentId: int("parentId"),
+  isPostable: int("isPostable").notNull().default(1),
+  isActive: int("isActive").notNull().default(1),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const accountingDocuments = mysqlTable("accountingDocuments", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: int("projectId"),
+  documentType: mysqlEnum("documentType", ["sales_invoice", "purchase_invoice", "journal_entry", "payment_voucher", "receipt_voucher", "quotation", "purchase_order"]).notNull(),
+  documentNumber: varchar("documentNumber", { length: 128 }).notNull().unique(),
+  partyName: varchar("partyName", { length: 255 }),
+  documentDate: date("documentDate"),
+  dueDate: date("dueDate"),
+  sourceAccountId: int("sourceAccountId"),
+  amount: decimal("amount", { precision: 14, scale: 2 }).notNull().default("0"),
+  taxAmount: decimal("taxAmount", { precision: 14, scale: 2 }).notNull().default("0"),
+  totalAmount: decimal("totalAmount", { precision: 14, scale: 2 }).notNull().default("0"),
+  paymentMethod: mysqlEnum("paymentMethod", ["cash", "bank"]),
+  status: mysqlEnum("status", ["draft", "posted", "cancelled"]).notNull().default("draft"),
+  notes: text("notes"),
+  createdBy: int("createdBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const accountingDocumentLines = mysqlTable("accountingDocumentLines", {
+  id: int("id").autoincrement().primaryKey(),
+  documentId: int("documentId").notNull(),
+  accountId: int("accountId").notNull(),
+  projectId: int("projectId"),
+  stageId: int("stageId"),
+  description: text("description"),
+  debit: decimal("debit", { precision: 14, scale: 2 }).notNull().default("0"),
+  credit: decimal("credit", { precision: 14, scale: 2 }).notNull().default("0"),
+});

@@ -10,7 +10,8 @@ import Finance from "./pages/Finance";
 import Approvals from "./pages/Approvals";
 import ProjectDetails from "./pages/ProjectDetails";
 import SalesCollections from "./pages/SalesCollections";
-import Reports from "./pages/Reports";
+import Reports from "@/pages/Reports";
+import Accounting from "@/pages/Accounting";
 import Users from "@/pages/Users";
 import Employees from "@/pages/Employees";
 import Operations from "@/pages/Operations";
@@ -28,6 +29,7 @@ function Router() {
       <Route path={"/transactions"} component={Finance} />
       <Route path={"/expenses"} component={Finance} />
       <Route path={"/finance"} component={Finance} />
+      <Route path={"/accounting"} component={Accounting} />
       <Route path={"/payroll"} component={Finance} />
       <Route path={"/operations"} component={Operations} />
       <Route path={"/certificates"} component={Operations} />

@@ -1,10 +1,11 @@
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
-import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, dailyTasks, employees, expenses, notifications, payroll, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, sales, stages, units, users, vendors, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems } from "../../drizzle/schema";
+import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, dailyTasks, employees, expenses, notifications, payroll, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, sales, stages, units, users, vendors, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems, accounts, accountingDocuments, accountingDocumentLines } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { calculateDocumentCompleteness, calculateExpenseTotals, calculateFinancialSummaryTotals, calculatePayrollTotals, calculatePurchaseInvoiceStatus, canAccessProject, canWriteProject, projectHealthReasons, projectHealthStatus, projectNotificationTriggers } from "../erpCalculations";
+import { accountingTotals } from "../accountingCalculations";
 
 const projectStatus = z.enum(["planning", "active", "paused", "completed", "archived"]);
 const projectClassification = z.enum(["operational", "administrative"]);
@@ -53,6 +54,15 @@ async function findApprovalPolicy(db: NonNullable<Awaited<ReturnType<typeof getD
 async function resolveApprovalStatus(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, projectId: number, entityType: "expense" | "payroll" | "certificate" | "collection" | "sale", amount: number) {
   const policy = await findApprovalPolicy(db, projectId, entityType);
   return policy && amount <= Number(policy.thresholdAmount) ? "approved" as const : "pending" as const;
+}
+
+async function loadAccountingLedger(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, input: { projectId?: number; from?: string; to?: string }) {
+  const [documentRows, lineRows, accountRows] = await Promise.all([db.select().from(accountingDocuments), db.select().from(accountingDocumentLines), db.select().from(accounts)]);
+  const from = input.from ? new Date(input.from).getTime() : Number.NEGATIVE_INFINITY;
+  const to = input.to ? new Date(input.to).getTime() + 86400000 : Number.POSITIVE_INFINITY;
+  const accountMap = new Map(accountRows.map((account) => [account.id, account]));
+  const documentMap = new Map(documentRows.filter((document) => (!input.projectId || document.projectId === input.projectId) && (!document.documentDate || (new Date(document.documentDate).getTime() >= from && new Date(document.documentDate).getTime() <= to))).map((document) => [document.id, document]));
+  return lineRows.filter((line) => documentMap.has(line.documentId)).map((line) => ({ ...line, document: documentMap.get(line.documentId)!, account: accountMap.get(line.accountId) || null }));
 }
 
 export const erpRouter = router({
@@ -882,6 +892,89 @@ export const erpRouter = router({
       const id = Number(result[0].insertId);
       await db.insert(auditLogs).values({ entityType: "periodLock", entityId: id, action: "locked", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
       return { id };
+    }),
+  }),
+
+  accounting: router({
+    accounts: router({
+      list: protectedProcedure.query(async () => {
+        const db = requireDb(await getDb());
+        return db.select().from(accounts).where(eq(accounts.isActive, 1));
+      }),
+      create: adminProcedure.input(z.object({ code: z.string().min(1).max(32), name: z.string().min(1).max(255), accountType: z.enum(["asset", "liability", "equity", "revenue", "expense"]), parentId: z.number().int().positive().optional(), isPostable: z.boolean().default(true) })).mutation(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        const result = await db.insert(accounts).values({ code: input.code, name: input.name, accountType: input.accountType, parentId: input.parentId || null, isPostable: input.isPostable ? 1 : 0, isActive: 1 });
+        const id = Number(result[0].insertId);
+        await db.insert(auditLogs).values({ entityType: "account", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
+        return { id };
+      }),
+    }),
+    documents: router({
+      list: protectedProcedure.input(z.object({ documentType: z.enum(["sales_invoice", "purchase_invoice", "journal_entry", "payment_voucher", "receipt_voucher", "quotation", "purchase_order"]).optional() }).optional()).query(async ({ input }) => {
+        const db = requireDb(await getDb());
+        const rows = await db.select().from(accountingDocuments);
+        const filtered = rows.filter((row) => !input?.documentType || row.documentType === input.documentType);
+        return Promise.all(filtered.map(async (row) => ({ ...row, lines: await db.select().from(accountingDocumentLines).where(eq(accountingDocumentLines.documentId, row.id)) })));
+      }),
+      create: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional(), documentType: z.enum(["sales_invoice", "purchase_invoice", "journal_entry", "payment_voucher", "receipt_voucher", "quotation", "purchase_order"]), partyName: z.string().max(255).optional(), documentDate: z.string().optional(), dueDate: z.string().optional(), sourceAccountId: z.number().int().positive().optional(), amount: z.number().nonnegative(), taxAmount: z.number().nonnegative(), totalAmount: z.number().nonnegative(), paymentMethod: z.enum(["cash", "bank"]).optional(), notes: z.string().max(2000).optional(), status: z.enum(["draft", "posted"]).default("draft"), lines: z.array(z.object({ accountId: z.number().int().positive(), projectId: z.number().int().positive().optional(), stageId: z.number().int().positive().optional(), description: z.string().max(500).optional(), debit: z.number().nonnegative(), credit: z.number().nonnegative() })).min(1) })).mutation(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        if (input.projectId) await assertProjectWrite(db, ctx, input.projectId);
+        const totals = accountingTotals(input.lines);
+        if (!totals.balanced) throw new TRPCError({ code: "BAD_REQUEST", message: "القيد غير متوازن: إجمالي المدين يجب أن يساوي إجمالي الدائن" });
+        const prefixes = { sales_invoice: "SI", purchase_invoice: "PI", journal_entry: "JE", payment_voucher: "PV", receipt_voucher: "RV", quotation: "QT", purchase_order: "PO" } as const;
+        const documentNumber = `${prefixes[input.documentType]}-${Date.now()}`;
+        const result = await db.insert(accountingDocuments).values({ projectId: input.projectId || null, documentType: input.documentType, documentNumber, partyName: input.partyName || null, documentDate: input.documentDate ? new Date(input.documentDate) : new Date(), dueDate: input.dueDate ? new Date(input.dueDate) : null, sourceAccountId: input.sourceAccountId || null, amount: input.amount.toFixed(2), taxAmount: input.taxAmount.toFixed(2), totalAmount: input.totalAmount.toFixed(2), paymentMethod: input.paymentMethod || null, status: input.status, notes: input.notes || null, createdBy: ctx.user.id });
+        const id = Number(result[0].insertId);
+        for (const line of input.lines) await db.insert(accountingDocumentLines).values({ documentId: id, accountId: line.accountId, projectId: line.projectId || input.projectId || null, stageId: line.stageId || null, description: line.description || null, debit: line.debit.toFixed(2), credit: line.credit.toFixed(2) });
+        await db.insert(auditLogs).values({ entityType: "accountingDocument", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify({ ...input, documentNumber }) });
+        return { id, documentNumber };
+      }),
+    }),
+    reports: router({
+      customerStatement: protectedProcedure.input(z.object({ partyName: z.string().min(1), projectId: z.number().int().positive().optional(), from: z.string().optional(), to: z.string().optional() })).query(async ({ input }) => {
+        const db = requireDb(await getDb());
+        const rows = (await loadAccountingLedger(db, input)).filter((row) => row.document.partyName === input.partyName);
+        const debit = rows.reduce((sum, row) => sum + Number(row.debit), 0);
+        const credit = rows.reduce((sum, row) => sum + Number(row.credit), 0);
+        return { partyName: input.partyName, debit, credit, balance: debit - credit, rows };
+      }),
+      supplierStatement: protectedProcedure.input(z.object({ partyName: z.string().min(1), projectId: z.number().int().positive().optional(), from: z.string().optional(), to: z.string().optional() })).query(async ({ input }) => {
+        const db = requireDb(await getDb());
+        const rows = (await loadAccountingLedger(db, input)).filter((row) => row.document.partyName === input.partyName);
+        const debit = rows.reduce((sum, row) => sum + Number(row.debit), 0);
+        const credit = rows.reduce((sum, row) => sum + Number(row.credit), 0);
+        return { partyName: input.partyName, debit, credit, balance: credit - debit, rows };
+      }),
+      trialBalance: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional(), from: z.string().optional(), to: z.string().optional() }).optional()).query(async ({ input }) => {
+        const db = requireDb(await getDb());
+        const rows = await loadAccountingLedger(db, input || {});
+        const grouped = new Map<number, { accountId: number; code: string; name: string; debit: number; credit: number }>();
+        for (const row of rows) { const account = row.account; if (!account) continue; const current = grouped.get(account.id) || { accountId: account.id, code: account.code, name: account.name, debit: 0, credit: 0 }; current.debit += Number(row.debit); current.credit += Number(row.credit); grouped.set(account.id, current); }
+        const items = Array.from(grouped.values()).map((item) => ({ ...item, balance: item.debit - item.credit }));
+        return { items, totalDebit: items.reduce((sum, item) => sum + item.debit, 0), totalCredit: items.reduce((sum, item) => sum + item.credit, 0) };
+      }),
+      incomeStatement: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional(), from: z.string().optional(), to: z.string().optional() }).optional()).query(async ({ input }) => {
+        const db = requireDb(await getDb());
+        const rows = await loadAccountingLedger(db, input || {});
+        const income = rows.filter((row) => row.account?.accountType === "revenue").reduce((sum, row) => sum + Number(row.credit) - Number(row.debit), 0);
+        const expensesTotal = rows.filter((row) => row.account?.accountType === "expense").reduce((sum, row) => sum + Number(row.debit) - Number(row.credit), 0);
+        return { revenue: income, expenses: expensesTotal, netIncome: income - expensesTotal, revenueRows: rows.filter((row) => row.account?.accountType === "revenue"), expenseRows: rows.filter((row) => row.account?.accountType === "expense") };
+      }),
+      balanceSheet: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional(), from: z.string().optional(), to: z.string().optional() }).optional()).query(async ({ input }) => {
+        const db = requireDb(await getDb());
+        const rows = await loadAccountingLedger(db, input || {});
+        const total = (type: string) => rows.filter((row) => row.account?.accountType === type).reduce((sum, row) => sum + Number(row.debit) - Number(row.credit), 0);
+        const assets = total("asset"); const liabilities = total("liability") * -1; const equity = total("equity") * -1; const revenue = rows.filter((row) => row.account?.accountType === "revenue").reduce((sum, row) => sum + Number(row.credit) - Number(row.debit), 0); const expensesTotal = total("expense");
+        return { assets, liabilities, equity, retainedEarnings: revenue - expensesTotal, totalLiabilitiesAndEquity: liabilities + equity + revenue - expensesTotal, balanced: Math.abs(assets - (liabilities + equity + revenue - expensesTotal)) <= 0.01 };
+      }),
+      financialPosition: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional(), from: z.string().optional(), to: z.string().optional() }).optional()).query(async ({ input }) => {
+        const db = requireDb(await getDb());
+        const rows = await loadAccountingLedger(db, input || {});
+        const cash = rows.filter((row) => ["1101", "1103"].includes(row.account?.code || "")).reduce((sum, row) => sum + Number(row.debit) - Number(row.credit), 0);
+        const receivables = rows.filter((row) => row.account?.code === "1201").reduce((sum, row) => sum + Number(row.debit) - Number(row.credit), 0);
+        const payables = rows.filter((row) => row.account?.code === "2101").reduce((sum, row) => sum + Number(row.credit) - Number(row.debit), 0);
+        return { cash, receivables, payables, netWorkingCapital: cash + receivables - payables };
+      }),
     }),
   }),
 

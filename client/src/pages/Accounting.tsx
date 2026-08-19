@@ -1,0 +1,104 @@
+import { useMemo, useState } from "react";
+import { useLocation } from "wouter";
+import { ArrowRight, Banknote, BarChart3, BookOpen, ClipboardPenLine, FileCheck2, FilePlus2, Landmark, Receipt, ShoppingCart, WalletCards } from "lucide-react";
+import DashboardLayout from "@/components/DashboardLayout";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { trpc } from "@/lib/trpc";
+
+const money = new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 2 });
+const documentTypes = [
+  { key: "sales_invoice", label: "فاتورة مبيعات", icon: Receipt },
+  { key: "purchase_invoice", label: "فاتورة مشتريات", icon: FileCheck2 },
+  { key: "journal_entry", label: "قيد محاسبي", icon: BookOpen },
+  { key: "payment_voucher", label: "سند صرف", icon: WalletCards },
+  { key: "receipt_voucher", label: "سند قبض", icon: Banknote },
+  { key: "quotation", label: "عرض سعر", icon: FilePlus2 },
+  { key: "purchase_order", label: "أمر شراء", icon: ShoppingCart },
+] as const;
+type DocumentType = (typeof documentTypes)[number]["key"];
+const reportTypes = [
+  { key: "customer", label: "كشف حساب عميل" },
+  { key: "supplier", label: "كشف حساب مورد" },
+  { key: "trial", label: "ميزان المراجعة" },
+  { key: "income", label: "قائمة الدخل" },
+  { key: "balance", label: "الميزانية العمومية" },
+  { key: "position", label: "المركز المالي" },
+] as const;
+type ReportType = (typeof reportTypes)[number]["key"];
+
+type Account = { id: number; code: string; name: string; accountType: string; parentId: number | null; isPostable: number };
+
+function Field({ label, value, onChange, type = "text", placeholder }: { label: string; value: string; onChange: (value: string) => void; type?: string; placeholder?: string }) {
+  return <div className="space-y-1.5"><Label className="text-sm text-slate-600">{label}</Label><Input type={type} value={value} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} /></div>;
+}
+function AccountSelect({ label, value, accounts, onChange }: { label: string; value: string; accounts: Account[]; onChange: (value: string) => void }) {
+  return <div className="space-y-1.5"><Label className="text-sm text-slate-600">{label}</Label><select className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm" value={value} onChange={(event) => onChange(event.target.value)}><option value="">اختر الحساب</option>{accounts.filter((account) => account.isPostable).map((account) => <option key={account.id} value={account.id}>{account.code} — {account.name}</option>)}</select></div>;
+}
+
+export default function Accounting() {
+  const [, setLocation] = useLocation();
+  const [documentType, setDocumentType] = useState<DocumentType>("payment_voucher");
+  const [partyName, setPartyName] = useState("");
+  const [amount, setAmount] = useState("");
+  const [taxAmount, setTaxAmount] = useState("0");
+  const [documentDate, setDocumentDate] = useState("");
+  const [notes, setNotes] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "bank">("cash");
+  const [debitAccountId, setDebitAccountId] = useState("");
+  const [creditAccountId, setCreditAccountId] = useState("");
+  const [reportType, setReportType] = useState<ReportType>("trial");
+  const [reportParty, setReportParty] = useState("");
+  const { data: accounts = [], isLoading: accountsLoading } = trpc.erp.accounting.accounts.list.useQuery();
+  const utils = trpc.useUtils();
+  const createDocument = trpc.erp.accounting.documents.create.useMutation({ onSuccess: () => { utils.erp.accounting.documents.list.invalidate(); setPartyName(""); setAmount(""); setTaxAmount("0"); setNotes(""); } });
+  const { data: documents = [], isLoading: documentsLoading } = trpc.erp.accounting.documents.list.useQuery();
+  const trialReport = trpc.erp.accounting.reports.trialBalance.useQuery({});
+  const incomeReport = trpc.erp.accounting.reports.incomeStatement.useQuery({});
+  const balanceReport = trpc.erp.accounting.reports.balanceSheet.useQuery({});
+  const positionReport = trpc.erp.accounting.reports.financialPosition.useQuery({});
+  const customerReport = trpc.erp.accounting.reports.customerStatement.useQuery({ partyName: reportParty }, { enabled: reportType === "customer" && reportParty.trim().length > 0 });
+  const supplierReport = trpc.erp.accounting.reports.supplierStatement.useQuery({ partyName: reportParty }, { enabled: reportType === "supplier" && reportParty.trim().length > 0 });
+
+  const paymentAccounts = useMemo(() => accounts.filter((account) => account.code === (paymentMethod === "cash" ? "1101" : "1103")), [accounts, paymentMethod]);
+  const selectedSourceAccount = paymentAccounts[0];
+  const suggestedAccounts = useMemo(() => {
+    const find = (code: string) => accounts.find((account) => account.code === code)?.id;
+    if (documentType === "payment_voucher") return { debit: find("5101"), credit: selectedSourceAccount?.id };
+    if (documentType === "receipt_voucher") return { debit: selectedSourceAccount?.id, credit: find("4101") };
+    if (documentType === "sales_invoice") return { debit: find("1201"), credit: find("4101") };
+    if (documentType === "purchase_invoice") return { debit: find("5101"), credit: find("2101") };
+    return { debit: undefined, credit: undefined };
+  }, [accounts, documentType, selectedSourceAccount]);
+
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault();
+    const value = Number(amount || 0);
+    const tax = Number(taxAmount || 0);
+    const debit = Number(debitAccountId || suggestedAccounts.debit || 0);
+    const credit = Number(creditAccountId || suggestedAccounts.credit || 0);
+    if (!debit || !credit || value <= 0) return;
+    createDocument.mutate({
+      documentType,
+      partyName: partyName || undefined,
+      documentDate: documentDate || undefined,
+      amount: value,
+      taxAmount: tax,
+      totalAmount: value + tax,
+      paymentMethod: ["payment_voucher", "receipt_voucher"].includes(documentType) ? paymentMethod : undefined,
+      sourceAccountId: ["payment_voucher", "receipt_voucher"].includes(documentType) ? selectedSourceAccount?.id : undefined,
+      notes: notes || undefined,
+      status: "posted",
+      lines: [{ accountId: debit, description: notes || partyName || "مدين", debit: value + tax, credit: 0 }, { accountId: credit, description: notes || partyName || "دائن", debit: 0, credit: value + tax }],
+    });
+  };
+
+  return <DashboardLayout><div dir="rtl" className="min-h-screen bg-[#f7f8fa] px-4 py-6 sm:px-8 lg:px-10"><div className="mx-auto max-w-7xl space-y-6">
+    <header><Button variant="ghost" className="mb-2 gap-2 px-0 text-slate-500" onClick={() => setLocation("/")}><ArrowRight className="h-4 w-4" /> العودة للوحة التنفيذ</Button><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-sm font-semibold text-[#b28a3b]">المركز المالي</p><h1 className="text-3xl font-bold text-[#18324b]">المحاسبة والمستندات</h1><p className="mt-2 text-sm text-slate-500">سجّل المستند مرة واحدة، وسيُحفظ معه القيد المحاسبي ومصدر الحركة.</p></div><div className="rounded-xl bg-[#18324b] px-4 py-3 text-white"><p className="text-xs text-white/70">حسابات الصرف والتحصيل</p><p className="mt-1 text-sm font-semibold">{accounts.filter((account) => ["1101", "1103"].includes(account.code)).length} حساب نقدي/بنكي</p></div></div></header>
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{documentTypes.map(({ key, label, icon: Icon }) => <button key={key} type="button" onClick={() => setDocumentType(key)} className={`rounded-2xl border p-4 text-right transition ${documentType === key ? "border-[#18324b] bg-[#18324b] text-white shadow-lg" : "border-slate-200 bg-white text-[#18324b] hover:border-[#b28a3b]"}`}><Icon className="mb-3 h-5 w-5" /><p className="font-bold">{label}</p><p className={`mt-1 text-xs ${documentType === key ? "text-white/70" : "text-slate-500"}`}>فتح نموذج المستند</p></button>)}</div>
+    <Card className="border-0 shadow-sm"><CardHeader><CardTitle className="flex items-center gap-2 text-lg text-[#18324b]"><BarChart3 className="h-5 w-5" /> التقارير المحاسبية الأساسية</CardTitle><p className="text-xs text-slate-500">التقارير مبنية على المستندات والقيود المحفوظة داخل النظام.</p></CardHeader><CardContent><div className="flex flex-wrap gap-2">{reportTypes.map((report) => <Button key={report.key} size="sm" variant={reportType === report.key ? "default" : "outline"} className={reportType === report.key ? "bg-[#18324b]" : ""} onClick={() => setReportType(report.key)}>{report.label}</Button>)}</div>{(reportType === "customer" || reportType === "supplier") && <div className="mt-4 max-w-md"><Field label={reportType === "customer" ? "اسم العميل" : "اسم المورد"} value={reportParty} onChange={setReportParty} placeholder="اكتب الاسم كما هو في المستند" /></div>}<div className="mt-5 overflow-x-auto">{reportType === "trial" && <div className="min-w-[620px]"><div className="grid grid-cols-4 gap-2 rounded-lg bg-[#f5f0e5] p-3 text-sm font-bold"><span>الحساب</span><span>مدين</span><span>دائن</span><span>الرصيد</span></div>{(trialReport.data?.items ?? []).map((item) => <div key={item.accountId} className="grid grid-cols-4 gap-2 border-b border-slate-100 p-3 text-sm"><span>{item.code} — {item.name}</span><span>{money.format(item.debit)}</span><span>{money.format(item.credit)}</span><span>{money.format(item.balance)}</span></div>)}<p className="mt-3 text-sm font-bold text-[#18324b]">الإجمالي: مدين {money.format(trialReport.data?.totalDebit ?? 0)} · دائن {money.format(trialReport.data?.totalCredit ?? 0)}</p></div>}{reportType === "income" && <div className="grid gap-3 sm:grid-cols-3"><div className="rounded-xl bg-emerald-50 p-4"><p className="text-xs text-slate-500">الإيرادات</p><p className="mt-2 text-xl font-bold text-emerald-700">{money.format(incomeReport.data?.revenue ?? 0)} ر.س</p></div><div className="rounded-xl bg-rose-50 p-4"><p className="text-xs text-slate-500">المصروفات</p><p className="mt-2 text-xl font-bold text-rose-700">{money.format(incomeReport.data?.expenses ?? 0)} ر.س</p></div><div className="rounded-xl bg-slate-100 p-4"><p className="text-xs text-slate-500">صافي الدخل</p><p className="mt-2 text-xl font-bold text-[#18324b]">{money.format(incomeReport.data?.netIncome ?? 0)} ر.س</p></div></div>}{reportType === "balance" && <div className="grid gap-3 sm:grid-cols-4"><div className="rounded-xl bg-blue-50 p-4"><p className="text-xs text-slate-500">الأصول</p><p className="mt-2 text-xl font-bold text-blue-700">{money.format(balanceReport.data?.assets ?? 0)}</p></div><div className="rounded-xl bg-amber-50 p-4"><p className="text-xs text-slate-500">الالتزامات</p><p className="mt-2 text-xl font-bold text-amber-700">{money.format(balanceReport.data?.liabilities ?? 0)}</p></div><div className="rounded-xl bg-violet-50 p-4"><p className="text-xs text-slate-500">حقوق الملكية</p><p className="mt-2 text-xl font-bold text-violet-700">{money.format(balanceReport.data?.equity ?? 0)}</p></div><div className="rounded-xl bg-slate-100 p-4"><p className="text-xs text-slate-500">حالة التوازن</p><p className="mt-2 text-xl font-bold text-[#18324b]">{balanceReport.data?.balanced ? "متوازن" : "يحتاج مراجعة"}</p></div></div>}{reportType === "position" && <div className="grid gap-3 sm:grid-cols-4"><div className="rounded-xl bg-emerald-50 p-4"><p className="text-xs text-slate-500">النقدية</p><p className="mt-2 text-xl font-bold text-emerald-700">{money.format(positionReport.data?.cash ?? 0)}</p></div><div className="rounded-xl bg-blue-50 p-4"><p className="text-xs text-slate-500">الذمم المدينة</p><p className="mt-2 text-xl font-bold text-blue-700">{money.format(positionReport.data?.receivables ?? 0)}</p></div><div className="rounded-xl bg-rose-50 p-4"><p className="text-xs text-slate-500">الذمم الدائنة</p><p className="mt-2 text-xl font-bold text-rose-700">{money.format(positionReport.data?.payables ?? 0)}</p></div><div className="rounded-xl bg-slate-100 p-4"><p className="text-xs text-slate-500">صافي رأس المال العامل</p><p className="mt-2 text-xl font-bold text-[#18324b]">{money.format(positionReport.data?.netWorkingCapital ?? 0)}</p></div></div>}{(reportType === "customer" || reportType === "supplier") && <div className="min-w-[700px]">{reportParty ? <><div className="grid grid-cols-5 gap-2 rounded-lg bg-[#f5f0e5] p-3 text-sm font-bold"><span>المستند</span><span>الطرف</span><span>التاريخ</span><span>مدين</span><span>دائن</span></div>{(reportType === "customer" ? customerReport.data?.rows : supplierReport.data?.rows)?.map((row) => <div key={row.id} className="grid grid-cols-5 gap-2 border-b border-slate-100 p-3 text-sm"><span>{row.document.documentNumber}</span><span>{row.document.partyName}</span><span>{row.document.documentDate ? String(row.document.documentDate).slice(0, 10) : "—"}</span><span>{money.format(Number(row.debit))}</span><span>{money.format(Number(row.credit))}</span></div>)}<p className="mt-3 text-sm font-bold text-[#18324b]">الرصيد: {money.format(reportType === "customer" ? customerReport.data?.balance ?? 0 : supplierReport.data?.balance ?? 0)} ر.س</p></> : <p className="text-sm text-slate-500">اكتب اسم العميل أو المورد لعرض كشف الحساب.</p>}</div>}</div></CardContent></Card>
+    <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]"><Card className="border-0 shadow-sm"><CardHeader><CardTitle className="text-lg text-[#18324b]">{documentTypes.find((item) => item.key === documentType)?.label}</CardTitle><p className="text-xs text-slate-500">سيتم إنشاء مدين ودائن متساويين للحفاظ على توازن القيد.</p></CardHeader><CardContent><form onSubmit={submit} className="space-y-4"><Field label="الطرف أو البيان" value={partyName} onChange={setPartyName} placeholder="اسم العميل / المورد / البيان" /><div className="grid grid-cols-2 gap-3"><Field label="القيمة" type="number" value={amount} onChange={setAmount} /><Field label="الضريبة" type="number" value={taxAmount} onChange={setTaxAmount} /></div><Field label="التاريخ" type="date" value={documentDate} onChange={setDocumentDate} />{["payment_voucher", "receipt_voucher"].includes(documentType) && <div className="grid gap-3 sm:grid-cols-2"><div className="space-y-1.5"><Label className="text-sm text-slate-600">مصدر الدفع/التحصيل</Label><select className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm" value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value as "cash" | "bank")}><option value="cash">الصندوق الرئيسي</option><option value="bank">البنك الرئيسي</option></select></div><div className="rounded-xl bg-slate-50 p-3 text-xs text-slate-500"><Landmark className="mb-1 h-4 w-4 text-[#b28a3b]" />سيتم استخدام الحساب المرتبط بمصدر الحركة تلقائيًا.</div></div>}<div className="grid gap-3 sm:grid-cols-2"><AccountSelect label="الحساب المدين" value={debitAccountId || String(suggestedAccounts.debit || "")} accounts={accounts} onChange={setDebitAccountId} /><AccountSelect label="الحساب الدائن" value={creditAccountId || String(suggestedAccounts.credit || "")} accounts={accounts} onChange={setCreditAccountId} /></div><Field label="ملاحظات" value={notes} onChange={setNotes} /><Button className="w-full bg-[#18324b] hover:bg-[#244767]" disabled={createDocument.isPending || accountsLoading}>{createDocument.isPending ? "جارٍ الحفظ..." : "حفظ وترحيل المستند"}</Button></form></CardContent></Card><div className="space-y-6"><Card className="border-0 shadow-sm"><CardHeader><CardTitle className="flex items-center gap-2 text-lg text-[#18324b]"><BookOpen className="h-5 w-5" /> شجرة الحسابات</CardTitle></CardHeader><CardContent className="space-y-2">{accounts.map((account) => <div key={account.id} className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm ${account.isPostable ? "bg-slate-50" : "bg-[#f5f0e5] font-bold text-[#18324b]"}`}><span>{account.code} — {account.name}</span><span className="text-xs text-slate-500">{account.accountType}</span></div>)}</CardContent></Card><Card className="border-0 shadow-sm"><CardHeader><CardTitle className="text-lg text-[#18324b]">آخر المستندات</CardTitle></CardHeader><CardContent className="space-y-2">{documentsLoading ? <p className="text-sm text-slate-500">جارٍ التحميل...</p> : documents.slice(0, 8).map((document) => <div key={document.id} className="flex items-center justify-between rounded-xl border border-slate-100 p-3"><div><p className="font-semibold text-[#18324b]">{document.documentNumber}</p><p className="text-xs text-slate-500">{document.partyName || "بدون طرف"} · {document.documentType}</p></div><p className="font-bold text-[#18324b]">{money.format(Number(document.totalAmount))} ر.س</p></div>)}</CardContent></Card></div></div>
+  </div></div></DashboardLayout>;
+}
