@@ -959,7 +959,7 @@
 ## Remaining requested parity
 
 - [ ] Finish Operations employee statement presentation
-- [ ] Finish stage-count dashboard progress reconciliation
+- [x] Finish stage-count dashboard progress reconciliation
 
 ## End marker
 
