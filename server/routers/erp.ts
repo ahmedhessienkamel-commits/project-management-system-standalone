@@ -174,7 +174,7 @@ export const erpRouter = router({
     summary: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
-      const [allProjectRows, stageRows, expenseRows, collectionRows, approvalRows, attachmentRows, salesRows, payrollRows, vendorRows, certificateRows] = await Promise.all([
+      const [allProjectRows, stageRows, expenseRows, collectionRows, approvalRows, attachmentRows, salesRows, payrollRows, vendorRows, certificateRows, administrativePayrollRows, payrollAllocationRows] = await Promise.all([
         db.select().from(projects),
         db.select().from(stages),
         db.select().from(expenses),
@@ -185,6 +185,8 @@ export const erpRouter = router({
         db.select().from(payroll),
         db.select().from(vendors),
         db.select().from(certificates),
+        db.select().from(administrativePayroll),
+        db.select().from(payrollAllocations),
       ]);
       const projectRows = allowed ? allProjectRows.filter((row) => allowed.has(row.id)) : allProjectRows;
       const summary = projectRows.map((project) => {
@@ -193,6 +195,8 @@ export const erpRouter = router({
         const projectCollections = collectionRows.filter((collection) => collection.projectId === project.id && collection.status === "received");
         const projectSales = salesRows.filter((sale) => sale.projectId === project.id && sale.status === "confirmed");
         const projectPayroll = payrollRows.filter((row) => row.projectId === project.id && row.classification !== "administrative" && ["approved", "posted"].includes(row.status));
+        const administrativePayrollIds = new Set(administrativePayrollRows.filter((row) => ["approved", "paid"].includes(row.status)).map((row) => row.id));
+        const projectAdministrativePayroll = payrollAllocationRows.filter((row) => row.projectId === project.id && administrativePayrollIds.has(row.administrativePayrollId));
         const projectApprovals = approvalRows.filter((approval) => approval.projectId === project.id && approval.status === "pending");
         const projectVendors = vendorRows.filter((vendor) => vendor.projectId === null || vendor.projectId === project.id);
         const projectAttachments = attachmentRows.filter((attachment) => attachment.projectId === project.id);
@@ -220,7 +224,7 @@ export const erpRouter = router({
         const expectedScheduleProgress = timeline.weight ? Math.round((timeline.expected / timeline.weight) * 100) : 0;
         const scheduleVariancePct = Math.max(expectedScheduleProgress - progress, 0);
         const planned = projectStages.reduce((sum, stage) => sum + Number(stage.plannedBudget || 0), 0);
-        const financialTotals = calculateFinancialSummaryTotals({ sales: projectSales, collections: projectCollections, expenses: projectExpenses, payroll: projectPayroll });
+        const financialTotals = calculateFinancialSummaryTotals({ sales: projectSales, collections: projectCollections, expenses: projectExpenses, payroll: [...projectPayroll, ...projectAdministrativePayroll.map((row) => ({ preTaxAmount: row.allocatedAmount, totalAmount: row.allocatedAmount, paidAmount: "0", status: "approved" as const }))] });
         const actual = financialTotals.expensesTotal + financialTotals.payrollTotal;
         const paid = financialTotals.expensesPaid + financialTotals.payrollPaid;
         const collectionsReceived = financialTotals.collectionsReceived;

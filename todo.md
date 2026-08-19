@@ -889,7 +889,7 @@
 - [x] Run Vitest suite and production build successfully
 - [ ] Complete final browser verification of Projects, Finance, Operations, and dashboard flows
 - [ ] Add dedicated automated tests for administrative payroll allocation persistence and rounding reconciliation
-- [ ] Include administrative payroll allocations in all project dashboard and cost reports
+- [x] Include administrative payroll allocations in all project dashboard and cost reports
 - [ ] Complete employee custody statement parity verification in the web UI
 
 ## Historical notes
@@ -936,7 +936,7 @@
 ## Follow-up
 
 - [ ] Add administrative salary ledger view
-- [ ] Add dashboard aggregation for payrollAllocations
+- [x] Add dashboard aggregation for payrollAllocations
 - [ ] Add custody statement UI regression test
 
 ## Checkpoint gate
