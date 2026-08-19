@@ -37,6 +37,7 @@ const menuItems = [
   { icon: FileText, label: "المستخلصات", path: "/certificates" },
   { icon: UserRound, label: "دليل الموظفين", path: "/employees" },
   { icon: ClipboardList, label: "الحضور والانصراف", path: "/attendance" },
+  { icon: ClipboardList, label: "المهام اليومية", path: "/tasks" },
   { icon: FileText, label: "الموافقات والمستندات", path: "/approvals" },
   { icon: BarChart3, label: "التقارير", path: "/reports" },
   { icon: Users, label: "المستخدمون والصلاحيات", path: "/users" },

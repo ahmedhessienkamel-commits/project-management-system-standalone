@@ -14,7 +14,8 @@ import Reports from "./pages/Reports";
 import Users from "@/pages/Users";
 import Employees from "@/pages/Employees";
 import Operations from "@/pages/Operations";
-import LegacyImport from "@/pages/LegacyImport";
+import LegacyImport from "./pages/LegacyImport";
+import Tasks from "./pages/Tasks";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -30,6 +31,7 @@ function Router() {
       <Route path={"/operations"} component={Operations} />
       <Route path={"/certificates"} component={Operations} />
       <Route path={"/attendance"} component={Operations} />
+      <Route path={"/tasks"} component={Tasks} />
       <Route path={"/approvals"} component={Approvals} />
       <Route path={"/reports"} component={Reports} />
       <Route path={"/users"} component={Users} />

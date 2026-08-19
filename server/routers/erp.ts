@@ -4,7 +4,7 @@ import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments,
 import { getDb } from "../db";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
-import { calculateDocumentCompleteness, calculateExpenseTotals, calculateFinancialSummaryTotals, calculatePayrollTotals, canAccessProject, canWriteProject, projectHealthReasons, projectHealthStatus, projectNotificationTriggers } from "../erpCalculations";
+import { calculateDocumentCompleteness, calculateExpenseTotals, calculateFinancialSummaryTotals, calculatePayrollTotals, calculatePurchaseInvoiceStatus, canAccessProject, canWriteProject, projectHealthReasons, projectHealthStatus, projectNotificationTriggers } from "../erpCalculations";
 
 const projectStatus = z.enum(["planning", "active", "paused", "completed", "archived"]);
 const projectClassification = z.enum(["operational", "administrative"]);
@@ -489,6 +489,17 @@ export const erpRouter = router({
         await db.update(approvalRequests).set({ status: input.decision, reviewedBy: ctx.user.id, note: input.note || null, reviewedAt: new Date() }).where(and(eq(approvalRequests.entityType, "purchaseOrder"), eq(approvalRequests.entityId, input.id), eq(approvalRequests.status, "pending")));
         await db.insert(auditLogs).values({ entityType: "purchaseOrder", entityId: input.id, action: input.decision, actorId: ctx.user.id, afterJson: JSON.stringify(input) });
         return { success: true } as const;
+      }),
+      updateInvoice: adminProcedure.input(z.object({ id: z.number().int().positive(), invoiceNumber: z.string().max(128).optional(), invoicedAmount: z.number().nonnegative(), paidAmount: z.number().nonnegative() })).mutation(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        const order = (await db.select().from(purchaseOrders).where(eq(purchaseOrders.id, input.id)).limit(1))[0];
+        if (!order) throw new TRPCError({ code: "NOT_FOUND", message: "أمر الشراء غير موجود" });
+        if (input.paidAmount > input.invoicedAmount) throw new TRPCError({ code: "BAD_REQUEST", message: "المدفوع لا يمكن أن يتجاوز قيمة الفاتورة" });
+        if (input.invoicedAmount > Number(order.totalAmount)) throw new TRPCError({ code: "BAD_REQUEST", message: "قيمة الفاتورة لا يمكن أن تتجاوز إجمالي أمر الشراء" });
+        const invoiceStatus = calculatePurchaseInvoiceStatus(input.invoicedAmount, input.paidAmount);
+        await db.update(purchaseOrders).set({ invoiceNumber: input.invoiceNumber || null, invoiceStatus, invoicedAmount: input.invoicedAmount.toFixed(2), paidAmount: input.paidAmount.toFixed(2) }).where(eq(purchaseOrders.id, input.id));
+        await db.insert(auditLogs).values({ entityType: "purchaseOrder", entityId: input.id, action: "invoice_updated", actorId: ctx.user.id, afterJson: JSON.stringify({ ...input, invoiceStatus }) });
+        return { success: true, invoiceStatus } as const;
       }),
       receive: protectedProcedure.input(z.object({ purchaseOrderId: z.number().int().positive(), receivedDate: z.string().optional(), notes: z.string().max(1000).optional(), items: z.array(z.object({ purchaseOrderItemId: z.number().int().positive(), quantity: z.number().positive() })).min(1) })).mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());

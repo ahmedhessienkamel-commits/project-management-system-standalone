@@ -1,10 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { allocateAdministrativeAmount, calculateExpenseTotals, calculatePayrollTotals, projectHealthStatus } from "./erpCalculations";
+import { allocateAdministrativeAmount, calculateExpenseTotals, calculatePayrollTotals, calculatePurchaseInvoiceStatus, projectHealthStatus } from "./erpCalculations";
 import { calculateAttendanceHours, filterAttendanceByMonth, summarizeAttendanceExceptions } from "../shared/attendance";
 
 describe("ERP financial rules", () => {
   it("calculates pre-tax, VAT, and total for expenses", () => {
     expect(calculateExpenseTotals(1000, 15)).toEqual({ preTaxAmount: 1000, taxRate: 15, taxAmount: 150, totalAmount: 1150 });
+  });
+
+  it("calculates purchase invoice payment status", () => {
+    expect(calculatePurchaseInvoiceStatus(0, 0)).toBe("not_received");
+    expect(calculatePurchaseInvoiceStatus(1000, 0)).toBe("received");
+    expect(calculatePurchaseInvoiceStatus(1000, 250)).toBe("partially_paid");
+    expect(calculatePurchaseInvoiceStatus(1000, 1000)).toBe("paid");
   });
 
   it("keeps payroll tax-free", () => {

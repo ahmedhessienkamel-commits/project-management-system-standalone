@@ -6,6 +6,12 @@ export function calculateExpenseTotals(preTaxAmount: number, taxRate: number) {
   return { preTaxAmount: safePreTax, taxRate: safeRate, taxAmount, totalAmount };
 }
 
+export function calculatePurchaseInvoiceStatus(invoicedAmount: number, paidAmount: number): "not_received" | "received" | "partially_paid" | "paid" {
+  if (invoicedAmount <= 0) return "not_received";
+  if (paidAmount >= invoicedAmount) return "paid";
+  return paidAmount > 0 ? "partially_paid" : "received";
+}
+
 export function calculatePayrollTotals(amount: number) {
   const safeAmount = Math.max(0, amount);
   return { preTaxAmount: safeAmount, taxAmount: 0, totalAmount: safeAmount };
