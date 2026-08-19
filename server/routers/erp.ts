@@ -703,6 +703,7 @@ export const erpRouter = router({
       const id = Number(result[0].insertId);
       await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "certificate", entityId: id, requestedBy: ctx.user.id, status: "pending", approvalStage: "project_manager", stageOrder: 1 });
       await db.insert(auditLogs).values({ entityType: "certificate", entityId: id, action: "created_pending_project_manager", actorId: ctx.user.id, afterJson: JSON.stringify({ ...input, ...totals }) });
+      await db.insert(notifications).values({ userId: ctx.user.id, type: "certificate_approval", title: "تم إنشاء مستخلص جديد", message: `المستخلص ${input.certificateNumber} مرتبط بالمشروع ويحتاج إلى اعتماد مدير المشاريع.` });
       return { id, totalAmount: totals.totalAmount, status: "pending" as const };
     }),
     approveStage: adminProcedure.input(z.object({ id: z.number().int().positive(), decision: z.enum(["approved", "rejected"]), note: z.string().max(1000).optional() })).mutation(async ({ ctx, input }) => {
@@ -715,14 +716,17 @@ export const erpRouter = router({
         await db.insert(auditLogs).values({ entityType: "certificate", entityId: input.id, action: `approval_${current.approvalStage}_${input.decision}`, actorId: ctx.user.id, afterJson: JSON.stringify(input) });
         if (input.decision === "rejected") {
           await db.update(certificates).set({ status: "rejected" }).where(eq(certificates.id, input.id));
+          if (certificate.createdBy) await db.insert(notifications).values({ userId: certificate.createdBy, type: "certificate_rejected", title: "تم رفض المستخلص", message: `تم رفض المستخلص ${certificate.certificateNumber} في مرحلة ${current.approvalStage}.` });
           return { status: "rejected" as const, nextStage: null };
         }
         const next = current.stageOrder === 1 ? { name: "general_manager", order: 2 } : current.stageOrder === 2 ? { name: "accountant", order: 3 } : null;
         if (!next) {
           await db.update(certificates).set({ status: "approved" }).where(eq(certificates.id, input.id));
+          if (certificate.createdBy) await db.insert(notifications).values({ userId: certificate.createdBy, type: "certificate_approved", title: "اكتملت موافقات المستخلص", message: `تم اعتماد المستخلص ${certificate.certificateNumber} ويمكن ترحيله للتقارير والتكلفة.` });
           return { status: "approved" as const, nextStage: null };
         }
         await db.insert(approvalRequests).values({ projectId: certificate.projectId, entityType: "certificate", entityId: input.id, requestedBy: certificate.createdBy || ctx.user.id, status: "pending", approvalStage: next.name, stageOrder: next.order });
+        if (certificate.createdBy) await db.insert(notifications).values({ userId: certificate.createdBy, type: "certificate_approval_stage", title: "انتقل المستخلص لمرحلة اعتماد جديدة", message: `المستخلص ${certificate.certificateNumber} ينتظر مرحلة ${next.name}.` });
         return { status: "pending" as const, nextStage: next.name };
       }),
   }),
