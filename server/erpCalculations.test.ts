@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { allocateAdministrativeAmount, calculateExpenseTotals, calculatePayrollTotals, calculatePurchaseInvoiceStatus, projectHealthStatus } from "./erpCalculations";
+import { allocateAdministrativeAmount, calculateExpenseTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, projectHealthStatus } from "./erpCalculations";
 import { calculateAttendanceHours, filterAttendanceByMonth, summarizeAttendanceExceptions } from "../shared/attendance";
 
 describe("ERP financial rules", () => {
@@ -16,6 +16,11 @@ describe("ERP financial rules", () => {
 
   it("keeps payroll tax-free", () => {
     expect(calculatePayrollTotals(1000)).toEqual({ preTaxAmount: 1000, taxAmount: 0, totalAmount: 1000 });
+  });
+
+  it("applies absence deduction without payroll tax", () => {
+    expect(calculatePayrollTotalsWithDeduction(3000, 500)).toEqual({ preTaxAmount: 2500, taxAmount: 0, totalAmount: 2500, deductionAmount: 500 });
+    expect(calculatePayrollTotalsWithDeduction(3000, 4000).totalAmount).toBe(0);
   });
 
   it("returns critical when a stage is delayed or budget is exceeded", () => {

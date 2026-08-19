@@ -17,6 +17,13 @@ export function calculatePayrollTotals(amount: number) {
   return { preTaxAmount: safeAmount, taxAmount: 0, totalAmount: safeAmount };
 }
 
+export function calculatePayrollTotalsWithDeduction(amount: number, deductionAmount = 0) {
+  const safeAmount = Math.max(0, amount);
+  const safeDeduction = Math.min(safeAmount, Math.max(0, deductionAmount));
+  const totalAmount = Number((safeAmount - safeDeduction).toFixed(2));
+  return { preTaxAmount: totalAmount, taxAmount: 0, totalAmount, deductionAmount: safeDeduction };
+}
+
 export function calculateFinancialSummaryTotals({ sales, collections, expenses, payroll }: { sales: Array<{ recognizedRevenue: string | number }>; collections: Array<{ amount: string | number; status: string }>; expenses: Array<{ preTaxAmount: string | number; taxAmount: string | number; totalAmount: string | number; paidAmount: string | number }>; payroll: Array<{ totalAmount: string | number; paidAmount: string | number }> }) {
   const revenue = sales.reduce((sum, row) => sum + Number(row.recognizedRevenue), 0);
   const collectionsReceived = collections.filter((row) => row.status === "received").reduce((sum, row) => sum + Number(row.amount), 0);

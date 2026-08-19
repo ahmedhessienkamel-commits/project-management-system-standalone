@@ -4,7 +4,7 @@ import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments,
 import { getDb } from "../db";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
-import { calculateDocumentCompleteness, calculateExpenseTotals, calculateFinancialSummaryTotals, calculatePayrollTotals, calculatePurchaseInvoiceStatus, canAccessProject, canWriteProject, projectHealthReasons, projectHealthStatus, projectNotificationTriggers } from "../erpCalculations";
+import { calculateDocumentCompleteness, calculateExpenseTotals, calculateFinancialSummaryTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, canAccessProject, canWriteProject, projectHealthReasons, projectHealthStatus, projectNotificationTriggers } from "../erpCalculations";
 import { accountingTotals } from "../accountingCalculations";
 
 const projectStatus = z.enum(["planning", "active", "paused", "completed", "archived"]);
@@ -675,29 +675,54 @@ export const erpRouter = router({
       });
       return { total: monthly.length, present: monthly.filter((row) => row.status === "present").length, absent: monthly.filter((row) => row.status === "absent").length, late: monthly.filter((row) => row.status === "late").length, leave: monthly.filter((row) => row.status === "leave").length };
     }),
+    createBatch: protectedProcedure.input(z.object({
+      month: z.number().int().min(1).max(12),
+      year: z.number().int().min(2000).max(2100),
+      rows: z.array(z.object({ projectId: z.number().int().positive(), stageId: z.number().int().positive().optional(), employeeId: z.number().int().positive().optional(), employeeName: z.string().trim().min(2), employeeCode: z.string().trim().max(64).optional(), classification: z.enum(["project", "administrative"]).default("project"), amount: z.number().nonnegative(), paidAmount: z.number().nonnegative().default(0), absenceDays: z.number().int().nonnegative().default(0), deductionAmount: z.number().nonnegative().default(0) })).min(1)
+    })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      const ids: number[] = [];
+      for (const row of input.rows) {
+        await assertProjectAccess(db, ctx, row.projectId);
+        await assertProjectWrite(db, ctx, row.projectId);
+        await assertPeriodOpen(db, ctx, row.projectId, new Date(input.year, input.month - 1, 1));
+        const totals = calculatePayrollTotalsWithDeduction(row.amount, row.deductionAmount);
+        const result = await db.insert(payroll).values({ projectId: row.projectId, stageId: row.stageId || null, employeeId: row.employeeId || null, employeeName: row.employeeName, employeeCode: row.employeeCode || null, month: input.month, year: input.year, classification: row.classification, preTaxAmount: totals.preTaxAmount.toFixed(2), taxAmount: "0.00", totalAmount: totals.totalAmount.toFixed(2), paidAmount: Math.min(row.paidAmount, totals.totalAmount).toFixed(2), absenceDays: row.absenceDays, deductionAmount: totals.deductionAmount.toFixed(2), createdBy: ctx.user.id, status: "pending" });
+        const id = Number(result[0].insertId); ids.push(id);
+        const approvalStatus = await resolveApprovalStatus(db, row.projectId, "payroll", totals.totalAmount);
+        if (approvalStatus === "approved") await db.update(payroll).set({ status: "approved" }).where(eq(payroll.id, id));
+        await db.insert(approvalRequests).values({ projectId: row.projectId, entityType: "payroll", entityId: id, requestedBy: ctx.user.id, status: approvalStatus });
+        await db.insert(auditLogs).values({ entityType: "payroll", entityId: id, action: "created_batch", actorId: ctx.user.id, afterJson: JSON.stringify({ ...row, month: input.month, year: input.year, ...totals }) });
+      }
+      return { ids, count: ids.length };
+    }),
     create: protectedProcedure
       .input(z.object({
         projectId: z.number().int().positive(),
         stageId: z.number().int().positive().optional(),
         employeeName: z.string().trim().min(2),
         employeeCode: z.string().trim().max(64).optional(),
+        employeeId: z.number().int().positive().optional(),
         month: z.number().int().min(1).max(12),
         year: z.number().int().min(2000).max(2100),
         classification: z.enum(["project", "administrative"]).default("project"),
         amount: z.number().nonnegative(),
         paidAmount: z.number().nonnegative().default(0),
+        absenceDays: z.number().int().nonnegative().default(0),
+        deductionAmount: z.number().nonnegative().default(0),
       }))
       .mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
         await assertProjectAccess(db, ctx, input.projectId);
         await assertProjectWrite(db, ctx, input.projectId);
         await assertPeriodOpen(db, ctx, input.projectId, new Date(input.year, input.month - 1, 1));
-        const totals = calculatePayrollTotals(input.amount);
+        const totals = calculatePayrollTotalsWithDeduction(input.amount, input.deductionAmount);
         const result = await db.insert(payroll).values({
           projectId: input.projectId,
           stageId: input.stageId || null,
           employeeName: input.employeeName,
           employeeCode: input.employeeCode || null,
+          employeeId: input.employeeId || null,
           month: input.month,
           year: input.year,
           classification: input.classification,
@@ -705,6 +730,8 @@ export const erpRouter = router({
           taxAmount: totals.taxAmount.toFixed(2),
           totalAmount: totals.totalAmount.toFixed(2),
           paidAmount: Math.min(input.paidAmount, totals.totalAmount).toFixed(2),
+          absenceDays: input.absenceDays,
+          deductionAmount: totals.deductionAmount.toFixed(2),
           createdBy: ctx.user.id,
           status: "pending",
         });
