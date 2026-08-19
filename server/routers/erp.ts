@@ -446,6 +446,13 @@ export const erpRouter = router({
       await db.insert(payrollAllocations).values(visible.map((project) => { const ratio = Number(project.contractValue || 0) / totalContractValue; return { administrativePayrollId, projectId: project.id, ratio: ratio.toFixed(6), allocatedAmount: (input.amount * ratio).toFixed(2) }; }));
       return { id: administrativePayrollId, allocations: visible.map((project) => { const ratio = Number(project.contractValue || 0) / totalContractValue; return { projectId: project.id, projectName: project.name, ratio, allocatedAmount: input.amount * ratio }; }) };
     }),
+    administrativeList: protectedProcedure.query(async ({ ctx }) => {
+      const db = requireDb(await getDb());
+      const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
+      const rows = await db.select().from(administrativePayroll).orderBy(administrativePayroll.createdAt);
+      const allocations = await db.select().from(payrollAllocations);
+      return (allowed ? rows : rows).map((row) => ({ ...row, allocations: allocations.filter((allocation) => allocation.administrativePayrollId === row.id && (!allowed || allowed.has(allocation.projectId))) }));
+    }),
     adminAllocationPreview: protectedProcedure.input(z.object({ amount: z.number().nonnegative() })).query(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);

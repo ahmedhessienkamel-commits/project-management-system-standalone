@@ -890,7 +890,7 @@
 - [ ] Complete final browser verification of Projects, Finance, Operations, and dashboard flows
 - [x] Add dedicated automated tests for administrative payroll allocation persistence and rounding reconciliation
 - [x] Include administrative payroll allocations in all project dashboard and cost reports
-- [ ] Complete employee custody statement parity verification in the web UI
+- [x] Complete employee custody statement parity verification in the web UI
 
 ## Historical notes
 
@@ -958,7 +958,7 @@
 
 ## Remaining requested parity
 
-- [ ] Finish Operations employee statement presentation
+- [x] Finish Operations employee statement presentation
 - [x] Finish stage-count dashboard progress reconciliation
 
 ## End marker
