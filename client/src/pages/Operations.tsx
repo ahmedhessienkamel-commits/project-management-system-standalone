@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
 import { calculateAttendanceHours, filterAttendanceByMonth } from "../../../shared/attendance";
 import { ArrowRight, ClipboardCheck, FileArchive, HardHat, UsersRound, WalletCards } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 
 const money = new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 2 });
@@ -30,7 +30,8 @@ export default function Operations() {
   const [tab, setTab] = useState<TabKey>("cost");
   const { data: projects = [] } = trpc.erp.projects.list.useQuery();
   const { data: stages = [] } = trpc.erp.stages.list.useQuery();
-  const selectedProjectId = projects[0]?.id;
+  const [selectedProjectId, setSelectedProjectId] = useState<number | undefined>(undefined);
+  useEffect(() => { if (selectedProjectId === undefined && projects[0]?.id) setSelectedProjectId(projects[0].id); }, [projects, selectedProjectId]);
   const cost = trpc.erp.reports.costCenter.useQuery({ projectId: selectedProjectId ?? 0 }, { enabled: Boolean(selectedProjectId) });
   const vendors = trpc.erp.vendors.list.useQuery();
   const certificates = trpc.erp.certificates.list.useQuery();
@@ -60,7 +61,7 @@ export default function Operations() {
   const stageOptions = stages.filter((s) => !selectedProjectId || s.projectId === selectedProjectId).map((s) => ({ value: String(s.id), label: s.name }));
 
   return <DashboardLayout><div dir="rtl" className="min-h-screen bg-[#f7f8fa] px-4 py-6 sm:px-8 lg:px-10"><div className="mx-auto max-w-7xl space-y-6">
-    <header><Button variant="ghost" className="mb-2 gap-2 px-0 text-slate-500" onClick={() => setLocation("/")}><ArrowRight className="h-4 w-4" /> العودة للوحة التنفيذ</Button><h1 className="text-3xl font-bold text-[#18324b]">الوحدات التشغيلية</h1><p className="mt-2 text-sm text-slate-500">سجل العملية مرة واحدة، ثم تابع أثرها في التقارير ومركز التكلفة دون إعادة إدخال.</p></header>
+    <header><Button variant="ghost" className="mb-2 gap-2 px-0 text-slate-500" onClick={() => setLocation("/")}><ArrowRight className="h-4 w-4" /> العودة للوحة التنفيذ</Button><div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><h1 className="text-3xl font-bold text-[#18324b]">الوحدات التشغيلية</h1><p className="mt-2 text-sm text-slate-500">سجل العملية مرة واحدة، ثم تابع أثرها في التقارير ومركز التكلفة دون إعادة إدخال.</p></div><div className="w-full md:w-72"><SelectField label="المشروع المعروض" value={selectedProjectId ? String(selectedProjectId) : ""} options={projectOptions} onChange={(v) => setSelectedProjectId(Number(v))} /></div></div></header>
     <div className="flex flex-wrap gap-2 rounded-2xl bg-white p-2 shadow-sm">{tabs.map(({ key, label, icon: Icon }) => <Button key={key} variant={tab === key ? "default" : "ghost"} className={tab === key ? "bg-[#18324b]" : ""} onClick={() => setTab(key)}><Icon className="ml-2 h-4 w-4" />{label}</Button>)}</div>
     {tab === "cost" && <CostCenterPanel data={cost.data ?? []} loading={cost.isLoading} projectName={projects.find((p) => p.id === selectedProjectId)?.name ?? ""} />}
     {tab === "vendors" && <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]"><FormCard title="إضافة مورد أو مقاول"><form className="space-y-3" onSubmit={(e) => { e.preventDefault(); if (!vendor.name) return; createVendor.mutate(vendor); setVendor({ name: "", taxNumber: "", commercialRegistration: "", iban: "", contact: "" }); }}><Field label="الاسم" value={vendor.name} onChange={(v) => setVendor({ ...vendor, name: v })} /><Field label="الرقم الضريبي" value={vendor.taxNumber} onChange={(v) => setVendor({ ...vendor, taxNumber: v })} /><Field label="السجل التجاري" value={vendor.commercialRegistration} onChange={(v) => setVendor({ ...vendor, commercialRegistration: v })} /><Field label="IBAN" value={vendor.iban} onChange={(v) => setVendor({ ...vendor, iban: v })} /><Field label="بيانات الاتصال" value={vendor.contact} onChange={(v) => setVendor({ ...vendor, contact: v })} /><Button className="w-full bg-[#18324b]" disabled={createVendor.isPending}>حفظ المورد</Button></form></FormCard><ListCard title="سجل الموردين والمقاولين">{(vendors.data ?? []).map((item) => <ListRow key={item.id} title={item.name} subtitle={[item.taxNumber, item.iban].filter(Boolean).join(" · ") || "بيانات الامتثال غير مكتملة"} badge="مرجع مركزي" projectId={item.projectId} entityType="vendor" entityId={item.id} />)}</ListCard></div>}
