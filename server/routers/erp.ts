@@ -169,6 +169,18 @@ export const erpRouter = router({
         });
         return { id: projectId };
       }),
+    update: protectedProcedure
+      .input(z.object({ id: z.number().int().positive(), code: z.string().trim().min(2).max(64), name: z.string().trim().min(2).max(255), location: z.string().trim().max(255).optional(), status: projectStatus, classification: projectClassification, projectType: projectType, contractValue: z.number().nonnegative(), plannedStart: z.string().optional(), plannedEnd: z.string().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        await assertProjectAccess(db, ctx, input.id);
+        if (input.plannedStart && input.plannedEnd && new Date(input.plannedEnd) < new Date(input.plannedStart)) throw new TRPCError({ code: "BAD_REQUEST", message: "نهاية المشروع لا يمكن أن تسبق بدايته" });
+        const before = (await db.select().from(projects).where(eq(projects.id, input.id)).limit(1))[0];
+        if (!before) throw new TRPCError({ code: "NOT_FOUND", message: "المشروع غير موجود" });
+        await db.update(projects).set({ code: input.code, name: input.name, location: input.location || null, status: input.status, classification: input.classification, projectType: input.projectType, contractValue: input.contractValue.toFixed(2), plannedStart: input.plannedStart ? new Date(input.plannedStart) : null, plannedEnd: input.plannedEnd ? new Date(input.plannedEnd) : null }).where(eq(projects.id, input.id));
+        await db.insert(auditLogs).values({ entityType: "project", entityId: input.id, action: "updated", actorId: ctx.user.id, beforeJson: JSON.stringify(before), afterJson: JSON.stringify(input) });
+        return { success: true } as const;
+      }),
   }),
 
   units: router({
@@ -206,6 +218,18 @@ export const erpRouter = router({
         const stageId = Number(result[0].insertId);
         await db.insert(auditLogs).values({ entityType: "stage", entityId: stageId, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
         return { id: stageId };
+      }),
+    updateSchedule: protectedProcedure
+      .input(z.object({ id: z.number().int().positive(), code: z.string().trim().min(1).max(64), name: z.string().trim().min(2).max(255), plannedBudget: z.number().nonnegative(), plannedStart: z.string().optional(), plannedEnd: z.string().optional(), actualProgress: z.number().min(0).max(100), status: z.enum(["planned", "active", "completed", "delayed"]) }))
+      .mutation(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        const before = (await db.select().from(stages).where(eq(stages.id, input.id)).limit(1))[0];
+        if (!before) throw new TRPCError({ code: "NOT_FOUND", message: "المرحلة غير موجودة" });
+        await assertProjectAccess(db, ctx, before.projectId);
+        if (input.plannedStart && input.plannedEnd && new Date(input.plannedEnd) < new Date(input.plannedStart)) throw new TRPCError({ code: "BAD_REQUEST", message: "نهاية المرحلة لا يمكن أن تسبق بدايتها" });
+        await db.update(stages).set({ code: input.code, name: input.name, plannedBudget: input.plannedBudget.toFixed(2), plannedStart: input.plannedStart ? new Date(input.plannedStart) : null, plannedEnd: input.plannedEnd ? new Date(input.plannedEnd) : null, actualProgress: input.actualProgress.toFixed(2), status: input.status }).where(eq(stages.id, input.id));
+        await db.insert(auditLogs).values({ entityType: "stage", entityId: input.id, action: "schedule_updated", actorId: ctx.user.id, beforeJson: JSON.stringify(before), afterJson: JSON.stringify(input) });
+        return { success: true } as const;
       }),
     updateProgress: protectedProcedure
       .input(z.object({ id: z.number().int().positive(), actualProgress: z.number().min(0).max(100), status: z.enum(["planned", "active", "completed", "delayed"]).optional() }))
