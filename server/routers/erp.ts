@@ -357,6 +357,24 @@ export const erpRouter = router({
       const assets = await db.select().from(fixedAssets).where(eq(fixedAssets.status, "active"));
       return Promise.all(assets.map(async (asset) => ({ ...asset, depreciation: await db.select().from(fixedAssetDepreciation).where(eq(fixedAssetDepreciation.assetId, asset.id)) })));
     }),
+    postDepreciation: protectedProcedure.input(z.object({ depreciationId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      const row = (await db.select().from(fixedAssetDepreciation).where(eq(fixedAssetDepreciation.id, input.depreciationId)).limit(1))[0];
+      if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "دفعة الإهلاك غير موجودة" });
+      if (row.status === "posted") throw new TRPCError({ code: "CONFLICT", message: "تم ترحيل إهلاك هذه الفترة مسبقًا" });
+      const asset = (await db.select().from(fixedAssets).where(eq(fixedAssets.id, row.assetId)).limit(1))[0];
+      if (!asset) throw new TRPCError({ code: "NOT_FOUND", message: "الأصل المرتبط غير موجود" });
+      const documentNumber = `DEP-${asset.assetCode}-${row.periodStart}`;
+      const result = await db.insert(accountingDocuments).values({ documentType: "journal_entry", documentNumber, documentDate: row.periodEnd, amount: row.depreciationAmount, taxAmount: "0", totalAmount: row.depreciationAmount, status: "posted", notes: `إهلاك شهري — ${asset.name}`, createdBy: ctx.user.id });
+      const documentId = Number(result[0].insertId);
+      await db.insert(accountingDocumentLines).values([
+        { documentId, accountId: asset.depreciationExpenseAccountId, description: `مصروف إهلاك ${asset.name}`, debit: row.depreciationAmount, credit: "0" },
+        { documentId, accountId: asset.accumulatedDepreciationAccountId, description: `مجمع إهلاك ${asset.name}`, debit: "0", credit: row.depreciationAmount },
+      ]);
+      await db.update(fixedAssetDepreciation).set({ status: "posted", journalDocumentId: documentId }).where(eq(fixedAssetDepreciation.id, row.id));
+      await db.insert(auditLogs).values({ entityType: "fixedAssetDepreciation", entityId: row.id, action: "posted", actorId: ctx.user.id, afterJson: JSON.stringify({ documentId }) });
+      return { documentId };
+    }),
     create: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional(), assetCode: z.string().trim().min(1).max(64), name: z.string().trim().min(2).max(255), category: z.string().trim().min(2).max(128), acquisitionDate: z.string(), inServiceDate: z.string(), acquisitionCost: z.number().positive(), residualValue: z.number().nonnegative().default(0), usefulLifeMonths: z.number().int().positive(), assetAccountId: z.number().int().positive(), depreciationExpenseAccountId: z.number().int().positive(), accumulatedDepreciationAccountId: z.number().int().positive(), sourceDocumentId: z.number().int().positive().optional() })).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
       if (input.projectId) await assertProjectWrite(db, ctx, input.projectId);
