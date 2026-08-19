@@ -36,7 +36,7 @@ const menuItems = [
   { icon: WalletCards, label: "مسير الرواتب", path: "/payroll" },
   { icon: WalletCards, label: "العهد", path: "/custody" },
   { icon: ClipboardList, label: "المقاولون والموردون", path: "/operations?tab=vendors" },
-  { icon: FileText, label: "المقاولون والمستخلصات", path: "/certificates" },
+  { icon: FileText, label: "المقاولون والمستخلصات", path: "/operations?tab=certificates" },
   { icon: FileText, label: "كشوف حسابات الموردين", path: "/reports?view=suppliers" },
   { icon: Landmark, label: "المعاملات المالية", path: "/transactions" },
   { icon: Landmark, label: "المحاسبة", path: "/accounting" },

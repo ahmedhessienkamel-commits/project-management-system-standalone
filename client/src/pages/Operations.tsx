@@ -31,7 +31,8 @@ const custodyAllocationLabels: Record<CustodyAllocationType, string> = { project
 
 export default function Operations() {
   const [location, setLocation] = useLocation();
-  const [tab, setTab] = useState<TabKey>(location === "/certificates" ? "certificates" : location === "/attendance" ? "attendance" : location === "/custody" ? "custodyStatement" : "cost");
+  const initialTab = (() => { const queryTab = new URLSearchParams(window.location.search).get("tab"); if (tabs.some((item) => item.key === queryTab)) return queryTab as TabKey; if (location === "/certificates") return "certificates"; if (location === "/attendance") return "attendance"; if (location === "/custody") return "custodyStatement"; return "cost"; })();
+  const [tab, setTab] = useState<TabKey>(initialTab);
   const { data: projects = [] } = trpc.erp.projects.list.useQuery();
   const { data: stages = [] } = trpc.erp.stages.list.useQuery();
   const [selectedProjectId, setSelectedProjectId] = useState<number | undefined>(undefined);

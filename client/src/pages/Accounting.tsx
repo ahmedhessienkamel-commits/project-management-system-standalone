@@ -50,7 +50,8 @@ export default function Accounting() {
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "bank">("cash");
   const [debitAccountId, setDebitAccountId] = useState("");
   const [creditAccountId, setCreditAccountId] = useState("");
-  const [reportType, setReportType] = useState<ReportType>("trial");
+  const initialReportType = (() => { const value = new URLSearchParams(window.location.search).get("report"); return reportTypes.some((report) => report.key === value) ? value as ReportType : "trial"; })();
+  const [reportType, setReportType] = useState<ReportType>(initialReportType);
   const [reportParty, setReportParty] = useState("");
   const [reportFrom, setReportFrom] = useState("");
   const [reportTo, setReportTo] = useState("");
