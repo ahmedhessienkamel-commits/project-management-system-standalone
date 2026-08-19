@@ -779,7 +779,7 @@ export const erpRouter = router({
       const db = requireDb(await getDb());
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
       const rows = await db.select().from(payroll).orderBy(payroll.createdAt);
-      return allowed ? rows.filter((row) => allowed.has(row.projectId)) : rows;
+      return allowed ? rows.filter((row) => row.projectId === null || allowed.has(row.projectId)) : rows;
     }),
     attendanceSummary: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), month: z.number().int().min(1).max(12), year: z.number().int().min(2000).max(2100) })).query(async ({ ctx, input }) => {
       const db = requireDb(await getDb());

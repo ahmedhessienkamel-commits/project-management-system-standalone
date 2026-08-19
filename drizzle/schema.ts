@@ -209,7 +209,7 @@ export const employees = mysqlTable("employees", {
 
 export const payroll = mysqlTable("payroll", {
   id: int("id").autoincrement().primaryKey(),
-  projectId: int("projectId").notNull(),
+  projectId: int("projectId"),
   stageId: int("stageId"),
   employeeId: int("employeeId"),
   employeeName: varchar("employeeName", { length: 255 }).notNull(),
@@ -217,6 +217,7 @@ export const payroll = mysqlTable("payroll", {
   month: int("month").notNull(),
   year: int("year").notNull(),
   classification: mysqlEnum("classification", ["project", "administrative"]).default("project").notNull(),
+  allocationRatio: decimal("allocationRatio", { precision: 8, scale: 6 }).default("1").notNull(),
   preTaxAmount: decimal("preTaxAmount", { precision: 14, scale: 2 }).default("0").notNull(),
   taxAmount: decimal("taxAmount", { precision: 14, scale: 2 }).default("0").notNull(),
   totalAmount: decimal("totalAmount", { precision: 14, scale: 2 }).default("0").notNull(),

@@ -1,0 +1,1 @@
+ALTER TABLE `payroll` MODIFY COLUMN `projectId` int;

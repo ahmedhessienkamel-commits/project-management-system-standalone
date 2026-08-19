@@ -1,0 +1,1 @@
+ALTER TABLE `payroll` ADD `allocationRatio` decimal(8,6) DEFAULT '1' NOT NULL;
