@@ -312,6 +312,12 @@ export const erpRouter = router({
         const scheduleVariancePct = Math.max(expectedScheduleProgress - progress, 0);
         const planned = projectStages.reduce((sum, stage) => sum + Number(stage.plannedBudget || 0), 0);
         const activeStage = [...projectStages].sort((a, b) => (a.plannedStart ? new Date(a.plannedStart).getTime() : Number.MAX_SAFE_INTEGER) - (b.plannedStart ? new Date(b.plannedStart).getTime() : Number.MAX_SAFE_INTEGER)).find((stage) => stage.status !== "completed" && Number(stage.actualProgress || 0) < 100) ?? null;
+        const administrativeExpenseRows = expenseRows.filter((expense) => expense.projectId === project.id && ["approved", "posted"].includes(expense.status) && (expense.classification === "administrative" || expense.expenseType === "administrative"));
+        const materialsExpenseRows = projectExpenses.filter((expense) => expense.classification !== "administrative" && expense.expenseType === "materials");
+        const operationalExpenseRows = projectExpenses.filter((expense) => expense.classification !== "administrative" && expense.expenseType !== "administrative" && expense.expenseType !== "materials");
+        const materialsExpensesTotal = materialsExpenseRows.reduce((sum, expense) => sum + Number(expense.totalAmount || 0), 0);
+        const operationalExpensesTotal = operationalExpenseRows.reduce((sum, expense) => sum + Number(expense.totalAmount || 0), 0);
+        const administrativeExpensesTotal = administrativeExpenseRows.reduce((sum, expense) => sum + Number(expense.totalAmount || 0), 0);
         const financialTotals = calculateFinancialSummaryTotals({ sales: projectSales, collections: projectCollections, expenses: projectExpenses, payroll: [...projectPayroll, ...projectAdministrativePayroll.map((row) => ({ preTaxAmount: row.allocatedAmount, totalAmount: row.allocatedAmount, paidAmount: "0", status: "approved" as const }))] });
         const actual = financialTotals.expensesTotal + financialTotals.payrollTotal;
         const paid = financialTotals.expensesPaid + financialTotals.payrollPaid;
@@ -333,8 +339,13 @@ export const erpRouter = router({
           outstandingCost: Math.max(actual - paid, 0),
           collectionsReceived,
           recognizedRevenue,
-          payrollOutstanding,
-          cashGap,
+           payrollOutstanding,
+           materialsExpensesTotal,
+           operationalExpensesTotal,
+           administrativeExpensesTotal,
+           payrollTotal: financialTotals.payrollTotal,
+           totalExpenses: materialsExpensesTotal + operationalExpensesTotal + administrativeExpensesTotal + financialTotals.payrollTotal,
+           cashGap,
           pendingApprovals: projectApprovals.length,
           overdueApprovals,
           expectedScheduleProgress,

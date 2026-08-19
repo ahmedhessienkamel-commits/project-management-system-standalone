@@ -30,9 +30,14 @@ export default function Home() {
     recognizedRevenue: totals.recognizedRevenue + item.recognizedRevenue,
     collectionsReceived: totals.collectionsReceived + item.collectionsReceived,
     payrollOutstanding: totals.payrollOutstanding + item.payrollOutstanding,
+    materialsExpenses: totals.materialsExpenses + item.materialsExpensesTotal,
+    operationalExpenses: totals.operationalExpenses + item.operationalExpensesTotal,
+    administrativeExpenses: totals.administrativeExpenses + item.administrativeExpensesTotal,
+    payrollTotal: totals.payrollTotal + item.payrollTotal,
+    totalExpenses: totals.totalExpenses + item.totalExpenses,
     cashGap: totals.cashGap + item.cashGap,
     pendingApprovals: totals.pendingApprovals + item.pendingApprovals,
-  }), { plannedBudget: 0, actualCost: 0, outstandingCost: 0, recognizedRevenue: 0, collectionsReceived: 0, payrollOutstanding: 0, cashGap: 0, pendingApprovals: 0 });
+  }), { plannedBudget: 0, actualCost: 0, outstandingCost: 0, recognizedRevenue: 0, collectionsReceived: 0, payrollOutstanding: 0, materialsExpenses: 0, operationalExpenses: 0, administrativeExpenses: 0, payrollTotal: 0, totalExpenses: 0, cashGap: 0, pendingApprovals: 0 });
   const totalBudget = shortcutTotals.plannedBudget;
   const totalActual = shortcutTotals.actualCost;
   const totalOutstanding = shortcutTotals.outstandingCost;
@@ -42,6 +47,7 @@ export default function Home() {
   const totalCollections = shortcutTotals.collectionsReceived;
   const totalPayrollOutstanding = shortcutTotals.payrollOutstanding;
   const totalCashGap = shortcutTotals.cashGap;
+  const selectedExpenseTotals = selectedSummary ? { materials: selectedSummary.materialsExpensesTotal, operational: selectedSummary.operationalExpensesTotal, payroll: selectedSummary.payrollTotal, administrative: selectedSummary.administrativeExpensesTotal, total: selectedSummary.totalExpenses } : { materials: shortcutTotals.materialsExpenses, operational: shortcutTotals.operationalExpenses, payroll: shortcutTotals.payrollTotal, administrative: shortcutTotals.administrativeExpenses, total: shortcutTotals.totalExpenses };
   const totalPendingApprovals = shortcutTotals.pendingApprovals;
 
   return (
@@ -64,6 +70,14 @@ export default function Home() {
           {selectedSummary && <section className="grid gap-4 rounded-3xl bg-[#18324b] p-5 text-white shadow-sm lg:grid-cols-[1.3fr_1fr_1fr]"><TimeGauge title="عداد المرحلة النشطة" subtitle={selectedSummary.activeStage?.name ?? "لا توجد مرحلة نشطة"} start={selectedSummary.activeStage?.plannedStart ?? null} end={selectedSummary.activeStage?.plannedEnd ?? null} /><TimeGauge title="عداد المشروع" start={selectedSummary.project.plannedStart} end={selectedSummary.project.plannedEnd} /><div className="grid grid-cols-2 gap-3"><Indicator label="إنجاز المشروع" value={`${selectedSummary.progress}%`} /><Indicator label="إنجاز المرحلة" value={`${selectedSummary.activeStage?.actualProgress ?? 0}%`} /><Indicator label="الميزانية" value={`${money.format(selectedSummary.plannedBudget)} ر.س`} /><Indicator label="المنصرف" value={`${money.format(selectedSummary.actualCost)} ر.س`} /></div></section>}
 
           {selectedSummary && <section className="grid gap-4 md:grid-cols-2"><BudgetSummary title="مقارنة المشروع ككل — الميزانية والمنصرف" planned={selectedSummary.plannedBudget} actual={selectedSummary.actualCost} /><BudgetSummary title={`مقارنة المرحلة الحالية — ${selectedSummary.activeStage?.name ?? "لا توجد مرحلة نشطة"}`} planned={selectedSummary.activeStage?.plannedBudget ?? 0} actual={selectedSummary.activeStage?.actualCost ?? 0} /></section>}
+
+          <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            <MetricCard icon={Landmark} label="تكلفة الخامات" value={`${money.format(selectedExpenseTotals.materials)} ر.س`} hint="بنود خامات معتمدة" tone="gold" onClick={() => setLocation("/expenses")} />
+            <MetricCard icon={WalletCards} label="التكلفة التشغيلية" value={`${money.format(selectedExpenseTotals.operational)} ر.س`} hint="تشغيل ومعدات وخدمات" tone="blue" onClick={() => setLocation("/expenses")} />
+            <MetricCard icon={Clock3} label="مصروف الرواتب" value={`${money.format(selectedExpenseTotals.payroll)} ر.س`} hint="رواتب محملة على المشروع" tone="violet" onClick={() => setLocation("/payroll")} />
+            <MetricCard icon={ReceiptText} label="المصاريف الإدارية والعمومية" value={`${money.format(selectedExpenseTotals.administrative)} ر.س`} hint="مصروفات إدارية معتمدة" tone="amber" onClick={() => setLocation("/expenses")} />
+            <MetricCard icon={CircleDollarSign} label="إجمالي المصروفات" value={`${money.format(selectedExpenseTotals.total)} ر.س`} hint="التصنيفات الأربعة مجمعة" tone="rose" onClick={() => setLocation("/reports")} />
+          </section>
 
           <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <MetricCard icon={FolderKanban} label="المشاريع النشطة" value={String(summaries.filter((item) => isProjectActive(item.project)).length)} hint={`${summaries.length} إجمالي المشاريع`} tone="blue" onClick={() => setLocation("/projects")} />
