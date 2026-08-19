@@ -17,12 +17,14 @@ import Employees from "@/pages/Employees";
 import Operations from "@/pages/Operations";
 import LegacyImport from "./pages/LegacyImport";
 import Tasks from "./pages/Tasks";
+import CompanySettings from "./pages/CompanySettings";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
       <Route path={"/"} component={Home} />
+      <Route path={"/company-settings"} component={CompanySettings} />
       <Route path={"/projects/:id"} component={ProjectDetails} />
       <Route path={"/projects"} component={Projects} />
       <Route path={"/sales"} component={SalesCollections} />

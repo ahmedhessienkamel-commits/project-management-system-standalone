@@ -28,6 +28,8 @@ import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 
 const menuItems = [
+  { icon: Settings2, label: "معلومات الشركة", path: "/company-settings" },
+  { icon: Landmark, label: "البنوك والنقدية", path: "/company-settings#cash" },
   { icon: LayoutDashboard, label: "لوحة التنفيذ", path: "/" },
   { icon: ClipboardList, label: "المشاريع والمراحل", path: "/projects" },
   { icon: WalletCards, label: "المبيعات والتحصيلات", path: "/sales" },

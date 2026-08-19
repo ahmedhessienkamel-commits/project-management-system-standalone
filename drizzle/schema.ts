@@ -448,6 +448,40 @@ export const approvalPolicies = mysqlTable("approvalPolicies", {
 });
 
 
+export const companyProfiles = mysqlTable("companyProfiles", {
+  id: int("id").autoincrement().primaryKey(),
+  legalName: varchar("legalName", { length: 255 }).notNull(),
+  tradeName: varchar("tradeName", { length: 255 }),
+  commercialRegistration: varchar("commercialRegistration", { length: 128 }),
+  taxNumber: varchar("taxNumber", { length: 128 }),
+  nationalAddress: text("nationalAddress"),
+  phone: varchar("phone", { length: 64 }),
+  email: varchar("email", { length: 255 }),
+  website: varchar("website", { length: 255 }),
+  logoUrl: text("logoUrl"),
+  notes: text("notes"),
+  createdBy: int("createdBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const cashAccounts = mysqlTable("cashAccounts", {
+  id: int("id").autoincrement().primaryKey(),
+  code: varchar("code", { length: 32 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  accountType: mysqlEnum("accountType", ["bank", "cash"]).notNull(),
+  bankName: varchar("bankName", { length: 255 }),
+  accountNumber: varchar("accountNumber", { length: 128 }),
+  iban: varchar("iban", { length: 64 }),
+  currency: varchar("currency", { length: 8 }).notNull().default("SAR"),
+  accountId: int("accountId"),
+  openingBalance: decimal("openingBalance", { precision: 14, scale: 2 }).notNull().default("0"),
+  isActive: int("isActive").notNull().default(1),
+  createdBy: int("createdBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
 export const accounts = mysqlTable("accounts", {
   id: int("id").autoincrement().primaryKey(),
   code: varchar("code", { length: 32 }).notNull().unique(),

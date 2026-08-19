@@ -176,6 +176,13 @@
       "when": 1787178047323,
       "tag": "0024_legal_bill_hollister",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "5",
+      "when": 1787180738172,
+      "tag": "0025_chilly_silver_sable",
+      "breakpoints": true
     }
   ]
 }
