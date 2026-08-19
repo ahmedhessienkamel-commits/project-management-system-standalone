@@ -429,6 +429,23 @@ export const erpRouter = router({
       await db.insert(auditLogs).values({ entityType: "fixedAsset", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify({ ...input, id }) });
       return { id };
     }),
+    update: protectedProcedure.input(z.object({ id: z.number().int().positive(), projectId: z.number().int().positive().nullable().optional(), assetCode: z.string().trim().min(1).max(64), name: z.string().trim().min(2).max(255), category: z.string().trim().min(2).max(128), acquisitionDate: z.string(), inServiceDate: z.string(), acquisitionCost: z.number().positive(), residualValue: z.number().nonnegative().default(0), usefulLifeMonths: z.number().int().positive(), assetAccountId: z.number().int().positive(), depreciationExpenseAccountId: z.number().int().positive(), accumulatedDepreciationAccountId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      const existing = (await db.select().from(fixedAssets).where(eq(fixedAssets.id, input.id)).limit(1))[0];
+      if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "بطاقة الأصل غير موجودة" });
+      if (input.projectId) await assertProjectWrite(db, ctx, input.projectId);
+      const depreciationRows = await db.select().from(fixedAssetDepreciation).where(eq(fixedAssetDepreciation.assetId, input.id));
+      if (depreciationRows.some((row) => row.status === "posted")) throw new TRPCError({ code: "CONFLICT", message: "لا يمكن تعديل أصل له إهلاك مرحّل؛ استخدم قيد تصحيحي" });
+      const accountRows = await db.select({ id: accounts.id }).from(accounts);
+      const accountIds = [input.assetAccountId, input.depreciationExpenseAccountId, input.accumulatedDepreciationAccountId];
+      if (accountIds.some((id) => !accountRows.some((row) => row.id === id))) throw new TRPCError({ code: "BAD_REQUEST", message: "اختر حسابات صحيحة للأصل والإهلاك" });
+      await db.update(fixedAssets).set({ projectId: input.projectId ?? null, assetCode: input.assetCode, name: input.name, category: input.category, acquisitionDate: new Date(input.acquisitionDate), inServiceDate: new Date(input.inServiceDate), acquisitionCost: input.acquisitionCost.toFixed(2), residualValue: input.residualValue.toFixed(2), usefulLifeMonths: input.usefulLifeMonths, assetAccountId: input.assetAccountId, depreciationExpenseAccountId: input.depreciationExpenseAccountId, accumulatedDepreciationAccountId: input.accumulatedDepreciationAccountId }).where(eq(fixedAssets.id, input.id));
+      await db.delete(fixedAssetDepreciation).where(eq(fixedAssetDepreciation.assetId, input.id));
+      const schedule = calculateStraightLineDepreciation({ acquisitionCost: input.acquisitionCost, residualValue: input.residualValue, usefulLifeMonths: input.usefulLifeMonths, inServiceDate: input.inServiceDate });
+      await db.insert(fixedAssetDepreciation).values(schedule.map((row) => ({ assetId: input.id, periodStart: new Date(row.periodStart), periodEnd: new Date(row.periodEnd), depreciationAmount: row.depreciationAmount.toFixed(2), accumulatedAmount: row.accumulatedAmount.toFixed(2), netBookValue: row.netBookValue.toFixed(2) })));
+      await db.insert(auditLogs).values({ entityType: "fixedAsset", entityId: input.id, action: "updated", actorId: ctx.user.id, beforeJson: JSON.stringify(existing), afterJson: JSON.stringify(input) });
+      return { id: input.id };
+    }),
   }),
   expenses: router({
     list: protectedProcedure.query(async ({ ctx }) => {
