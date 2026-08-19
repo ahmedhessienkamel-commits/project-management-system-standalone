@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { trpc } from "@/lib/trpc";
+import { isProjectActive } from "../../../shared/projectStatus";
 import { ArrowLeft, CalendarClock, CheckCircle2, CircleDollarSign, Clock3, FileCheck2, FolderKanban, HandCoins, Landmark, Plus, ReceiptText, ShieldAlert, WalletCards } from "lucide-react";
 import { useLocation } from "wouter";
 import { useMemo, useState } from "react";
@@ -60,10 +61,12 @@ export default function Home() {
             </Button>
           </header>
 
-          {selectedSummary && <section className="grid gap-4 rounded-3xl bg-[#18324b] p-5 text-white shadow-sm lg:grid-cols-[1.3fr_1fr_1fr]"><TimeGauge title="عداد المشروع" start={selectedSummary.project.plannedStart} end={selectedSummary.project.plannedEnd} /><TimeGauge title="عداد المرحلة النشطة" start={selectedSummary.activeStage?.plannedStart ?? null} end={selectedSummary.activeStage?.plannedEnd ?? null} /><div className="grid grid-cols-2 gap-3"><Indicator label="إنجاز المشروع" value={`${selectedSummary.progress}%`} /><Indicator label="إنجاز المرحلة" value={`${selectedSummary.activeStage?.actualProgress ?? 0}%`} /><Indicator label="الميزانية" value={`${money.format(selectedSummary.plannedBudget)} ر.س`} /><Indicator label="المنصرف" value={`${money.format(selectedSummary.actualCost)} ر.س`} /></div></section>}
+          {selectedSummary && <section className="grid gap-4 rounded-3xl bg-[#18324b] p-5 text-white shadow-sm lg:grid-cols-[1.3fr_1fr_1fr]"><TimeGauge title="عداد المشروع" start={selectedSummary.project.plannedStart} end={selectedSummary.project.plannedEnd} /><TimeGauge title="عداد المرحلة النشطة" subtitle={selectedSummary.activeStage?.name ?? "لا توجد مرحلة نشطة"} start={selectedSummary.activeStage?.plannedStart ?? null} end={selectedSummary.activeStage?.plannedEnd ?? null} /><div className="grid grid-cols-2 gap-3"><Indicator label="إنجاز المشروع" value={`${selectedSummary.progress}%`} /><Indicator label="إنجاز المرحلة" value={`${selectedSummary.activeStage?.actualProgress ?? 0}%`} /><Indicator label="الميزانية" value={`${money.format(selectedSummary.plannedBudget)} ر.س`} /><Indicator label="المنصرف" value={`${money.format(selectedSummary.actualCost)} ر.س`} /></div></section>}
+
+          {selectedSummary && <section className="grid gap-4 md:grid-cols-2"><BudgetSummary title="مقارنة المشروع ككل — الميزانية والمنصرف" planned={selectedSummary.plannedBudget} actual={selectedSummary.actualCost} /><BudgetSummary title={`مقارنة المرحلة الحالية — ${selectedSummary.activeStage?.name ?? "لا توجد مرحلة نشطة"}`} planned={selectedSummary.activeStage?.plannedBudget ?? 0} actual={selectedSummary.activeStage?.actualCost ?? 0} /></section>}
 
           <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <MetricCard icon={FolderKanban} label="المشاريع النشطة" value={String(summaries.filter((item) => item.project.status === "active").length)} hint={`${summaries.length} إجمالي المشاريع`} tone="blue" onClick={() => setLocation("/projects")} />
+            <MetricCard icon={FolderKanban} label="المشاريع النشطة" value={String(summaries.filter((item) => isProjectActive(item.project)).length)} hint={`${summaries.length} إجمالي المشاريع`} tone="blue" onClick={() => setLocation("/projects")} />
             <MetricCard icon={Landmark} label="الميزانية المخططة" value={`${money.format(totalBudget)} ر.س`} hint="من العقد والمراحل" tone="gold" onClick={() => setLocation("/reports")} />
             <MetricCard icon={WalletCards} label="التكلفة الفعلية" value={`${money.format(totalActual)} ر.س`} hint={`${money.format(totalOutstanding)} ر.س مستحق`} tone="rose" onClick={() => setLocation("/finance")} />
             <MetricCard icon={ReceiptText} label="المصروفات المستحقة" value={`${money.format(totalOutstanding + totalPayrollOutstanding)} ر.س`} hint="تكاليف ورواتب غير مدفوعة" tone="amber" onClick={() => setLocation("/finance")} />
@@ -111,17 +114,26 @@ export default function Home() {
   );
 }
 
-function TimeGauge({ title, start, end }: { title: string; start?: string | Date | null; end?: string | Date | null }) {
+function TimeGauge({ title, subtitle, start, end }: { title: string; subtitle?: string; start?: string | Date | null; end?: string | Date | null }) {
   const startDate = start ? new Date(start) : null;
   const endDate = end ? new Date(end) : null;
   const now = Date.now();
   const totalDays = startDate && endDate ? Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / 86400000)) : 0;
   const remainingDays = endDate ? Math.max(0, Math.ceil((endDate.getTime() - now) / 86400000)) : null;
   const elapsed = startDate && endDate ? Math.min(100, Math.max(0, ((now - startDate.getTime()) / Math.max(1, endDate.getTime() - startDate.getTime())) * 100)) : 0;
-  return <div className="rounded-2xl bg-white/10 p-4"><div className="flex items-center justify-between"><p className="text-sm font-semibold text-slate-200">{title}</p><Clock3 className="h-5 w-5 text-[#e0b95c]" /></div><p className="mt-3 text-3xl font-bold">{remainingDays === null ? "—" : `${remainingDays} يوم`}</p><p className="mt-1 text-xs text-slate-300">{startDate && endDate ? `${startDate.toLocaleDateString("ar-SA")} → ${endDate.toLocaleDateString("ar-SA")} · ${totalDays} يوم` : "أدخل تاريخي البداية والنهاية"}</p><div className="mt-3 h-2 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-[#e0b95c]" style={{ width: `${elapsed}%` }} /></div></div>;
+  const status = !startDate || !endDate ? "بدون تواريخ" : now < startDate.getTime() ? "لم تبدأ" : now > endDate.getTime() ? "متأخرة" : "جارية";
+  const statusTone = status === "جارية" ? "text-emerald-300" : status === "متأخرة" ? "text-rose-300" : "text-amber-300";
+  return <div className="rounded-2xl bg-white/10 p-4"><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-semibold text-slate-200">{title}</p>{subtitle && <p className="mt-1 text-xs text-slate-300">{subtitle}</p>}</div><Clock3 className="h-5 w-5 text-[#e0b95c]" /></div><div className="mt-3 flex items-end justify-between gap-2"><p className="text-3xl font-bold">{remainingDays === null ? "—" : `${remainingDays} يوم`}</p><span className={`text-xs font-semibold ${statusTone}`}>{status}</span></div><p className="mt-1 text-xs text-slate-300">{startDate && endDate ? `${startDate.toLocaleDateString("ar-SA")} → ${endDate.toLocaleDateString("ar-SA")} · ${totalDays} يوم` : "أدخل تاريخي البداية والنهاية"}</p><div className="mt-3 h-2 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-md bg-[#e0b95c]" style={{ width: `${elapsed}%` }} /></div></div>;
 }
 
 function Indicator({ label, value }: { label: string; value: string }) { return <div className="rounded-xl bg-white/10 p-3"><p className="text-[11px] text-slate-300">{label}</p><p className="mt-1 text-sm font-bold text-white">{value}</p></div>; }
+
+function BudgetSummary({ title, planned, actual }: { title: string; planned: number; actual: number }) {
+  const difference = Number(planned) - Number(actual);
+  const deviation = planned ? ((Number(actual) - Number(planned)) / Number(planned)) * 100 : 0;
+  const favorable = difference >= 0;
+  return <Card className="overflow-hidden border-0 shadow-sm"><CardHeader className="bg-[#18324b] py-3 text-white"><CardTitle className="text-base">{title}</CardTitle></CardHeader><CardContent className="p-0"><div className="grid grid-cols-3 divide-x divide-x-reverse divide-slate-200 bg-[#f5f0e5] text-center text-sm font-bold text-[#18324b]"><div className="p-3"><p className="text-xs font-normal text-slate-500">الميزانية المحددة</p><p className="mt-1">{money.format(Number(planned))}</p></div><div className="p-3"><p className="text-xs font-normal text-slate-500">منصرف فعليًا</p><p className="mt-1">{money.format(Number(actual))}</p></div><div className={`p-3 ${favorable ? "text-emerald-700" : "text-rose-700"}`}><p className="text-xs font-normal text-slate-500">الفرق</p><p className="mt-1">{money.format(Math.abs(difference))}</p></div></div><div className="grid grid-cols-3 divide-x divide-x-reverse divide-slate-200 text-center text-sm"><div className="p-3"><p className="text-xs text-slate-500">معدل الانحراف</p><p className={`mt-1 font-bold ${deviation > 0 ? "text-rose-700" : "text-emerald-700"}`}>{deviation.toFixed(1)}%</p></div><div className="p-3"><p className="text-xs text-slate-500">الحالة</p><p className={`mt-1 font-bold ${favorable ? "text-emerald-700" : "text-rose-700"}`}>{favorable ? "وفر متاح" : "تجاوز الميزانية"}</p></div><div className="p-3"><p className="text-xs text-slate-500">القراءة التنفيذية</p><p className="mt-1 font-bold text-[#18324b]">{favorable ? "وفر" : "تحتاج إجراء"}</p></div></div><div className="border-t border-slate-200 bg-white p-3 text-center text-xs text-slate-500">{planned ? "المقارنة مبنية على مركز التكلفة والقيود المسجلة" : "أدخل ميزانية مركز التكلفة لعرض المقارنة"}</div></CardContent></Card>;
+}
 
 function MetricCard({ icon: Icon, label, value, hint, tone, onClick }: { icon: typeof FolderKanban; label: string; value: string; hint: string; tone: "blue" | "gold" | "rose" | "amber" | "green" | "teal" | "violet" | "slate"; onClick?: () => void }) {
   const colors = { blue: "bg-blue-50 text-blue-700", gold: "bg-amber-50 text-amber-700", rose: "bg-rose-50 text-rose-700", amber: "bg-orange-50 text-orange-700", green: "bg-emerald-50 text-emerald-700", teal: "bg-cyan-50 text-cyan-700", violet: "bg-violet-50 text-violet-700", slate: "bg-slate-100 text-slate-700" };

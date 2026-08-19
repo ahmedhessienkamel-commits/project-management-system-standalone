@@ -1,0 +1,1 @@
+ALTER TABLE `projects` ADD `projectType` enum('real_estate_development','off_plan_sales','main_contractor','subcontractor','general') DEFAULT 'general' NOT NULL;

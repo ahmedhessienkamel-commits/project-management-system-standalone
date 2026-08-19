@@ -27,6 +27,7 @@ export const projects = mysqlTable("projects", {
   name: varchar("name", { length: 255 }).notNull(),
   status: mysqlEnum("status", ["planning", "active", "paused", "completed", "archived"]).default("planning").notNull(),
   classification: mysqlEnum("classification", ["operational", "administrative"]).default("operational").notNull(),
+  projectType: mysqlEnum("projectType", ["real_estate_development", "off_plan_sales", "main_contractor", "subcontractor", "general"]).default("general").notNull(),
   contractValue: decimal("contractValue", { precision: 14, scale: 2 }).default("0").notNull(),
   location: varchar("location", { length: 255 }),
   plannedStart: date("plannedStart"),
@@ -166,7 +167,9 @@ export const sales = mysqlTable("sales", {
 export const collections = mysqlTable("collections", {
   id: int("id").autoincrement().primaryKey(),
   projectId: int("projectId").notNull(),
-  saleId: int("saleId").notNull(),
+  saleId: int("saleId"),
+  collectionType: mysqlEnum("collectionType", ["unit_sale", "owner_payment", "contract_payment", "other"]).default("other").notNull(),
+  partyName: varchar("partyName", { length: 255 }),
   receiptReference: varchar("receiptReference", { length: 128 }),
   collectionDate: date("collectionDate"),
   amount: decimal("amount", { precision: 14, scale: 2 }).default("0").notNull(),

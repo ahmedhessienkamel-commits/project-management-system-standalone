@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { allocateAdministrativeAmount, calculateExpenseTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, calculateStraightLineDepreciation, projectHealthStatus } from "./erpCalculations";
 import { calculateAttendanceHours, filterAttendanceByMonth, summarizeAttendanceExceptions } from "../shared/attendance";
+import { isProjectActive } from "../shared/projectStatus";
 
 describe("ERP financial rules", () => {
   it("calculates pre-tax, VAT, and total for expenses", () => {
@@ -29,6 +30,14 @@ describe("ERP financial rules", () => {
     expect(schedule[0]).toMatchObject({ periodStart: "2026-01-01", depreciationAmount: 900 });
     expect(schedule.at(-1)?.accumulatedAmount).toBe(10800);
     expect(schedule.at(-1)?.netBookValue).toBe(1200);
+  });
+
+  it("counts projects inside their planned date range as active", () => {
+    const now = new Date("2026-08-20T12:00:00Z");
+    expect(isProjectActive({ status: "planning", plannedStart: "2026-08-01", plannedEnd: "2029-01-30" }, now)).toBe(true);
+    expect(isProjectActive({ status: "active", plannedStart: null, plannedEnd: null }, now)).toBe(true);
+    expect(isProjectActive({ status: "planning", plannedStart: "2025-01-01", plannedEnd: "2026-01-01" }, now)).toBe(false);
+    expect(isProjectActive({ status: "planning", plannedStart: null, plannedEnd: null }, now)).toBe(false);
   });
 
   it("returns critical when a stage is delayed or budget is exceeded", () => {

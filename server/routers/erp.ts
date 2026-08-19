@@ -9,6 +9,7 @@ import { accountingTotals } from "../accountingCalculations";
 
 const projectStatus = z.enum(["planning", "active", "paused", "completed", "archived"]);
 const projectClassification = z.enum(["operational", "administrative"]);
+const projectType = z.enum(["real_estate_development", "off_plan_sales", "main_contractor", "subcontractor", "general"]);
 
 function requireDb(db: Awaited<ReturnType<typeof getDb>>) {
   if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة حاليًا" });
@@ -143,6 +144,7 @@ export const erpRouter = router({
         location: z.string().trim().max(255).optional(),
         status: projectStatus.default("planning"),
         classification: projectClassification.default("operational"),
+        projectType: projectType.default("general"),
         contractValue: z.number().nonnegative().default(0),
         plannedStart: z.string().optional(),
         plannedEnd: z.string().optional(),
@@ -284,6 +286,8 @@ export const erpRouter = router({
         const cashGap = Math.max(paid - collectionsReceived, 0);
         const budgetUsage = planned ? Math.round((actual / planned) * 100) : 0;
         const delayedStages = projectStages.filter((stage) => stage.status === "delayed").length + overdueStages.length;
+        const activeStagePlannedBudget = activeStage ? Number(activeStage.plannedBudget || 0) : 0;
+        const activeStageActualCost = activeStage ? projectExpenses.filter((expense) => expense.stageId === activeStage.id).reduce((sum, expense) => sum + Number(expense.totalAmount || 0), 0) + projectPayroll.filter((row) => row.stageId === activeStage.id).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) : 0;
         const status = projectHealthStatus({ budgetUsage, progress, delayedStages, cashGapRatio: actual ? cashGap / actual : 0, pendingApprovals: projectApprovals.length, overdueApprovals, scheduleVariancePct });
         const reasons = projectHealthReasons({ budgetUsage, progress, delayedStages, cashGap, pendingApprovals: projectApprovals.length, overdueApprovals, scheduleVariancePct });
         return {
@@ -307,7 +311,7 @@ export const erpRouter = router({
           stageCount: projectStages.length,
           delayedStages,
           missingDocumentCount: documentCompleteness.missing.length + missingCertificateDocuments + missingPaymentDocuments,
-          activeStage: activeStage ? { id: activeStage.id, code: activeStage.code, name: activeStage.name, status: activeStage.status, plannedStart: activeStage.plannedStart, plannedEnd: activeStage.plannedEnd, actualProgress: Number(activeStage.actualProgress || 0) } : null,
+          activeStage: activeStage ? { id: activeStage.id, code: activeStage.code, name: activeStage.name, status: activeStage.status, plannedStart: activeStage.plannedStart, plannedEnd: activeStage.plannedEnd, actualProgress: Number(activeStage.actualProgress || 0), plannedBudget: activeStagePlannedBudget, actualCost: activeStageActualCost } : null,
         };
       });
       for (const item of summary) {
