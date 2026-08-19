@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
-import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, employees, expenses, notifications, payroll, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, sales, stages, units, users, vendors } from "../../drizzle/schema";
+import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, dailyTasks, employees, expenses, notifications, payroll, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, sales, stages, units, users, vendors, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
@@ -71,6 +71,26 @@ export const erpRouter = router({
       const db = requireDb(await getDb());
       await db.update(employees).set({ status: input.status }).where(eq(employees.id, input.id));
       await db.insert(auditLogs).values({ entityType: "employee", entityId: input.id, action: "status_updated", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
+      return { success: true } as const;
+    }),
+  }),
+  tasks: router({
+    list: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional() }).optional()).query(async ({ input }) => {
+      const db = requireDb(await getDb());
+      const rows = await db.select().from(dailyTasks).orderBy(dailyTasks.dueDate, dailyTasks.createdAt);
+      return input?.projectId ? rows.filter((task) => task.projectId === input.projectId || task.projectId === null) : rows;
+    }),
+    create: protectedProcedure.input(z.object({ projectId: z.number().int().positive().nullable().optional(), assignedEmployeeId: z.number().int().positive().nullable().optional(), title: z.string().min(1), description: z.string().optional(), dueDate: z.string().optional(), priority: z.enum(["low", "normal", "high"]).default("normal") })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      if (input.projectId) await assertProjectWrite(db, ctx, input.projectId);
+      const result = await db.insert(dailyTasks).values({ ...input, projectId: input.projectId ?? null, assignedEmployeeId: input.assignedEmployeeId ?? null, description: input.description || null, dueDate: input.dueDate ? new Date(input.dueDate) : null, createdBy: ctx.user.id });
+      await db.insert(auditLogs).values({ entityType: "daily_task", entityId: Number(result[0].insertId), action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
+      return { id: Number(result[0].insertId) };
+    }),
+    updateStatus: protectedProcedure.input(z.object({ id: z.number().int().positive(), status: z.enum(["open", "in_progress", "done", "cancelled"]) })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      await db.update(dailyTasks).set({ status: input.status, completedAt: input.status === "done" ? new Date() : null }).where(eq(dailyTasks.id, input.id));
+      await db.insert(auditLogs).values({ entityType: "daily_task", entityId: input.id, action: "status_updated", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
       return { success: true } as const;
     }),
   }),
@@ -406,6 +426,96 @@ export const erpRouter = router({
       }),
   }),
 
+  procurement: router({
+    requisitions: router({
+      list: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional() }).optional()).query(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        const rows = await db.select().from(materialRequisitions);
+        const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
+        return rows.filter((row) => (!input?.projectId || row.projectId === input.projectId) && (!allowed || allowed.has(row.projectId)));
+      }),
+      create: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), stageId: z.number().int().positive().optional(), description: z.string().max(2000).optional(), requiredBy: z.string().optional(), items: z.array(z.object({ description: z.string().min(1).max(255), unit: z.string().max(64).optional(), quantity: z.number().positive(), estimatedUnitCost: z.number().nonnegative(), notes: z.string().max(500).optional() })).min(1) })).mutation(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        await assertProjectWrite(db, ctx, input.projectId);
+        const requestNumber = `MR-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        const result = await db.insert(materialRequisitions).values({ projectId: input.projectId, stageId: input.stageId || null, requestedBy: ctx.user.id, requestNumber, description: input.description || null, status: "pending_approval", requiredBy: input.requiredBy ? new Date(input.requiredBy) : null });
+        const id = Number(result[0].insertId);
+        for (const item of input.items) await db.insert(materialRequisitionItems).values({ requisitionId: id, description: item.description, unit: item.unit || null, quantity: item.quantity.toFixed(3), estimatedUnitCost: item.estimatedUnitCost.toFixed(2), notes: item.notes || null });
+        await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "materialRequisition", entityId: id, requestedBy: ctx.user.id, status: "pending", approvalStage: "project_manager", stageOrder: 1 });
+        await db.insert(auditLogs).values({ entityType: "materialRequisition", entityId: id, action: "submitted", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
+        return { id, requestNumber };
+      }),
+      decide: adminProcedure.input(z.object({ id: z.number().int().positive(), decision: z.enum(["approved", "rejected"]), note: z.string().max(1000).optional() })).mutation(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        const request = (await db.select().from(materialRequisitions).where(eq(materialRequisitions.id, input.id)).limit(1))[0];
+        if (!request) throw new TRPCError({ code: "NOT_FOUND", message: "طلب المواد غير موجود" });
+        const approved = input.decision === "approved";
+        await db.update(materialRequisitions).set({ status: approved ? "approved" : "rejected" }).where(eq(materialRequisitions.id, input.id));
+        await db.update(approvalRequests).set({ status: input.decision, reviewedBy: ctx.user.id, note: input.note || null, reviewedAt: new Date() }).where(and(eq(approvalRequests.entityType, "materialRequisition"), eq(approvalRequests.entityId, input.id), eq(approvalRequests.status, "pending")));
+        await db.insert(auditLogs).values({ entityType: "materialRequisition", entityId: input.id, action: input.decision, actorId: ctx.user.id, afterJson: JSON.stringify(input) });
+        return { success: true } as const;
+      }),
+    }),
+    purchaseOrders: router({
+      list: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional() }).optional()).query(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        const rows = await db.select().from(purchaseOrders);
+        const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
+        const filtered = rows.filter((row) => (!input?.projectId || row.projectId === input.projectId) && (!allowed || allowed.has(row.projectId)));
+        return Promise.all(filtered.map(async (row) => ({ ...row, items: await db.select().from(purchaseOrderItems).where(eq(purchaseOrderItems.purchaseOrderId, row.id)) })));
+      }),
+      create: protectedProcedure.input(z.object({ requisitionId: z.number().int().positive(), vendorId: z.number().int().positive(), orderDate: z.string().optional(), expectedDate: z.string().optional(), items: z.array(z.object({ description: z.string().min(1).max(255), unit: z.string().max(64).optional(), quantity: z.number().positive(), unitCost: z.number().nonnegative() })).min(1) })).mutation(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        const requisition = (await db.select().from(materialRequisitions).where(eq(materialRequisitions.id, input.requisitionId)).limit(1))[0];
+        if (!requisition || requisition.status !== "approved") throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن إنشاء أمر شراء إلا لطلب مواد معتمد" });
+        await assertProjectWrite(db, ctx, requisition.projectId);
+        const vendor = (await db.select().from(vendors).where(eq(vendors.id, input.vendorId)).limit(1))[0];
+        if (!vendor) throw new TRPCError({ code: "NOT_FOUND", message: "المورد غير موجود" });
+        const subtotal = input.items.reduce((sum, item) => sum + item.quantity * item.unitCost, 0);
+        const orderNumber = `PO-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        const result = await db.insert(purchaseOrders).values({ projectId: requisition.projectId, stageId: requisition.stageId || null, vendorId: input.vendorId, requisitionId: requisition.id, orderNumber, status: "pending_approval", subtotal: subtotal.toFixed(2), taxAmount: "0.00", totalAmount: subtotal.toFixed(2), orderDate: input.orderDate ? new Date(input.orderDate) : null, expectedDate: input.expectedDate ? new Date(input.expectedDate) : null, createdBy: ctx.user.id });
+        const id = Number(result[0].insertId);
+        for (const item of input.items) await db.insert(purchaseOrderItems).values({ purchaseOrderId: id, description: item.description, unit: item.unit || null, quantity: item.quantity.toFixed(3), unitCost: item.unitCost.toFixed(2), receivedQuantity: "0.000", totalAmount: (item.quantity * item.unitCost).toFixed(2) });
+        await db.update(materialRequisitions).set({ status: "converted" }).where(eq(materialRequisitions.id, requisition.id));
+        await db.insert(approvalRequests).values({ projectId: requisition.projectId, entityType: "purchaseOrder", entityId: id, requestedBy: ctx.user.id, status: "pending", approvalStage: "project_manager", stageOrder: 1 });
+        await db.insert(auditLogs).values({ entityType: "purchaseOrder", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
+        return { id, orderNumber };
+      }),
+      decide: adminProcedure.input(z.object({ id: z.number().int().positive(), decision: z.enum(["approved", "rejected"]), note: z.string().max(1000).optional() })).mutation(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        const order = (await db.select().from(purchaseOrders).where(eq(purchaseOrders.id, input.id)).limit(1))[0];
+        if (!order) throw new TRPCError({ code: "NOT_FOUND", message: "أمر الشراء غير موجود" });
+        await db.update(purchaseOrders).set({ status: input.decision === "approved" ? "approved" : "cancelled" }).where(eq(purchaseOrders.id, input.id));
+        await db.update(approvalRequests).set({ status: input.decision, reviewedBy: ctx.user.id, note: input.note || null, reviewedAt: new Date() }).where(and(eq(approvalRequests.entityType, "purchaseOrder"), eq(approvalRequests.entityId, input.id), eq(approvalRequests.status, "pending")));
+        await db.insert(auditLogs).values({ entityType: "purchaseOrder", entityId: input.id, action: input.decision, actorId: ctx.user.id, afterJson: JSON.stringify(input) });
+        return { success: true } as const;
+      }),
+      receive: protectedProcedure.input(z.object({ purchaseOrderId: z.number().int().positive(), receivedDate: z.string().optional(), notes: z.string().max(1000).optional(), items: z.array(z.object({ purchaseOrderItemId: z.number().int().positive(), quantity: z.number().positive() })).min(1) })).mutation(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        const order = (await db.select().from(purchaseOrders).where(eq(purchaseOrders.id, input.purchaseOrderId)).limit(1))[0];
+        if (!order || !["approved", "partially_received"].includes(order.status)) throw new TRPCError({ code: "BAD_REQUEST", message: "أمر الشراء غير معتمد أو مغلق" });
+        await assertProjectWrite(db, ctx, order.projectId);
+        const receiptNumber = `GRN-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        const receiptResult = await db.insert(purchaseReceipts).values({ purchaseOrderId: order.id, projectId: order.projectId, stageId: order.stageId || null, receiptNumber, receivedDate: input.receivedDate ? new Date(input.receivedDate) : null, notes: input.notes || null, status: "posted", createdBy: ctx.user.id });
+        const receiptId = Number(receiptResult[0].insertId);
+        let receivedCost = 0;
+        for (const received of input.items) {
+          const item = (await db.select().from(purchaseOrderItems).where(and(eq(purchaseOrderItems.id, received.purchaseOrderItemId), eq(purchaseOrderItems.purchaseOrderId, order.id))).limit(1))[0];
+          if (!item) throw new TRPCError({ code: "NOT_FOUND", message: "بند أمر الشراء غير موجود" });
+          const quantity = Math.min(received.quantity, Number(item.quantity) - Number(item.receivedQuantity));
+          if (quantity <= 0) continue;
+          receivedCost += quantity * Number(item.unitCost);
+          await db.insert(purchaseReceiptItems).values({ receiptId, purchaseOrderItemId: item.id, quantity: quantity.toFixed(3) });
+          await db.update(purchaseOrderItems).set({ receivedQuantity: (Number(item.receivedQuantity) + quantity).toFixed(3) }).where(eq(purchaseOrderItems.id, item.id));
+        }
+        if (receivedCost > 0) await db.insert(expenses).values({ projectId: order.projectId, stageId: order.stageId || null, vendorId: order.vendorId, reference: receiptNumber, description: `استلام مواد من أمر شراء ${order.orderNumber}`, unit: "استلام", quantity: "1.000", expenseType: "materials", classification: "project", preTaxAmount: receivedCost.toFixed(2), taxRate: "0.00", taxAmount: "0.00", totalAmount: receivedCost.toFixed(2), paidAmount: "0.00", status: "posted", expenseDate: input.receivedDate ? new Date(input.receivedDate) : new Date(), createdBy: ctx.user.id });
+        await db.update(purchaseOrders).set({ status: "partially_received" }).where(eq(purchaseOrders.id, order.id));
+        await db.insert(auditLogs).values({ entityType: "purchaseReceipt", entityId: receiptId, action: "posted", actorId: ctx.user.id, afterJson: JSON.stringify({ ...input, receivedCost }) });
+        return { id: receiptId, receiptNumber, receivedCost };
+      }),
+    }),
+  }),
+
   approvals: router({
     policies: router({
       list: protectedProcedure.input(z.object({ projectId: z.number().int().positive() })).query(async ({ ctx, input }) => {
@@ -447,8 +557,18 @@ export const erpRouter = router({
         if (request.entityType === "payroll") await db.update(payroll).set({ status: approved ? "approved" : "draft" }).where(eq(payroll.id, request.entityId));
         if (request.entityType === "sale") await db.update(sales).set({ status: approved ? "confirmed" : "cancelled" }).where(eq(sales.id, request.entityId));
         if (request.entityType === "collection") await db.update(collections).set({ status: approved ? "received" : "reversed" }).where(eq(collections.id, request.entityId));
-        if (request.entityType === "certificate") await db.update(certificates).set({ status: approved ? "approved" : "rejected" }).where(eq(certificates.id, request.entityId));
-        await db.insert(auditLogs).values({ entityType: "approval", entityId: input.id, action: input.decision, actorId: ctx.user.id, afterJson: JSON.stringify(input) });
+        if (request.entityType === "certificate") {
+          if (!approved) {
+            await db.update(certificates).set({ status: "rejected" }).where(eq(certificates.id, request.entityId));
+          } else if (request.stageOrder === 1 || request.stageOrder === 2) {
+            const nextStage = request.stageOrder === 1 ? { name: "general_manager", order: 2 } : { name: "accountant", order: 3 };
+            const certificate = (await db.select().from(certificates).where(eq(certificates.id, request.entityId)).limit(1))[0];
+            await db.insert(approvalRequests).values({ projectId: request.projectId, entityType: "certificate", entityId: request.entityId, requestedBy: certificate?.createdBy || ctx.user.id, status: "pending", approvalStage: nextStage.name, stageOrder: nextStage.order });
+          } else {
+            await db.update(certificates).set({ status: "approved" }).where(eq(certificates.id, request.entityId));
+          }
+        }
+        await db.insert(auditLogs).values({ entityType: "approval", entityId: input.id, action: input.decision, actorId: ctx.user.id, afterJson: JSON.stringify({ ...input, approvalStage: request.approvalStage, stageOrder: request.stageOrder }) });
         return { success: true } as const;
       }),
   }),
@@ -581,12 +701,30 @@ export const erpRouter = router({
       const totals = calculateExpenseTotals(input.preTaxAmount, input.taxRate);
       const result = await db.insert(certificates).values({ projectId: input.projectId, stageId: input.stageId || null, vendorId: input.vendorId || null, certificateNumber: input.certificateNumber, description: input.description || null, preTaxAmount: totals.preTaxAmount.toFixed(2), taxAmount: totals.taxAmount.toFixed(2), totalAmount: totals.totalAmount.toFixed(2), paidAmount: Math.min(input.paidAmount, totals.totalAmount).toFixed(2), status: "pending", certificateDate: input.certificateDate ? new Date(input.certificateDate) : null, createdBy: ctx.user.id });
       const id = Number(result[0].insertId);
-      const approvalStatus = await resolveApprovalStatus(db, input.projectId, "certificate", totals.totalAmount);
-      if (approvalStatus === "approved") await db.update(certificates).set({ status: "approved" }).where(eq(certificates.id, id));
-      await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "certificate", entityId: id, requestedBy: ctx.user.id, status: approvalStatus });
-      await db.insert(auditLogs).values({ entityType: "certificate", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify({ ...input, ...totals }) });
-      return { id, totalAmount: totals.totalAmount };
+      await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "certificate", entityId: id, requestedBy: ctx.user.id, status: "pending", approvalStage: "project_manager", stageOrder: 1 });
+      await db.insert(auditLogs).values({ entityType: "certificate", entityId: id, action: "created_pending_project_manager", actorId: ctx.user.id, afterJson: JSON.stringify({ ...input, ...totals }) });
+      return { id, totalAmount: totals.totalAmount, status: "pending" as const };
     }),
+    approveStage: adminProcedure.input(z.object({ id: z.number().int().positive(), decision: z.enum(["approved", "rejected"]), note: z.string().max(1000).optional() })).mutation(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        const certificate = (await db.select().from(certificates).where(eq(certificates.id, input.id)).limit(1))[0];
+        if (!certificate) throw new TRPCError({ code: "NOT_FOUND", message: "المستخلص غير موجود" });
+        const current = (await db.select().from(approvalRequests).where(and(eq(approvalRequests.entityType, "certificate"), eq(approvalRequests.entityId, input.id), eq(approvalRequests.status, "pending"))).limit(1))[0];
+        if (!current) throw new TRPCError({ code: "BAD_REQUEST", message: "لا توجد مرحلة موافقة معلقة لهذا المستخلص" });
+        await db.update(approvalRequests).set({ status: input.decision, reviewedBy: ctx.user.id, note: input.note || null, reviewedAt: new Date() }).where(eq(approvalRequests.id, current.id));
+        await db.insert(auditLogs).values({ entityType: "certificate", entityId: input.id, action: `approval_${current.approvalStage}_${input.decision}`, actorId: ctx.user.id, afterJson: JSON.stringify(input) });
+        if (input.decision === "rejected") {
+          await db.update(certificates).set({ status: "rejected" }).where(eq(certificates.id, input.id));
+          return { status: "rejected" as const, nextStage: null };
+        }
+        const next = current.stageOrder === 1 ? { name: "general_manager", order: 2 } : current.stageOrder === 2 ? { name: "accountant", order: 3 } : null;
+        if (!next) {
+          await db.update(certificates).set({ status: "approved" }).where(eq(certificates.id, input.id));
+          return { status: "approved" as const, nextStage: null };
+        }
+        await db.insert(approvalRequests).values({ projectId: certificate.projectId, entityType: "certificate", entityId: input.id, requestedBy: certificate.createdBy || ctx.user.id, status: "pending", approvalStage: next.name, stageOrder: next.order });
+        return { status: "pending" as const, nextStage: next.name };
+      }),
   }),
 
   custody: router({

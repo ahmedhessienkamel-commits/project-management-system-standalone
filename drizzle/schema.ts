@@ -102,6 +102,8 @@ export const approvalRequests = mysqlTable("approvalRequests", {
   note: text("note"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   reviewedAt: timestamp("reviewedAt"),
+  approvalStage: varchar("approvalStage", { length: 32 }),
+  stageOrder: int("stageOrder"),
 });
 
 export const auditLogs = mysqlTable("auditLogs", {
@@ -311,6 +313,21 @@ export const notifications = mysqlTable("notifications", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
+export const dailyTasks = mysqlTable("dailyTasks", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: int("projectId"),
+  assignedEmployeeId: int("assignedEmployeeId"),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  dueDate: timestamp("dueDate"),
+  priority: varchar("priority", { length: 16 }).notNull().default("normal"),
+  status: varchar("status", { length: 16 }).notNull().default("open"),
+  createdBy: int("createdBy"),
+  completedAt: timestamp("completedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
 export const periodLocks = mysqlTable("periodLocks", {
   id: int("id").autoincrement().primaryKey(),
   projectId: int("projectId").notNull(),
@@ -319,6 +336,78 @@ export const periodLocks = mysqlTable("periodLocks", {
   lockedBy: int("lockedBy").notNull(),
   lockedAt: timestamp("lockedAt").defaultNow().notNull(),
   reason: text("reason"),
+});
+
+export const materialRequisitions = mysqlTable("materialRequisitions", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: int("projectId").notNull(),
+  stageId: int("stageId"),
+  requestedBy: int("requestedBy").notNull(),
+  requestNumber: varchar("requestNumber", { length: 128 }).notNull().unique(),
+  description: text("description"),
+  status: mysqlEnum("status", ["draft", "pending_approval", "approved", "rejected", "converted", "cancelled"]).default("draft").notNull(),
+  requiredBy: date("requiredBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const materialRequisitionItems = mysqlTable("materialRequisitionItems", {
+  id: int("id").autoincrement().primaryKey(),
+  requisitionId: int("requisitionId").notNull(),
+  description: varchar("description", { length: 255 }).notNull(),
+  unit: varchar("unit", { length: 64 }),
+  quantity: decimal("quantity", { precision: 14, scale: 3 }).notNull().default("1"),
+  estimatedUnitCost: decimal("estimatedUnitCost", { precision: 14, scale: 2 }).notNull().default("0"),
+  notes: text("notes"),
+});
+
+export const purchaseOrders = mysqlTable("purchaseOrders", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: int("projectId").notNull(),
+  stageId: int("stageId"),
+  vendorId: int("vendorId").notNull(),
+  requisitionId: int("requisitionId"),
+  orderNumber: varchar("orderNumber", { length: 128 }).notNull().unique(),
+  status: mysqlEnum("status", ["draft", "pending_approval", "approved", "partially_received", "received", "cancelled"]).default("draft").notNull(),
+  subtotal: decimal("subtotal", { precision: 14, scale: 2 }).notNull().default("0"),
+  taxAmount: decimal("taxAmount", { precision: 14, scale: 2 }).notNull().default("0"),
+  totalAmount: decimal("totalAmount", { precision: 14, scale: 2 }).notNull().default("0"),
+  orderDate: date("orderDate"),
+  expectedDate: date("expectedDate"),
+  createdBy: int("createdBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const purchaseOrderItems = mysqlTable("purchaseOrderItems", {
+  id: int("id").autoincrement().primaryKey(),
+  purchaseOrderId: int("purchaseOrderId").notNull(),
+  description: varchar("description", { length: 255 }).notNull(),
+  unit: varchar("unit", { length: 64 }),
+  quantity: decimal("quantity", { precision: 14, scale: 3 }).notNull().default("1"),
+  unitCost: decimal("unitCost", { precision: 14, scale: 2 }).notNull().default("0"),
+  receivedQuantity: decimal("receivedQuantity", { precision: 14, scale: 3 }).notNull().default("0"),
+  totalAmount: decimal("totalAmount", { precision: 14, scale: 2 }).notNull().default("0"),
+});
+
+export const purchaseReceipts = mysqlTable("purchaseReceipts", {
+  id: int("id").autoincrement().primaryKey(),
+  purchaseOrderId: int("purchaseOrderId").notNull(),
+  projectId: int("projectId").notNull(),
+  stageId: int("stageId"),
+  receiptNumber: varchar("receiptNumber", { length: 128 }).notNull().unique(),
+  receivedDate: date("receivedDate"),
+  notes: text("notes"),
+  status: mysqlEnum("status", ["draft", "posted", "cancelled"]).default("draft").notNull(),
+  createdBy: int("createdBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const purchaseReceiptItems = mysqlTable("purchaseReceiptItems", {
+  id: int("id").autoincrement().primaryKey(),
+  receiptId: int("receiptId").notNull(),
+  purchaseOrderItemId: int("purchaseOrderItemId").notNull(),
+  quantity: decimal("quantity", { precision: 14, scale: 3 }).notNull().default("0"),
 });
 
 export const approvalPolicies = mysqlTable("approvalPolicies", {

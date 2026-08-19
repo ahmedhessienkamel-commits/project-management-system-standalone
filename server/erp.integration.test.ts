@@ -183,8 +183,9 @@ describe("ERP sales and collections API flow", () => {
     await caller.erp.collections.create({ projectId: 1, saleId: 102, amount: 50000 });
     expect(state.payroll.find((row) => row.employeeName === "راتب دون الحد")).toMatchObject({ status: "approved" });
     expect(state.payroll.find((row) => row.employeeName === "راتب فوق الحد")).toMatchObject({ status: "pending" });
-    expect(state.certificates.find((row) => row.certificateNumber === "CERT-BELOW")).toMatchObject({ status: "approved" });
+    expect(state.certificates.find((row) => row.certificateNumber === "CERT-BELOW")).toMatchObject({ status: "pending" });
     expect(state.certificates.find((row) => row.certificateNumber === "CERT-ABOVE")).toMatchObject({ status: "pending" });
+    expect(state.approvalRequests.find((row) => row.entityType === "certificate" && row.approvalStage === "project_manager" && row.status === "pending")).toBeTruthy();
     expect(state.sales.find((row) => row.customerName === "بيع دون الحد")).toMatchObject({ status: "confirmed", recognizedRevenue: "10000.00" });
     expect(state.sales.find((row) => row.customerName === "بيع فوق الحد")).toMatchObject({ status: "reserved", recognizedRevenue: "0.00" });
     expect(state.collections.find((row) => row.amount === "10000.00")).toMatchObject({ status: "received" });

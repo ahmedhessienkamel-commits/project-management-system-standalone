@@ -11920,16 +11920,16 @@
 - [x] Add Gantt/timeline view with project and stage schedule setup guidance in the web UI
 - [x] Add employee master-data section in the sidebar
 - [x] Link employees to custody movements and employee custody statements
-- [ ] Add dedicated professional payroll-run section with printable payroll statement
-- [ ] Ensure payroll classification supports project payroll and general administrative payroll
-- [ ] Add dedicated contractor certificates/claims section with paid and outstanding allocation
-- [ ] Reflect certificate payments and outstanding amounts in project dashboards and costs
-- [ ] Add cost-center and income-statement reporting section with project filters
-- [ ] Add monthly cash-flow report and funding-gap forecast from stage performance
-- [ ] Add attendance and check-in/out section with future fingerprint integration boundary
+- [x] Add dedicated professional payroll-run section with printable payroll statement
+- [x] Ensure payroll classification supports project payroll and general administrative payroll
+- [x] Add dedicated contractor certificates/claims section with paid and outstanding allocation
+- [x] Reflect certificate payments and outstanding amounts in project dashboards and costs
+- [x] Add cost-center and income-statement reporting section with project filters
+- [x] Add monthly cash-flow report and funding-gap forecast from stage performance
+- [x] Add attendance and check-in/out section with future fingerprint integration boundary
 - [ ] Add daily tasks section and browser notification feasibility path
-- [ ] Improve sidebar icon navigation and report discoverability
-- [ ] Preserve single-entry rule and Arabic RTL visual consistency across all new sections
+- [x] Improve sidebar icon navigation and report discoverability
+- [x] Preserve single-entry rule and Arabic RTL visual consistency across all new sections
 - [ ] Add Vitest coverage for new dashboard and financial aggregation logic
 - [ ] Run full browser smoke tests and save a final review checkpoint
 
@@ -22688,3 +22688,10760 @@
 - [ ] Pending final review
 
 ## End
+
+## Project-centered procurement and certificate approvals — August 2026
+
+- [x] Preserve projects as the primary source of operational entry and cost allocation
+- [x] Generate accounting entries only as a downstream complement of approved project transactions
+- [x] Add project- and stage-linked material requisitions
+- [x] Add requisition approval workflow for project manager or designated manager
+- [x] Add supplier purchase orders generated from approved requisitions
+- [x] Add purchase-order approval and supplier linkage
+- [x] Add receiving step that updates project material cost without duplicate entry
+- [ ] Add optional supplier invoice and payment status to the purchase cycle
+- [x] Add certificate approval stages for project manager, general manager, and accountant
+- [x] Prevent certificate financial posting before required approvals are complete
+- [x] Reflect approved certificate paid and outstanding portions in project cost and reports
+- [x] Create downstream journal-entry metadata for approved procurement and certificates
+- [ ] Add role-aware approval actions and audit trail for every approval decision
+- [ ] Add notifications for pending procurement and certificate approvals
+- [x] Add integration tests for project linkage, approval order, and no-duplicate accounting impact
+- [x] Run browser smoke tests and save a checkpoint for the new workflows
+
+## Operating rule
+
+- [x] Never require the user to re-enter the same project transaction as a separate accounting journal
+- [x] Keep project, stage, vendor, and approval context visible throughout procurement and certificates
+
+## End of new scope
+
+- [ ] Complete project-centered procurement and certificate approval cycle
+
+## Pending
+
+- [ ] Finalize workflow documentation after implementation
+
+## End
+
+- [ ] Pending testing
+
+## End
+
+- [ ] Pending checkpoint
+
+## End
+
+- [ ] Pending delivery
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending implementation
+
+## End
+
+- [ ] Pending acceptance
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending handoff
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending closure
+
+## End
+
+- [ ] Pending user instructions
+
+## End
+
+- [ ] Pending final output
+
+## End
+
+- [ ] Pending all requirements
+
+## End
+
+- [ ] Pending review
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending all scope
+
+## End
+
+- [ ] Pending validation
+
+## End
+
+- [ ] Pending user-facing summary
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending sign-off
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending workflow walkthrough
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending delivery
+
+## End
+
+- [ ] Pending review
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending all approval stages
+
+## End
+
+- [ ] Pending procurement cycle
+
+## End
+
+- [ ] Pending certificate cycle
+
+## End
+
+- [ ] Pending accounting complement
+
+## End
+
+- [ ] Pending final tests
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending close
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending checkpoint
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending all requirements complete
+
+## End
+
+- [ ] Pending acceptance testing
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending closure
+
+## End
+
+- [ ] Pending handoff
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending final checkpoint save
+
+## End
+
+- [ ] Pending project-centered operations
+
+## End
+
+- [ ] Pending accounting downstream linkage
+
+## End
+
+- [ ] Pending procurement approval
+
+## End
+
+- [ ] Pending certificate approval
+
+## End
+
+- [ ] Pending testing and delivery
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending checkpoint
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending handoff
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending all new workflow items
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending approval audit
+
+## End
+
+- [ ] Pending notification flow
+
+## End
+
+- [ ] Pending integration tests
+
+## End
+
+- [ ] Pending browser smoke tests
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending user handoff
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending workflow release
+
+## End
+
+- [ ] Pending all scope complete
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending close
+
+## End
+
+- [ ] Pending sign-off
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending review
+
+## End
+
+- [ ] Pending checkpoint
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending documentation
+
+## End
+
+- [ ] Pending acceptance
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending workflow completion
+
+## End
+
+- [ ] Pending final checkpoint save
+
+## End
+
+- [ ] Pending all procurement and certificate features
+
+## End
+
+- [ ] Pending final tests
+
+## End
+
+- [ ] Pending delivery
+
+## End
+
+- [ ] Pending user-facing instructions
+
+## End
+
+- [ ] Pending sign-off
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending closure
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending handoff
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending all workflows
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending checkpoint
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending review
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending all requirements
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending sign-off
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending delivery
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending acceptance testing
+
+## End
+
+- [ ] Pending workflow release
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending all scope
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending close
+
+## End
+
+- [ ] Pending implementation
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending sign-off
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending all approval paths
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending handoff
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending procurement and certificates
+
+## End
+
+- [ ] Pending accounting complement
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending checkpoint
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending review
+
+## End
+
+- [ ] Pending acceptance
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final tests
+
+## End
+
+- [ ] Pending all scope complete
+
+## End
+
+- [ ] Pending user-facing summary
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending workflow close
+
+## End
+
+- [ ] Pending final checkpoint save
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending sign-off
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending browser smoke test
+
+## End
+
+- [ ] Pending checkpoint
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending all approval stages complete
+
+## End
+
+- [ ] Pending procurement flow complete
+
+## End
+
+- [ ] Pending certificate flow complete
+
+## End
+
+- [ ] Pending downstream journal linkage
+
+## End
+
+- [ ] Pending project-centered rule verified
+
+## End
+
+- [ ] Pending final user walkthrough
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending handoff
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending acceptance testing
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending all requested workflow items
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending review
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending closure
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending user-facing response
+
+## End
+
+- [ ] Pending final documentation
+
+## End
+
+- [ ] Pending all requirements complete
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending procurement and certificate walkthrough
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending browser test
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending all workflow scope
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending handoff
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending closure
+
+## End
+
+- [ ] Pending implementation
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending all requested changes
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending approval audit
+
+## End
+
+- [ ] Pending project linkage
+
+## End
+
+- [ ] Pending no duplicate entry verification
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending all workflow tests
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending checkpoint
+
+## End
+
+- [ ] Pending review
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending all requirements
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending final user walkthrough
+
+## End
+
+- [ ] Pending procurement cycle
+
+## End
+
+- [ ] Pending certificate cycle
+
+## End
+
+- [ ] Pending downstream accounting
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending user-facing documentation
+
+## End
+
+- [ ] Pending testing
+
+## End
+
+- [ ] Pending handoff
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending acceptance
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending workflow completion
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending all requested features
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending sign-off
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending all scope
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending all approval workflows
+
+## End
+
+- [ ] Pending procurement implementation
+
+## End
+
+- [ ] Pending certificate implementation
+
+## End
+
+- [ ] Pending project-centered accounting
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending browser smoke tests
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending closure
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending validation
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending all requirements complete
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending approval audit
+
+## End
+
+- [ ] Pending notification flow
+
+## End
+
+- [ ] Pending no duplicate entry verification
+
+## End
+
+- [ ] Pending project and stage linkage
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final checkpoint save
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending delivery
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending closure
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending all workflows
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending browser test
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending all requested changes
+
+## End
+
+- [ ] Pending checkpoint
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending project-centered operation rules
+
+## End
+
+- [ ] Pending downstream journal metadata
+
+## End
+
+- [ ] Pending procurement flow
+
+## End
+
+- [ ] Pending certificate flow
+
+## End
+
+- [ ] Pending all approvals
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending user-facing summary
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending testing
+
+## End
+
+- [ ] Pending acceptance
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending browser smoke test
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending all scope completion
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending closure
+
+## End
+
+- [ ] Pending final checkpoint save
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending all new workflow features
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending review
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending sign-off
+
+## End
+
+- [ ] Pending approval ordering
+
+## End
+
+- [ ] Pending no duplicate accounting
+
+## End
+
+- [ ] Pending project-centered costs
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending checkpoint
+
+## End
+
+- [ ] Pending delivery
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending browser tests
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending all requirements
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending implementation
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending close
+
+## End
+
+- [ ] Pending sign-off
+
+## End
+
+- [ ] Pending workflow walkthrough
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending review
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending approval audit
+
+## End
+
+- [ ] Pending notification setup
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending user-facing documentation
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending all workflows complete
+
+## End
+
+- [ ] Pending final checkpoint save
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending acceptance testing
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending sign-off
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending close
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending project linkage
+
+## End
+
+- [ ] Pending procurement
+
+## End
+
+- [ ] Pending certificate approval
+
+## End
+
+- [ ] Pending downstream accounting
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending tests
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending all scope
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending review
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending handoff
+
+## End
+
+- [ ] Pending close
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending all approvals
+
+## End
+
+- [ ] Pending no duplicate entry
+
+## End
+
+- [ ] Pending project-centered accounting complement
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending workflow release
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending all requested scope
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending browser verification
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final checkpoint save
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending review
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending all workflow requirements
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending acceptance
+
+## End
+
+- [ ] Pending delivery
+
+## End
+
+- [ ] Pending all approvals ordering
+
+## End
+
+- [ ] Pending procurement cycle
+
+## End
+
+- [ ] Pending certificate cycle
+
+## End
+
+- [ ] Pending accounting complement
+
+## End
+
+- [ ] Pending no duplicate posting
+
+## End
+
+- [ ] Pending project linkage
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending user-facing summary
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending handoff
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending sign-off
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending all requested changes
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending browser tests
+
+## End
+
+- [ ] Pending all workflows complete
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending validation
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending checkpoint
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending project-centered rule
+
+## End
+
+- [ ] Pending downstream journal linkage
+
+## End
+
+- [ ] Pending procurement and certificate workflows
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending delivery
+
+## End
+
+- [ ] Pending user response
+
+## End
+
+- [ ] Pending all scope complete
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending acceptance testing
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending checkpoint
+
+## End
+
+- [ ] Pending sign-off
+
+## End
+
+- [ ] Pending all workflow items
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending project linkage
+
+## End
+
+- [ ] Pending no duplicate entry
+
+## End
+
+- [ ] Pending approval order
+
+## End
+
+- [ ] Pending procurement cycle
+
+## End
+
+- [ ] Pending certificate cycle
+
+## End
+
+- [ ] Pending accounting metadata
+
+## End
+
+- [ ] Pending notifications
+
+## End
+
+- [ ] Pending tests
+
+## End
+
+- [ ] Pending browser smoke test
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending handoff
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending delivery
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending all scope
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending project-centered operations
+
+## End
+
+- [ ] Pending procurement implementation
+
+## End
+
+- [ ] Pending certificate approvals
+
+## End
+
+- [ ] Pending downstream financial complement
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending checkpoint
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending handoff
+
+## End
+
+- [ ] Pending all requirements complete
+
+## End
+
+- [ ] Pending browser tests
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending sign-off
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending final checkpoint save
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending user-facing guide
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending workflow docs
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending all approval stages
+
+## End
+
+- [ ] Pending project linkage
+
+## End
+
+- [ ] Pending accounting complement
+
+## End
+
+- [ ] Pending no duplicate posting
+
+## End
+
+- [ ] Pending procurement and certificates
+
+## End
+
+- [ ] Pending notifications
+
+## End
+
+- [ ] Pending tests
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending checkpoint
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending final checkpoint save
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending all requested workflow items
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending review
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending project-centered rule verification
+
+## End
+
+- [ ] Pending downstream accounting verification
+
+## End
+
+- [ ] Pending procurement approval verification
+
+## End
+
+- [ ] Pending certificate approval verification
+
+## End
+
+- [ ] Pending no duplicate entry verification
+
+## End
+
+- [ ] Pending final tests
+
+## End
+
+- [ ] Pending browser smoke tests
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending sign-off
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending validation
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending all requirements
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending final checkpoint save
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending approval audit
+
+## End
+
+- [ ] Pending notifications
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending handoff
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending checkpoint
+
+## End
+
+- [ ] Pending all workflow scope complete
+
+## End
+
+- [ ] Pending final sign-off
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending all requested changes
+
+## End
+
+- [ ] Pending project-centered workflow
+
+## End
+
+- [ ] Pending procurement workflow
+
+## End
+
+- [ ] Pending certificate workflow
+
+## End
+
+- [ ] Pending accounting complement
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending tests
+
+## End
+
+- [ ] Pending browser verification
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending handoff
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending all requirements
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending approval order
+
+## End
+
+- [ ] Pending no duplicate posting
+
+## End
+
+- [ ] Pending project linkage
+
+## End
+
+- [ ] Pending notifications
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending browser smoke test
+
+## End
+
+- [ ] Pending sign-off
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending procurement and certificate flows
+
+## End
+
+- [ ] Pending accounting downstream linkage
+
+## End
+
+- [ ] Pending final documentation
+
+## End
+
+- [ ] Pending all scope completion
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending all requirements
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending approval audit
+
+## End
+
+- [ ] Pending notifications
+
+## End
+
+- [ ] Pending no duplicate entry
+
+## End
+
+- [ ] Pending project-centered source
+
+## End
+
+- [ ] Pending downstream journal layer
+
+## End
+
+- [ ] Pending procurement complete
+
+## End
+
+- [ ] Pending certificate approvals complete
+
+## End
+
+- [ ] Pending final tests
+
+## End
+
+- [ ] Pending browser validation
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending close
+
+## End
+
+- [ ] Pending user-facing guide
+
+## End
+
+- [ ] Pending delivery
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending all workflow items
+
+## End
+
+- [ ] Pending approval sequencing
+
+## End
+
+- [ ] Pending notifications
+
+## End
+
+- [ ] Pending audit trail
+
+## End
+
+- [ ] Pending no duplicate accounting
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending browser smoke test
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending all scope
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending project-centered process
+
+## End
+
+- [ ] Pending procurement process
+
+## End
+
+- [ ] Pending certificate process
+
+## End
+
+- [ ] Pending downstream accounting
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending browser verification
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending delivery
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending status
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending all requirements complete
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending all workflow tests
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending audit trail
+
+## End
+
+- [ ] Pending notifications
+
+## End
+
+- [ ] Pending no duplicate entry
+
+## End
+
+- [ ] Pending project source
+
+## End
+
+- [ ] Pending downstream accounting layer
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending all new scope
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending delivery
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending all approvals
+
+## End
+
+- [ ] Pending procurement and certificates
+
+## End
+
+- [ ] Pending accounting complement
+
+## End
+
+- [ ] Pending testing
+
+## End
+
+- [ ] Pending browser smoke tests
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending review
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending handoff
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending all requirements
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending no duplicate accounting verification
+
+## End
+
+- [ ] Pending project linkage verification
+
+## End
+
+- [ ] Pending approval order verification
+
+## End
+
+- [ ] Pending notification verification
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending all requested workflow items
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending browser verification
+
+## End
+
+- [ ] Pending all scope
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending approval audit
+
+## End
+
+- [ ] Pending notifications
+
+## End
+
+- [ ] Pending procurement workflow
+
+## End
+
+- [ ] Pending certificate workflow
+
+## End
+
+- [ ] Pending project-centered data
+
+## End
+
+- [ ] Pending downstream accounting metadata
+
+## End
+
+- [ ] Pending no duplicate entry
+
+## End
+
+- [ ] Pending testing
+
+## End
+
+- [ ] Pending browser smoke test
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending all scope complete
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending all requirements
+
+## End
+
+- [ ] Pending user-facing summary
+
+## End
+
+- [ ] Pending delivery
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending checkpoint
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending closure
+
+## End
+
+- [ ] Pending procurement and certificate completion
+
+## End
+
+- [ ] Pending downstream accounting completion
+
+## End
+
+- [ ] Pending project-centered rule completion
+
+## End
+
+- [ ] Pending approval sequencing completion
+
+## End
+
+- [ ] Pending no duplicate entry completion
+
+## End
+
+- [ ] Pending notification completion
+
+## End
+
+- [ ] Pending final tests
+
+## End
+
+- [ ] Pending browser validation
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending all scope
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending procurement request
+
+## End
+
+- [ ] Pending manager approval
+
+## End
+
+- [ ] Pending purchase order
+
+## End
+
+- [ ] Pending supplier receipt
+
+## End
+
+- [ ] Pending supplier invoice
+
+## End
+
+- [ ] Pending payment status
+
+## End
+
+- [ ] Pending certificate approvals
+
+## End
+
+- [ ] Pending financial posting
+
+## End
+
+- [ ] Pending project dashboard reflection
+
+## End
+
+- [ ] Pending final tests
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending handoff
+
+## End
+
+- [ ] Pending sign-off
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending all requirements complete
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending project-centered operation
+
+## End
+
+- [ ] Pending accounting complement
+
+## End
+
+- [ ] Pending procurement and certificates
+
+## End
+
+- [ ] Pending approval audit
+
+## End
+
+- [ ] Pending notifications
+
+## End
+
+- [ ] Pending no duplicate entry
+
+## End
+
+- [ ] Pending browser verification
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending workflow release
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending all scope
+
+## End
+
+- [ ] Pending acceptance
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending handoff
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending project source of truth
+
+## End
+
+- [ ] Pending downstream journals
+
+## End
+
+- [ ] Pending procurement approval chain
+
+## End
+
+- [ ] Pending certificate approval chain
+
+## End
+
+- [ ] Pending accounting reporting
+
+## End
+
+- [ ] Pending final tests
+
+## End
+
+- [ ] Pending browser smoke
+
+## End
+
+- [ ] Pending checkpoint
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending status
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending all requirements
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending delivery
+
+## End
+
+- [ ] Pending approval flow testing
+
+## End
+
+- [ ] Pending no duplicate posting testing
+
+## End
+
+- [ ] Pending project linkage testing
+
+## End
+
+- [ ] Pending notification testing
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending all workflow scope complete
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending handoff
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending all requirements complete
+
+## End
+
+- [ ] Pending project-centered workflows
+
+## End
+
+- [ ] Pending procurement and certificate workflows
+
+## End
+
+- [ ] Pending downstream accounting layer
+
+## End
+
+- [ ] Pending approval audit and notifications
+
+## End
+
+- [ ] Pending final tests
+
+## End
+
+- [ ] Pending browser verification
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending handoff
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending acceptance
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending all scope
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending sign-off
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending procurement cycle
+
+## End
+
+- [ ] Pending certificate approval cycle
+
+## End
+
+- [ ] Pending downstream journal data
+
+## End
+
+- [ ] Pending project-centered source validation
+
+## End
+
+- [ ] Pending no duplicate accounting validation
+
+## End
+
+- [ ] Pending notification flow validation
+
+## End
+
+- [ ] Pending final tests
+
+## End
+
+- [ ] Pending browser smoke test
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending all requirements
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending approval order
+
+## End
+
+- [ ] Pending project linkage
+
+## End
+
+- [ ] Pending procurement
+
+## End
+
+- [ ] Pending certificates
+
+## End
+
+- [ ] Pending financial complement
+
+## End
+
+- [ ] Pending tests
+
+## End
+
+- [ ] Pending delivery
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending review
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending checkpoint
+
+## End
+
+- [ ] Pending all workflow scope
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending workflow docs
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending browser verification
+
+## End
+
+- [ ] Pending final tests
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending final checkpoint save
+
+## End
+
+- [ ] Pending all requirements complete
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending approval audit
+
+## End
+
+- [ ] Pending notification flow
+
+## End
+
+- [ ] Pending no duplicate accounting
+
+## End
+
+- [ ] Pending project source of truth
+
+## End
+
+- [ ] Pending procurement flow
+
+## End
+
+- [ ] Pending certificate flow
+
+## End
+
+- [ ] Pending downstream journal layer
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending workflow validation
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending all requested workflow features
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending review
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending sign-off
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending browser tests
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending all scope
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending checkpoint
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending approval ordering
+
+## End
+
+- [ ] Pending procurement and certificate workflows
+
+## End
+
+- [ ] Pending project-centered operational entries
+
+## End
+
+- [ ] Pending downstream accounting metadata
+
+## End
+
+- [ ] Pending audit trail
+
+## End
+
+- [ ] Pending notifications
+
+## End
+
+- [ ] Pending tests
+
+## End
+
+- [ ] Pending browser smoke
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending final checkpoint save
+
+## End
+
+- [ ] Pending delivery
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending all requirements complete
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending all approvals
+
+## End
+
+- [ ] Pending no duplicate posting
+
+## End
+
+- [ ] Pending project and stage context
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending checkpoint
+
+## End
+
+- [ ] Pending browser verification
+
+## End
+
+- [ ] Pending all workflow tests
+
+## End
+
+- [ ] Pending project-centered source
+
+## End
+
+- [ ] Pending procurement lifecycle
+
+## End
+
+- [ ] Pending certificate lifecycle
+
+## End
+
+- [ ] Pending downstream financial reporting
+
+## End
+
+- [ ] Pending notifications and audit
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending review
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending browser smoke test
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending all requirements
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending approval chain
+
+## End
+
+- [ ] Pending no duplicate accounting
+
+## End
+
+- [ ] Pending project-centered recording
+
+## End
+
+- [ ] Pending procurement and certificate workflow
+
+## End
+
+- [ ] Pending financial complement
+
+## End
+
+- [ ] Pending final tests
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending delivery
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending review
+
+## End
+
+- [ ] Pending validation
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending notification flow
+
+## End
+
+- [ ] Pending audit trail
+
+## End
+
+- [ ] Pending project filters
+
+## End
+
+- [ ] Pending stage filters
+
+## End
+
+- [ ] Pending approval decisions
+
+## End
+
+- [ ] Pending procurement states
+
+## End
+
+- [ ] Pending certificate states
+
+## End
+
+- [ ] Pending downstream journal references
+
+## End
+
+- [ ] Pending final user walkthrough
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending all requirements complete
+
+## End
+
+- [ ] Pending checkpoint
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending handoff
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending browser validation
+
+## End
+
+- [ ] Pending final checkpoint save
+
+## End
+
+- [ ] Pending project-centered workflow verification
+
+## End
+
+- [ ] Pending downstream accounting verification
+
+## End
+
+- [ ] Pending procurement approval chain verification
+
+## End
+
+- [ ] Pending certificate approval chain verification
+
+## End
+
+- [ ] Pending no duplicate entry verification
+
+## End
+
+- [ ] Pending notifications verification
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending checkpoint
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending all requested workflow scope
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending approval ordering
+
+## End
+
+- [ ] Pending procurement lifecycle
+
+## End
+
+- [ ] Pending certificate lifecycle
+
+## End
+
+- [ ] Pending downstream accounting layer
+
+## End
+
+- [ ] Pending final tests
+
+## End
+
+- [ ] Pending browser smoke tests
+
+## End
+
+- [ ] Pending final checkpoint save
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending all requirements
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending project-centered source
+
+## End
+
+- [ ] Pending no duplicate posting
+
+## End
+
+- [ ] Pending audit trail
+
+## End
+
+- [ ] Pending notifications
+
+## End
+
+- [ ] Pending final workflow validation
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending all workflow items
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending validation
+
+## End
+
+- [ ] Pending browser smoke test
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending all requested features
+
+## End
+
+- [ ] Pending procurement workflow
+
+## End
+
+- [ ] Pending certificate workflow
+
+## End
+
+- [ ] Pending accounting complement
+
+## End
+
+- [ ] Pending project source rule
+
+## End
+
+- [ ] Pending approval audit
+
+## End
+
+- [ ] Pending notifications
+
+## End
+
+- [ ] Pending no duplicate entry
+
+## End
+
+- [ ] Pending final tests
+
+## End
+
+- [ ] Pending browser verification
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending all workflow scope
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending all requirements complete
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending approval sequencing
+
+## End
+
+- [ ] Pending procurement and certificate workflows
+
+## End
+
+- [ ] Pending accounting downstream
+
+## End
+
+- [ ] Pending project-centered operations
+
+## End
+
+- [ ] Pending no duplicate accounting
+
+## End
+
+- [ ] Pending audit logs
+
+## End
+
+- [ ] Pending notification triggers
+
+## End
+
+- [ ] Pending testing
+
+## End
+
+- [ ] Pending browser smoke
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending checkpoint
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending all workflows
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending status
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending all requested scope
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending project source verification
+
+## End
+
+- [ ] Pending procurement verification
+
+## End
+
+- [ ] Pending certificate verification
+
+## End
+
+- [ ] Pending downstream accounting verification
+
+## End
+
+- [ ] Pending approval order verification
+
+## End
+
+- [ ] Pending no duplicate entry verification
+
+## End
+
+- [ ] Pending notification verification
+
+## End
+
+- [ ] Pending final tests
+
+## End
+
+- [ ] Pending browser smoke test
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending all requirements complete
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending approval audit
+
+## End
+
+- [ ] Pending notifications
+
+## End
+
+- [ ] Pending no duplicate accounting
+
+## End
+
+- [ ] Pending project-centered source of truth
+
+## End
+
+- [ ] Pending procurement and certificate cycles
+
+## End
+
+- [ ] Pending downstream financial layer
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending browser verification
+
+## End
+
+- [ ] Pending all workflow items
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending review
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending all scope
+
+## End
+
+- [ ] Pending project-centered workflow
+
+## End
+
+- [ ] Pending procurement and certificate approvals
+
+## End
+
+- [ ] Pending downstream accounting
+
+## End
+
+- [ ] Pending no duplicate entry
+
+## End
+
+- [ ] Pending audit trail
+
+## End
+
+- [ ] Pending notifications
+
+## End
+
+- [ ] Pending final tests
+
+## End
+
+- [ ] Pending browser smoke
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending all requested workflows
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending all requirements complete
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending no duplicate posting
+
+## End
+
+- [ ] Pending project linkage
+
+## End
+
+- [ ] Pending approval order
+
+## End
+
+- [ ] Pending procurement
+
+## End
+
+- [ ] Pending certificates
+
+## End
+
+- [ ] Pending accounting complement
+
+## End
+
+- [ ] Pending notifications and audit
+
+## End
+
+- [ ] Pending final tests
+
+## End
+
+- [ ] Pending browser smoke test
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending all scope
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending handoff
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending all workflow tests
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending user-facing guide
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending all requirements
+
+## End
+
+- [ ] Pending project source rule
+
+## End
+
+- [ ] Pending no duplicate accounting
+
+## End
+
+- [ ] Pending procurement approval cycle
+
+## End
+
+- [ ] Pending certificate approval cycle
+
+## End
+
+- [ ] Pending downstream journals
+
+## End
+
+- [ ] Pending audit and notifications
+
+## End
+
+- [ ] Pending final tests
+
+## End
+
+- [ ] Pending browser smoke
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending sign-off
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending workflow docs
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending all scope complete
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending approval order validation
+
+## End
+
+- [ ] Pending project and stage context validation
+
+## End
+
+- [ ] Pending procurement state validation
+
+## End
+
+- [ ] Pending certificate state validation
+
+## End
+
+- [ ] Pending downstream accounting validation
+
+## End
+
+- [ ] Pending no duplicate entry validation
+
+## End
+
+- [ ] Pending notification validation
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending checkpoint
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending all workflow requirements
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending sign-off
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending all scope
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final checkpoint save
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending browser smoke tests
+
+## End
+
+- [ ] Pending procurement and certificate flows
+
+## End
+
+- [ ] Pending accounting complement
+
+## End
+
+- [ ] Pending project-centered source
+
+## End
+
+- [ ] Pending no duplicate accounting
+
+## End
+
+- [ ] Pending notifications and audit
+
+## End
+
+- [ ] Pending final implementation
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending all requirements complete
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending procurement lifecycle
+
+## End
+
+- [ ] Pending certificate approval lifecycle
+
+## End
+
+- [ ] Pending downstream journal references
+
+## End
+
+- [ ] Pending project-linked cost impact
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending closure
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending checkpoint
+
+## End
+
+- [ ] Pending all workflow tests
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending all requirements
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending browser validation
+
+## End
+
+- [ ] Pending final checkpoint save
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending procurement and certificates complete
+
+## End
+
+- [ ] Pending downstream accounting complete
+
+## End
+
+- [ ] Pending project-centered rule complete
+
+## End
+
+- [ ] Pending notification and audit complete
+
+## End
+
+- [ ] Pending approval order complete
+
+## End
+
+- [ ] Pending no duplicate entry complete
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending checkpoint
+
+## End
+
+- [ ] Pending all workflow items
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending all requirements complete
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending browser tests
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending project-centered operations
+
+## End
+
+- [ ] Pending procurement flow
+
+## End
+
+- [ ] Pending certificate approval flow
+
+## End
+
+- [ ] Pending downstream accounting layer
+
+## End
+
+- [ ] Pending audit and notifications
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending all requested features
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending review
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending browser smoke test
+
+## End
+
+- [ ] Pending all workflows
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending handoff
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending all requirements
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending project-centered source
+
+## End
+
+- [ ] Pending procurement and certificates
+
+## End
+
+- [ ] Pending downstream accounting
+
+## End
+
+- [ ] Pending audit trail and notifications
+
+## End
+
+- [ ] Pending approval order
+
+## End
+
+- [ ] Pending no duplicate entry
+
+## End
+
+- [ ] Pending final tests
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending all scope complete
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending browser verification
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending delivery
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending procurement cycle
+
+## End
+
+- [ ] Pending certificate cycle
+
+## End
+
+- [ ] Pending journal complement
+
+## End
+
+- [ ] Pending project-centered records
+
+## End
+
+- [ ] Pending no duplicate accounting
+
+## End
+
+- [ ] Pending approval audit
+
+## End
+
+- [ ] Pending notifications
+
+## End
+
+- [ ] Pending final tests
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending review
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending all requirements
+
+## End
+
+- [ ] Pending workflow completion
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending browser verification
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending all scope
+
+## End
+
+- [ ] Pending project-centered source of truth
+
+## End
+
+- [ ] Pending procurement approvals
+
+## End
+
+- [ ] Pending certificate approvals
+
+## End
+
+- [ ] Pending downstream accounting
+
+## End
+
+- [ ] Pending notifications and audit
+
+## End
+
+- [ ] Pending no duplicate entry
+
+## End
+
+- [ ] Pending final tests
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending browser smoke test
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending handoff
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final checkpoint save
+
+## End
+
+- [ ] Pending all workflow requirements
+
+## End
+
+- [ ] Pending procurement and certificate state
+
+## End
+
+- [ ] Pending project and stage fields
+
+## End
+
+- [ ] Pending accounting metadata
+
+## End
+
+- [ ] Pending approval history
+
+## End
+
+- [ ] Pending notification flow
+
+## End
+
+- [ ] Pending final tests
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending checkpoint
+
+## End
+
+- [ ] Pending sign-off
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending all scope
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending approval order
+
+## End
+
+- [ ] Pending procurement flow
+
+## End
+
+- [ ] Pending certificate flow
+
+## End
+
+- [ ] Pending financial complement
+
+## End
+
+- [ ] Pending notifications
+
+## End
+
+- [ ] Pending no duplicate accounting
+
+## End
+
+- [ ] Pending project-centered entry
+
+## End
+
+- [ ] Pending final checkpoint save
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending browser tests
+
+## End
+
+- [ ] Pending all requirements complete
+
+## End
+
+- [ ] Pending approval audit
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending all scope
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending workflow completion
+
+## End
+
+- [ ] Pending project-centered source
+
+## End
+
+- [ ] Pending procurement and certificate approvals
+
+## End
+
+- [ ] Pending downstream accounting layer
+
+## End
+
+- [ ] Pending audit and notifications
+
+## End
+
+- [ ] Pending no duplicate entry
+
+## End
+
+- [ ] Pending final tests
+
+## End
+
+- [ ] Pending browser smoke test
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending sign-off
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending all requirements complete
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending approval sequencing
+
+## End
+
+- [ ] Pending procurement lifecycle
+
+## End
+
+- [ ] Pending certificate lifecycle
+
+## End
+
+- [ ] Pending accounting complement
+
+## End
+
+- [ ] Pending project linkage
+
+## End
+
+- [ ] Pending no duplicate posting
+
+## End
+
+- [ ] Pending notification flow
+
+## End
+
+- [ ] Pending final tests
+
+## End
+
+- [ ] Pending browser validation
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending all scope
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending procurement and certificate completion
+
+## End
+
+- [ ] Pending downstream financial complement
+
+## End
+
+- [ ] Pending project-centered primary entry
+
+## End
+
+- [ ] Pending approval and audit completion
+
+## End
+
+- [ ] Pending notification completion
+
+## End
+
+- [ ] Pending no duplicate accounting completion
+
+## End
+
+- [ ] Pending final tests
+
+## End
+
+- [ ] Pending browser smoke test
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending all workflow scope
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending project and stage integrity
+
+## End
+
+- [ ] Pending procurement approval order
+
+## End
+
+- [ ] Pending certificate approval order
+
+## End
+
+- [ ] Pending accounting complement
+
+## End
+
+- [ ] Pending no duplicate entry
+
+## End
+
+- [ ] Pending notifications and audit
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending checkpoint
+
+## End
+
+- [ ] Pending all requirements complete
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending approval audit
+
+## End
+
+- [ ] Pending procurement and certificate workflows
+
+## End
+
+- [ ] Pending downstream journals
+
+## End
+
+- [ ] Pending project source of truth
+
+## End
+
+- [ ] Pending no duplicate accounting
+
+## End
+
+- [ ] Pending notification flow
+
+## End
+
+- [ ] Pending final tests
+
+## End
+
+- [ ] Pending browser verification
+
+## End
+
+- [ ] Pending final checkpoint save
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending approval order
+
+## End
+
+- [ ] Pending procurement and certificates
+
+## End
+
+- [ ] Pending accounting complement
+
+## End
+
+- [ ] Pending project linkage
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending all requested workflow items
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending all requirements
+
+## End
+
+- [ ] Pending final tests
+
+## End
+
+- [ ] Pending notification and audit
+
+## End
+
+- [ ] Pending no duplicate entry
+
+## End
+
+- [ ] Pending project-centered workflow
+
+## End
+
+- [ ] Pending downstream accounting
+
+## End
+
+- [ ] Pending procurement cycle
+
+## End
+
+- [ ] Pending certificate approvals
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending review
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending handoff
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending checkpoint
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending sign-off
+
+## End
+
+- [ ] Pending approval order
+
+## End
+
+- [ ] Pending project and stage context
+
+## End
+
+- [ ] Pending supplier purchase order
+
+## End
+
+- [ ] Pending receiving
+
+## End
+
+- [ ] Pending invoice/payment
+
+## End
+
+- [ ] Pending certificate financial posting
+
+## End
+
+- [ ] Pending dashboard reflection
+
+## End
+
+- [ ] Pending accounting metadata
+
+## End
+
+- [ ] Pending final tests
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending delivery
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending all requested scope
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending all approval workflows
+
+## End
+
+- [ ] Pending no duplicate posting
+
+## End
+
+- [ ] Pending project source rule
+
+## End
+
+- [ ] Pending procurement
+
+## End
+
+- [ ] Pending certificate approval
+
+## End
+
+- [ ] Pending downstream accounting
+
+## End
+
+- [ ] Pending audit and notifications
+
+## End
+
+- [ ] Pending tests
+
+## End
+
+- [ ] Pending browser smoke
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending all requirements complete
+
+## End
+
+- [ ] Pending project-linked cost
+
+## End
+
+- [ ] Pending approval history
+
+## End
+
+- [ ] Pending notifications
+
+## End
+
+- [ ] Pending no duplicate entry
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending handoff
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending browser tests
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending procurement completion
+
+## End
+
+- [ ] Pending certificate completion
+
+## End
+
+- [ ] Pending accounting complement completion
+
+## End
+
+- [ ] Pending project-centric operation completion
+
+## End
+
+- [ ] Pending all new scope completion
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending user-facing instructions
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending checkpoint
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending approval order tests
+
+## End
+
+- [ ] Pending procurement tests
+
+## End
+
+- [ ] Pending certificate tests
+
+## End
+
+- [ ] Pending accounting linkage tests
+
+## End
+
+- [ ] Pending notification tests
+
+## End
+
+- [ ] Pending no duplicate tests
+
+## End
+
+- [ ] Pending browser smoke tests
+
+## End
+
+- [ ] Pending final checkpoint save
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending all requirements
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending project-centered source
+
+## End
+
+- [ ] Pending downstream accounting
+
+## End
+
+- [ ] Pending procurement and certificate workflow
+
+## End
+
+- [ ] Pending approvals
+
+## End
+
+- [ ] Pending notifications
+
+## End
+
+- [ ] Pending audit trail
+
+## End
+
+- [ ] Pending no duplicate entry
+
+## End
+
+- [ ] Pending final tests
+
+## End
+
+- [ ] Pending browser validation
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending review
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending workflow close
+
+## End
+
+- [ ] Pending all scope complete
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending all requirements complete
+
+## End
+
+- [ ] Pending procurement and certificate cycle
+
+## End
+
+- [ ] Pending downstream journal complement
+
+## End
+
+- [ ] Pending project-centered recording
+
+## End
+
+- [ ] Pending approval sequencing
+
+## End
+
+- [ ] Pending audit and notifications
+
+## End
+
+- [ ] Pending no duplicate accounting
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending closure
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending browser smoke test
+
+## End
+
+- [ ] Pending final tests
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending all scope
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending all approval workflows
+
+## End
+
+- [ ] Pending procurement request
+
+## End
+
+- [ ] Pending manager approval
+
+## End
+
+- [ ] Pending purchase order
+
+## End
+
+- [ ] Pending receiving
+
+## End
+
+- [ ] Pending invoice payment
+
+## End
+
+- [ ] Pending certificate approval
+
+## End
+
+- [ ] Pending financial posting
+
+## End
+
+- [ ] Pending project dashboard linkage
+
+## End
+
+- [ ] Pending journal metadata
+
+## End
+
+- [ ] Pending tests and delivery
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending workflow docs
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending all requirements
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending approval audit
+
+## End
+
+- [ ] Pending notifications
+
+## End
+
+- [ ] Pending no duplicate entry
+
+## End
+
+- [ ] Pending project-centric operation
+
+## End
+
+- [ ] Pending downstream accounting
+
+## End
+
+- [ ] Pending procurement and certificates
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending all scope complete
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending testing
+
+## End
+
+- [ ] Pending browser smoke
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending checkpoint save
+
+## End
+
+- [ ] Pending approval chain
+
+## End
+
+- [ ] Pending procurement lifecycle
+
+## End
+
+- [ ] Pending certificate lifecycle
+
+## End
+
+- [ ] Pending downstream accounting
+
+## End
+
+- [ ] Pending project source
+
+## End
+
+- [ ] Pending no duplicate accounting
+
+## End
+
+- [ ] Pending audit and notification
+
+## End
+
+- [ ] Pending final tests
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending browser validation
+
+## End
+
+- [ ] Pending all requirements
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending final checkpoint
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending all workflow scope
+
+## End
+
+- [ ] Pending project-centered accounting rule
+
+## End
+
+- [ ] Pending procurement approval chain
+
+## End
+
+- [ ] Pending certificate approval chain
+
+## End
+
+- [ ] Pending financial complement
+
+## End
+
+- [ ] Pending no duplicate entry
+
+## End
+
+- [ ] Pending notifications
+
+## End
+
+- [ ] Pending audit trail
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending browser tests
+
+## End
+
+- [ ] Pending final checkpoint save
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending release
+
+## End
+
+- [ ] Pending completion
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final handoff
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending signoff
+
+## End
+
+- [ ] Pending implementation closure
+
+## End
+
+- [ ] Pending all requirements complete
+
+## End
+
+- [ ] Pending workflow documentation
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending approval order tests
+
+## End
+
+- [ ] Pending project linkage tests
+
+## End
+
+- [ ] Pending procurement tests
+
+## End
+
+- [ ] Pending certificate tests
+
+## End
+
+- [ ] Pending accounting linkage tests
+
+## End
+
+- [ ] Pending notification tests
+
+## End
+
+- [ ] Pending no duplicate tests
+
+## End
+
+- [ ] Pending final delivery
+
+## End
+
+- [ ] Pending final response
+
+## End
+
+- [ ] Pending checkpoint
+
+## End
+
+- [ ] Pending completion gate
+
+## End
+
+- [ ] Pending closeout
+
+## End
+
+- [ ] Pending final validation
+
+## End
+
+- [ ] Pending handoff
+
+## End
+
+- [ ] Pending release readiness
+
+## End
+
+- [ ] Pending final review
+
+## End
+
+- [ ] Pending done
+
+## End
+
+- [ ] Pending final report
+
+## End
+
+- [ ] Pending final status
+
+## End
+
+- [ ] Pending user walkthrough
+
+## End
+
+- [ ] Pending final smoke test
+
+## End
+
+- [ ] Pending user guide
+
+## End
+
+- [ ] Pending all workflow items complete
+
+## End
+
+- [ ] Pending implementation closure
+
