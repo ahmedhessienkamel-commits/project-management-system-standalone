@@ -12,6 +12,7 @@ import ProjectDetails from "./pages/ProjectDetails";
 import SalesCollections from "./pages/SalesCollections";
 import Reports from "./pages/Reports";
 import Users from "@/pages/Users";
+import Employees from "@/pages/Employees";
 import Operations from "@/pages/Operations";
 import LegacyImport from "@/pages/LegacyImport";
 
@@ -29,6 +30,7 @@ function Router() {
       <Route path={"/approvals"} component={Approvals} />
       <Route path={"/reports"} component={Reports} />
       <Route path={"/users"} component={Users} />
+      <Route path={"/employees"} component={Employees} />
       <Route path={"/settings"} component={LegacyImport} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}

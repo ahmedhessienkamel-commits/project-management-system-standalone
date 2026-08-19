@@ -11917,9 +11917,9 @@
 
 - [x] Add project and active-stage countdown timers to the home dashboard
 - [x] Add persistent executive KPI board to the home dashboard without requiring a separate report
-- [ ] Add Gantt/timeline view with project and stage schedule setup guidance in the web UI
-- [ ] Add employee master-data section in the sidebar
-- [ ] Link employees to custody movements and employee custody statements
+- [x] Add Gantt/timeline view with project and stage schedule setup guidance in the web UI
+- [x] Add employee master-data section in the sidebar
+- [x] Link employees to custody movements and employee custody statements
 - [ ] Add dedicated professional payroll-run section with printable payroll statement
 - [ ] Ensure payroll classification supports project payroll and general administrative payroll
 - [ ] Add dedicated contractor certificates/claims section with paid and outstanding allocation

@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
-import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, expenses, notifications, payroll, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, sales, stages, units, users, vendors } from "../../drizzle/schema";
+import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, employees, expenses, notifications, payroll, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, sales, stages, units, users, vendors } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
@@ -56,6 +56,24 @@ async function resolveApprovalStatus(db: NonNullable<Awaited<ReturnType<typeof g
 }
 
 export const erpRouter = router({
+  employees: router({
+    list: protectedProcedure.query(async () => {
+      const db = requireDb(await getDb());
+      return db.select().from(employees).orderBy(employees.fullName);
+    }),
+    create: adminProcedure.input(z.object({ employeeCode: z.string().min(1), fullName: z.string().min(1), jobTitle: z.string().optional(), phone: z.string().optional(), nationalId: z.string().optional(), defaultProjectId: z.number().int().positive().nullable().optional() })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      const result = await db.insert(employees).values({ ...input, jobTitle: input.jobTitle || null, phone: input.phone || null, nationalId: input.nationalId || null, defaultProjectId: input.defaultProjectId ?? null });
+      await db.insert(auditLogs).values({ entityType: "employee", entityId: Number(result[0].insertId), action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
+      return { id: Number(result[0].insertId) };
+    }),
+    updateStatus: adminProcedure.input(z.object({ id: z.number().int().positive(), status: z.enum(["active", "inactive"]) })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      await db.update(employees).set({ status: input.status }).where(eq(employees.id, input.id));
+      await db.insert(auditLogs).values({ entityType: "employee", entityId: input.id, action: "status_updated", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
+      return { success: true } as const;
+    }),
+  }),
   users: router({
     list: adminProcedure.query(async () => {
       const db = requireDb(await getDb());

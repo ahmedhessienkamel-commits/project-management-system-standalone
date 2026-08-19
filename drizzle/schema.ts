@@ -123,6 +123,8 @@ export type Stage = typeof stages.$inferSelect;
 export type InsertStage = typeof stages.$inferInsert;
 export type Vendor = typeof vendors.$inferSelect;
 export type InsertVendor = typeof vendors.$inferInsert;
+export type Employee = typeof employees.$inferSelect;
+export type InsertEmployee = typeof employees.$inferInsert;
 export type Expense = typeof expenses.$inferSelect;
 export type InsertExpense = typeof expenses.$inferInsert;
 export type AdministrativePayroll = typeof administrativePayroll.$inferSelect;
@@ -170,10 +172,24 @@ export const collections = mysqlTable("collections", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
+export const employees = mysqlTable("employees", {
+  id: int("id").autoincrement().primaryKey(),
+  employeeCode: varchar("employeeCode", { length: 64 }).notNull().unique(),
+  fullName: varchar("fullName", { length: 255 }).notNull(),
+  jobTitle: varchar("jobTitle", { length: 255 }),
+  phone: varchar("phone", { length: 64 }),
+  nationalId: varchar("nationalId", { length: 64 }),
+  status: mysqlEnum("status", ["active", "inactive"]).default("active").notNull(),
+  defaultProjectId: int("defaultProjectId"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
 export const payroll = mysqlTable("payroll", {
   id: int("id").autoincrement().primaryKey(),
   projectId: int("projectId").notNull(),
   stageId: int("stageId"),
+  employeeId: int("employeeId"),
   employeeName: varchar("employeeName", { length: 255 }).notNull(),
   employeeCode: varchar("employeeCode", { length: 64 }),
   month: int("month").notNull(),
@@ -245,6 +261,7 @@ export const custodyMovements = mysqlTable("custodyMovements", {
   projectId: int("projectId"),
   stageId: int("stageId"),
   employeeCode: varchar("employeeCode", { length: 64 }).notNull(),
+  employeeId: int("employeeId"),
   employeeName: varchar("employeeName", { length: 255 }).notNull(),
   movementType: mysqlEnum("movementType", ["issue", "spend", "return", "settlement"]).notNull(),
   allocationType: mysqlEnum("allocationType", ["project", "general_cash", "general_admin"]).notNull(),
@@ -262,6 +279,7 @@ export const attendance = mysqlTable("attendance", {
   projectId: int("projectId").notNull(),
   stageId: int("stageId"),
   employeeCode: varchar("employeeCode", { length: 64 }),
+  employeeId: int("employeeId"),
   employeeName: varchar("employeeName", { length: 255 }).notNull(),
   attendanceDate: date("attendanceDate").notNull(),
   checkIn: varchar("checkIn", { length: 16 }),

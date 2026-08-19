@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { startLogin } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { BarChart3, ClipboardList, FileText, LayoutDashboard, LogOut, PanelLeft, Settings2, Users, WalletCards } from "lucide-react";
+import { BarChart3, ClipboardList, FileText, LayoutDashboard, LogOut, PanelLeft, Settings2, Users, UserRound, WalletCards } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -33,6 +33,7 @@ const menuItems = [
   { icon: WalletCards, label: "المبيعات والتحصيلات", path: "/sales" },
   { icon: WalletCards, label: "المعاملات المالية", path: "/transactions" },
   { icon: ClipboardList, label: "الوحدات التشغيلية", path: "/operations" },
+  { icon: UserRound, label: "دليل الموظفين", path: "/employees" },
   { icon: FileText, label: "الموافقات والمستندات", path: "/approvals" },
   { icon: BarChart3, label: "التقارير", path: "/reports" },
   { icon: Users, label: "المستخدمون والصلاحيات", path: "/users" },
