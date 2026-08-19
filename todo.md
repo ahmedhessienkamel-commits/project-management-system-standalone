@@ -888,7 +888,7 @@
 - [x] Add Arabic RTL administrative payroll form with allocation preview
 - [x] Run Vitest suite and production build successfully
 - [ ] Complete final browser verification of Projects, Finance, Operations, and dashboard flows
-- [ ] Add dedicated automated tests for administrative payroll allocation persistence and rounding reconciliation
+- [x] Add dedicated automated tests for administrative payroll allocation persistence and rounding reconciliation
 - [x] Include administrative payroll allocations in all project dashboard and cost reports
 - [ ] Complete employee custody statement parity verification in the web UI
 
@@ -937,7 +937,7 @@
 
 - [ ] Add administrative salary ledger view
 - [x] Add dashboard aggregation for payrollAllocations
-- [ ] Add custody statement UI regression test
+- [x] Add custody statement UI regression test
 
 ## Checkpoint gate
 

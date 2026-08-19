@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateExpenseTotals, calculatePayrollTotals, projectHealthStatus } from "./erpCalculations";
+import { allocateAdministrativeAmount, calculateExpenseTotals, calculatePayrollTotals, projectHealthStatus } from "./erpCalculations";
 import { calculateAttendanceHours, filterAttendanceByMonth, summarizeAttendanceExceptions } from "../shared/attendance";
 
 describe("ERP financial rules", () => {
@@ -33,6 +33,18 @@ describe("ERP financial rules", () => {
     expect(rows[0]).toEqual(expect.objectContaining({ id: 1, projectId: 1, attendanceDate: "2026-08-05", checkIn: "08:00", checkOut: "17:00", employeeName: "أحمد", stageId: 2, status: "present", notes: "" }));
     expect(calculateAttendanceHours(rows[0].checkIn, rows[0].checkOut)).toBe(9);
     expect(summarizeAttendanceExceptions([{ projectId: 1, attendanceDate: "2026-08-05", status: "late" }, { projectId: 1, attendanceDate: "2026-08-06", status: "absent" }, { projectId: 2, attendanceDate: "2026-08-06", status: "late" }], 1)).toEqual({ total: 2, absent: 1, late: 1 });
+  });
+
+  it("allocates administrative salary by contract value and excludes zero-value projects", () => {
+    const rows = allocateAdministrativeAmount(1500, [
+      { projectId: 1, projectName: "وادي نمار", contractValue: 10000000 },
+      { projectId: 2, projectName: "المهدية", contractValue: 5000000 },
+      { projectId: 3, projectName: "غير مؤهل", contractValue: 0 },
+    ]);
+    expect(rows).toHaveLength(2);
+    expect(rows[0].allocatedAmount).toBe(1000);
+    expect(rows[1].allocatedAmount).toBe(500);
+    expect(rows.reduce((sum, row) => sum + row.allocatedAmount, 0)).toBe(1500);
   });
 
   it("returns critical for a large cash gap or approval backlog", () => {

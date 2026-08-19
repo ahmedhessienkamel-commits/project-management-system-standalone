@@ -23,6 +23,16 @@ export function calculateFinancialSummaryTotals({ sales, collections, expenses, 
   return { revenue, collectionsReceived, expensesPreTax, expensesTax, expensesTotal, expensesPaid, payrollTotal, payrollPaid, payrollOutstanding: Math.max(payrollTotal - payrollPaid, 0) };
 }
 
+export function allocateAdministrativeAmount(amount: number, projects: Array<{ projectId: number; projectName: string; contractValue: number }>) {
+  const safeAmount = Math.max(0, amount);
+  const eligible = projects.filter((project) => project.contractValue > 0);
+  const totalContractValue = eligible.reduce((sum, project) => sum + project.contractValue, 0);
+  return eligible.map((project) => {
+    const ratio = totalContractValue ? project.contractValue / totalContractValue : 0;
+    return { ...project, ratio, allocatedAmount: Number((safeAmount * ratio).toFixed(2)) };
+  });
+}
+
 export function calculateDashboardShortcutTotals(summaries: Array<{ plannedBudget: number; actualCost: number; outstandingCost: number; recognizedRevenue: number; collectionsReceived: number; payrollOutstanding: number; cashGap: number; pendingApprovals: number }>) {
   return summaries.reduce((totals, item) => ({
     plannedBudget: totals.plannedBudget + item.plannedBudget,
