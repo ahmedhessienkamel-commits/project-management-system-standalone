@@ -10,6 +10,9 @@ import { accountingTotals } from "../accountingCalculations";
 const projectStatus = z.enum(["planning", "active", "paused", "completed", "archived"]);
 const projectClassification = z.enum(["operational", "administrative"]);
 const projectType = z.enum(["real_estate_development", "off_plan_sales", "main_contractor", "subcontractor", "general"]);
+const employeeProfileSchema = z.object({
+  employeeCode: z.string().trim().min(1).max(64), fullName: z.string().trim().min(1).max(255), jobTitle: z.string().max(255).optional(), department: z.string().max(255).optional(), managerName: z.string().max(255).optional(), phone: z.string().max(64).optional(), email: z.string().email().optional().or(z.literal("")), nationalId: z.string().max(64).optional(), nationality: z.string().max(128).optional(), birthDate: z.string().optional(), hireDate: z.string().optional(), workLocation: z.string().max(255).optional(), bankName: z.string().max(255).optional(), iban: z.string().max(128).optional(), insuranceNumber: z.string().max(128).optional(), basicSalary: z.number().nonnegative().default(0), housingAllowance: z.number().nonnegative().default(0), transportAllowance: z.number().nonnegative().default(0), otherAllowances: z.number().nonnegative().default(0), standardDeduction: z.number().nonnegative().default(0), notes: z.string().max(4000).optional(), defaultProjectId: z.number().int().positive().nullable().optional(),
+});
 
 function requireDb(db: Awaited<ReturnType<typeof getDb>>) {
   if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة حاليًا" });
@@ -73,11 +76,19 @@ export const erpRouter = router({
       const db = requireDb(await getDb());
       return db.select().from(employees).orderBy(employees.fullName);
     }),
-    create: adminProcedure.input(z.object({ employeeCode: z.string().min(1), fullName: z.string().min(1), jobTitle: z.string().optional(), phone: z.string().optional(), nationalId: z.string().optional(), defaultProjectId: z.number().int().positive().nullable().optional() })).mutation(async ({ ctx, input }) => {
+    create: adminProcedure.input(employeeProfileSchema).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
-      const result = await db.insert(employees).values({ ...input, jobTitle: input.jobTitle || null, phone: input.phone || null, nationalId: input.nationalId || null, defaultProjectId: input.defaultProjectId ?? null });
+      const result = await db.insert(employees).values({ ...input, jobTitle: input.jobTitle || null, department: input.department || null, managerName: input.managerName || null, phone: input.phone || null, email: input.email || null, nationalId: input.nationalId || null, nationality: input.nationality || null, birthDate: input.birthDate ? new Date(input.birthDate) : null, hireDate: input.hireDate ? new Date(input.hireDate) : null, workLocation: input.workLocation || null, bankName: input.bankName || null, iban: input.iban || null, insuranceNumber: input.insuranceNumber || null, basicSalary: input.basicSalary.toFixed(2), housingAllowance: input.housingAllowance.toFixed(2), transportAllowance: input.transportAllowance.toFixed(2), otherAllowances: input.otherAllowances.toFixed(2), standardDeduction: input.standardDeduction.toFixed(2), notes: input.notes || null, defaultProjectId: input.defaultProjectId ?? null });
       await db.insert(auditLogs).values({ entityType: "employee", entityId: Number(result[0].insertId), action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
       return { id: Number(result[0].insertId) };
+    }),
+    update: adminProcedure.input(employeeProfileSchema.extend({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      const before = (await db.select().from(employees).where(eq(employees.id, input.id)).limit(1))[0];
+      if (!before) throw new TRPCError({ code: "NOT_FOUND", message: "الموظف غير موجود" });
+      await db.update(employees).set({ employeeCode: input.employeeCode, fullName: input.fullName, jobTitle: input.jobTitle || null, department: input.department || null, managerName: input.managerName || null, phone: input.phone || null, email: input.email || null, nationalId: input.nationalId || null, nationality: input.nationality || null, birthDate: input.birthDate ? new Date(input.birthDate) : null, hireDate: input.hireDate ? new Date(input.hireDate) : null, workLocation: input.workLocation || null, bankName: input.bankName || null, iban: input.iban || null, insuranceNumber: input.insuranceNumber || null, basicSalary: input.basicSalary.toFixed(2), housingAllowance: input.housingAllowance.toFixed(2), transportAllowance: input.transportAllowance.toFixed(2), otherAllowances: input.otherAllowances.toFixed(2), standardDeduction: input.standardDeduction.toFixed(2), notes: input.notes || null, defaultProjectId: input.defaultProjectId ?? null }).where(eq(employees.id, input.id));
+      await db.insert(auditLogs).values({ entityType: "employee", entityId: input.id, action: "updated", actorId: ctx.user.id, beforeJson: JSON.stringify(before), afterJson: JSON.stringify(input) });
+      return { success: true } as const;
     }),
     updateStatus: adminProcedure.input(z.object({ id: z.number().int().positive(), status: z.enum(["active", "inactive"]) })).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
@@ -354,6 +365,8 @@ export const erpRouter = router({
     create: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional(), parentId: z.number().int().positive().optional(), code: z.string().trim().min(1).max(32), name: z.string().trim().min(2).max(255), category: z.string().trim().min(2).max(64) })).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
       if (input.projectId) await assertProjectWrite(db, ctx, input.projectId);
+      const duplicate = await db.select({ id: costItems.id }).from(costItems).where(eq(costItems.code, input.code)).limit(1);
+      if (duplicate.length) throw new TRPCError({ code: "CONFLICT", message: "كود بند التكلفة مستخدم بالفعل، اختر كودًا مختلفًا" });
       const result = await db.insert(costItems).values({ projectId: input.projectId || null, parentId: input.parentId || null, code: input.code, name: input.name, category: input.category, createdBy: ctx.user.id });
       const id = Number(result[0].insertId);
       await db.insert(auditLogs).values({ entityType: "costItem", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
