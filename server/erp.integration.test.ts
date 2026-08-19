@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { projects, stages, expenses, collections, approvalRequests, attachments, sales, payroll, vendors, certificates, projectMembers, units, periodLocks, notifications, auditLogs, attendance, approvalPolicies, custodyMovements } from "../drizzle/schema";
+import { projects, stages, expenses, collections, approvalRequests, attachments, sales, payroll, vendors, certificates, projectMembers, units, periodLocks, notifications, auditLogs, attendance, approvalPolicies, custodyMovements, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems } from "../drizzle/schema";
 
 const state = {
   projects: [] as any[],
@@ -20,10 +20,16 @@ const state = {
   attendance: [] as any[],
   approvalPolicies: [] as any[],
   custodyMovements: [] as any[],
+  materialRequisitions: [] as any[],
+  materialRequisitionItems: [] as any[],
+  purchaseOrders: [] as any[],
+  purchaseOrderItems: [] as any[],
+  purchaseReceipts: [] as any[],
+  purchaseReceiptItems: [] as any[],
 };
 
 const tableState = new Map<any, keyof typeof state>([
-  [projects, "projects"], [stages, "stages"], [expenses, "expenses"], [collections, "collections"], [approvalRequests, "approvalRequests"], [attachments, "attachments"], [sales, "sales"], [payroll, "payroll"], [vendors, "vendors"], [certificates, "certificates"], [projectMembers, "projectMembers"], [units, "units"], [periodLocks, "periodLocks"], [notifications, "notifications"], [auditLogs, "auditLogs"], [attendance, "attendance"], [approvalPolicies, "approvalPolicies"], [custodyMovements, "custodyMovements"],
+  [projects, "projects"], [stages, "stages"], [expenses, "expenses"], [collections, "collections"], [approvalRequests, "approvalRequests"], [attachments, "attachments"], [sales, "sales"], [payroll, "payroll"], [vendors, "vendors"], [certificates, "certificates"], [projectMembers, "projectMembers"], [units, "units"], [periodLocks, "periodLocks"], [notifications, "notifications"], [auditLogs, "auditLogs"], [attendance, "attendance"], [approvalPolicies, "approvalPolicies"], [custodyMovements, "custodyMovements"], [materialRequisitions, "materialRequisitions"], [materialRequisitionItems, "materialRequisitionItems"], [purchaseOrders, "purchaseOrders"], [purchaseOrderItems, "purchaseOrderItems"], [purchaseReceipts, "purchaseReceipts"], [purchaseReceiptItems, "purchaseReceiptItems"],
 ]);
 
 function rowsFor(table: any) {
@@ -134,6 +140,21 @@ describe("ERP sales and collections API flow", () => {
     const cashFlow = await caller.erp.reports.cashFlow({ projectId: 1 });
     expect(cashFlow.stages.find((row) => row.stageId === 2)).toMatchObject({ stageName: "الحفر", cashIn: 75000, cashOut: 1500, net: 73500, cumulativeGap: -73500, fundingRequired: 0, allocation: "stage-linked-sales-and-outflows" });
     expect(cashFlow.stages.find((row) => row.stageId === null)).toBeUndefined();
+  });
+
+  it("completes procurement from requisition to receipt, invoice, and partial payment", async () => {
+    const admin = appRouter.createCaller(context(1, "admin"));
+    const vendor = await admin.erp.vendors.create({ projectId: 1, name: "مورد مواد", taxNumber: "TAX-PO", commercialRegistration: "CR-PO" });
+    const requisition = await admin.erp.procurement.requisitions.create({ projectId: 1, stageId: 2, description: "مواد خرسانة", items: [{ description: "حديد", unit: "طن", quantity: 2, estimatedUnitCost: 1000 }] });
+    await admin.erp.procurement.requisitions.decide({ id: requisition.id, decision: "approved" });
+    const order = await admin.erp.procurement.purchaseOrders.create({ requisitionId: requisition.id, vendorId: vendor.id, items: [{ description: "حديد", unit: "طن", quantity: 2, unitCost: 1000 }] });
+    await admin.erp.procurement.purchaseOrders.decide({ id: order.id, decision: "approved" });
+    const receipt = await admin.erp.procurement.purchaseOrders.receive({ purchaseOrderId: order.id, receivedDate: "2026-08-19", items: [{ purchaseOrderItemId: state.purchaseOrderItems[0].id, quantity: 2 }] });
+    expect(receipt.receivedCost).toBe(2000);
+    expect(state.expenses.find((row) => row.reference === receipt.receiptNumber)).toMatchObject({ projectId: 1, expenseType: "materials", totalAmount: "2000.00", status: "posted" });
+    const invoice = await admin.erp.procurement.purchaseOrders.updateInvoice({ id: order.id, invoiceNumber: "INV-PO-001", invoicedAmount: 2000, paidAmount: 500 });
+    expect(invoice.invoiceStatus).toBe("partially_paid");
+    expect(state.purchaseOrders[0]).toMatchObject({ invoiceNumber: "INV-PO-001", invoicedAmount: "2000.00", paidAmount: "500.00", invoiceStatus: "partially_paid" });
   });
 
   it("records custody movements and returns a complete employee statement", async () => {
