@@ -1,0 +1,1 @@
+ALTER TABLE `projects` ADD `contractValue` decimal(14,2) DEFAULT '0' NOT NULL;

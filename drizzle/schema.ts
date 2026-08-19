@@ -27,6 +27,7 @@ export const projects = mysqlTable("projects", {
   name: varchar("name", { length: 255 }).notNull(),
   status: mysqlEnum("status", ["planning", "active", "paused", "completed", "archived"]).default("planning").notNull(),
   classification: mysqlEnum("classification", ["operational", "administrative"]).default("operational").notNull(),
+  contractValue: decimal("contractValue", { precision: 14, scale: 2 }).default("0").notNull(),
   location: varchar("location", { length: 255 }),
   plannedStart: date("plannedStart"),
   plannedEnd: date("plannedEnd"),
@@ -124,6 +125,10 @@ export type Vendor = typeof vendors.$inferSelect;
 export type InsertVendor = typeof vendors.$inferInsert;
 export type Expense = typeof expenses.$inferSelect;
 export type InsertExpense = typeof expenses.$inferInsert;
+export type AdministrativePayroll = typeof administrativePayroll.$inferSelect;
+export type PayrollAllocation = typeof payrollAllocations.$inferSelect;
+export type CustodyMovement = typeof custodyMovements.$inferSelect;
+export type InsertCustodyMovement = typeof custodyMovements.$inferInsert;
 
 export const units = mysqlTable("units", {
   id: int("id").autoincrement().primaryKey(),
@@ -183,6 +188,28 @@ export const payroll = mysqlTable("payroll", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
+export const administrativePayroll = mysqlTable("administrativePayroll", {
+  id: int("id").autoincrement().primaryKey(),
+  employeeName: varchar("employeeName", { length: 255 }).notNull(),
+  employeeCode: varchar("employeeCode", { length: 64 }),
+  month: int("month").notNull(),
+  year: int("year").notNull(),
+  totalAmount: decimal("totalAmount", { precision: 14, scale: 2 }).default("0").notNull(),
+  paidAmount: decimal("paidAmount", { precision: 14, scale: 2 }).default("0").notNull(),
+  status: mysqlEnum("status", ["draft", "pending", "approved", "paid"]).default("pending").notNull(),
+  createdBy: int("createdBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const payrollAllocations = mysqlTable("payrollAllocations", {
+  id: int("id").autoincrement().primaryKey(),
+  administrativePayrollId: int("administrativePayrollId").notNull(),
+  projectId: int("projectId").notNull(),
+  ratio: decimal("ratio", { precision: 8, scale: 6 }).notNull(),
+  allocatedAmount: decimal("allocatedAmount", { precision: 14, scale: 2 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
 export const certificates = mysqlTable("certificates", {
   id: int("id").autoincrement().primaryKey(),
   projectId: int("projectId").notNull(),
@@ -209,6 +236,23 @@ export const custody = mysqlTable("custody", {
   issuedAmount: decimal("issuedAmount", { precision: 14, scale: 2 }).default("0").notNull(),
   settledAmount: decimal("settledAmount", { precision: 14, scale: 2 }).default("0").notNull(),
   status: mysqlEnum("status", ["open", "partially_settled", "settled"]).default("open").notNull(),
+  createdBy: int("createdBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const custodyMovements = mysqlTable("custodyMovements", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: int("projectId"),
+  stageId: int("stageId"),
+  employeeCode: varchar("employeeCode", { length: 64 }).notNull(),
+  employeeName: varchar("employeeName", { length: 255 }).notNull(),
+  movementType: mysqlEnum("movementType", ["issue", "spend", "return", "settlement"]).notNull(),
+  allocationType: mysqlEnum("allocationType", ["project", "general_cash", "general_admin"]).notNull(),
+  description: text("description").notNull(),
+  amount: decimal("amount", { precision: 14, scale: 2 }).default("0").notNull(),
+  signedAmount: decimal("signedAmount", { precision: 14, scale: 2 }).default("0").notNull(),
+  movementDate: date("movementDate"),
+  expenseType: varchar("expenseType", { length: 64 }),
   createdBy: int("createdBy"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });

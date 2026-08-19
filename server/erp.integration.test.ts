@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { projects, stages, expenses, collections, approvalRequests, attachments, sales, payroll, vendors, certificates, projectMembers, units, periodLocks, notifications, auditLogs, attendance, approvalPolicies } from "../drizzle/schema";
+import { projects, stages, expenses, collections, approvalRequests, attachments, sales, payroll, vendors, certificates, projectMembers, units, periodLocks, notifications, auditLogs, attendance, approvalPolicies, custodyMovements } from "../drizzle/schema";
 
 const state = {
   projects: [] as any[],
@@ -19,10 +19,11 @@ const state = {
   auditLogs: [] as any[],
   attendance: [] as any[],
   approvalPolicies: [] as any[],
+  custodyMovements: [] as any[],
 };
 
 const tableState = new Map<any, keyof typeof state>([
-  [projects, "projects"], [stages, "stages"], [expenses, "expenses"], [collections, "collections"], [approvalRequests, "approvalRequests"], [attachments, "attachments"], [sales, "sales"], [payroll, "payroll"], [vendors, "vendors"], [certificates, "certificates"], [projectMembers, "projectMembers"], [units, "units"], [periodLocks, "periodLocks"], [notifications, "notifications"], [auditLogs, "auditLogs"], [attendance, "attendance"], [approvalPolicies, "approvalPolicies"],
+  [projects, "projects"], [stages, "stages"], [expenses, "expenses"], [collections, "collections"], [approvalRequests, "approvalRequests"], [attachments, "attachments"], [sales, "sales"], [payroll, "payroll"], [vendors, "vendors"], [certificates, "certificates"], [projectMembers, "projectMembers"], [units, "units"], [periodLocks, "periodLocks"], [notifications, "notifications"], [auditLogs, "auditLogs"], [attendance, "attendance"], [approvalPolicies, "approvalPolicies"], [custodyMovements, "custodyMovements"],
 ]);
 
 function rowsFor(table: any) {
@@ -133,6 +134,17 @@ describe("ERP sales and collections API flow", () => {
     const cashFlow = await caller.erp.reports.cashFlow({ projectId: 1 });
     expect(cashFlow.stages.find((row) => row.stageId === 2)).toMatchObject({ stageName: "الحفر", cashIn: 75000, cashOut: 1500, net: 73500, cumulativeGap: -73500, fundingRequired: 0, allocation: "stage-linked-sales-and-outflows" });
     expect(cashFlow.stages.find((row) => row.stageId === null)).toBeUndefined();
+  });
+
+  it("records custody movements and returns a complete employee statement", async () => {
+    const caller = appRouter.createCaller(context());
+    await caller.erp.custodyMovements.create({ employeeCode: "EMP-001", employeeName: "أحمد", movementType: "issue", allocationType: "general_cash", description: "عهدة نثريات", amount: 500, movementDate: "2026-08-18" });
+    await caller.erp.custodyMovements.create({ employeeCode: "EMP-001", employeeName: "أحمد", movementType: "spend", allocationType: "general_cash", description: "شراء مستلزمات", amount: 100, movementDate: "2026-08-19", expenseType: "نثريات" });
+    const statement = await caller.erp.custodyMovements.statement({ employeeCode: "EMP-001" });
+    expect(statement).toHaveLength(2);
+    expect(statement[0]).toMatchObject({ employeeCode: "EMP-001", movementType: "issue", allocationType: "general_cash", signedAmount: "500.00", balance: 500 });
+    expect(statement[1]).toMatchObject({ movementType: "spend", description: "شراء مستلزمات", signedAmount: "-100.00", balance: 400 });
+    expect(await caller.erp.custodyMovements.statement({ employeeCode: "EMP-001", allocationType: "general_admin" })).toHaveLength(0);
   });
 
   it("persists configurable approval policy thresholds for administrators", async () => {

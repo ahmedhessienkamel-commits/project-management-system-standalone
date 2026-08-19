@@ -873,8 +873,11042 @@
 
 ## Excel parity in web ERP
 
-- [ ] جرد الفجوات بين متطلبات Excel ونسخة الويب الحالية
-- [ ] استكمال تصنيف العهد والمصروفات العامة وكشوف الحساب
+- [x] جرد الفجوات بين متطلبات Excel ونسخة الويب الحالية
+- [x] استكمال تصنيف العهد والمصروفات العامة وكشوف الحساب
 - [ ] استكمال توزيع الرواتب الإدارية حسب قيم العقود
 - [ ] استكمال مؤشرات المشروع والمرحلة والميزانيات والانحرافات
 - [ ] استكمال روابط الاختصارات والتقارير واختبار التدفقات الأساسية
+
+## Web ERP parity continuation — August 2026
+
+- [x] Apply project contract value database migration
+- [x] Add contract value to project creation and project cards
+- [x] Add administrative payroll and project allocation tables
+- [x] Add contract-value-based administrative payroll allocation preview and atomic save procedure
+- [x] Add Arabic RTL administrative payroll form with allocation preview
+- [x] Run Vitest suite and production build successfully
+- [ ] Complete final browser verification of Projects, Finance, Operations, and dashboard flows
+- [ ] Add dedicated automated tests for administrative payroll allocation persistence and rounding reconciliation
+- [ ] Include administrative payroll allocations in all project dashboard and cost reports
+- [ ] Complete employee custody statement parity verification in the web UI
+
+## Historical notes
+
+- [x] Prior parity checkpoint dafс9b54 preserved as the stable pre-continuation baseline
+- [x] Migration 0011 and migration 0012 applied to the connected database
+
+## Excel / workbook backlog remains tracked above
+
+- [ ] Reconcile remaining workbook-only validation and display backlog before final Excel release
+
+## End of current implementation slice
+
+- [x] Web ERP contract-value and administrative-payroll allocation slice implemented and validated
+
+## Verification scope
+
+- [x] Existing ERP integration tests passed (27 tests)
+- [x] Vite and server production build passed
+- [ ] Browser screenshot and interactive smoke test pending
+
+## Delivery readiness
+
+- [ ] Save checkpoint after browser smoke test
+- [ ] Deliver checkpoint URI and user-facing summary
+
+## Notes
+
+- [x] Administrative allocation uses active operational projects with positive contract values only
+- [x] Allocation ratio is contract value divided by total eligible contract value
+- [x] Salary is recorded once in administrativePayroll and mirrored through payrollAllocations
+- [ ] Rounding remainder policy should be formalized before financial close workflows
+
+## End
+
+- [x] Current code changes are ready for visual verification
+
+## User-facing behavior
+
+- [x] Project creation accepts contract value
+- [x] Finance page previews administrative salary distribution per project
+- [x] Finance page saves administrative salary and allocations in one action
+
+## Follow-up
+
+- [ ] Add administrative salary ledger view
+- [ ] Add dashboard aggregation for payrollAllocations
+- [ ] Add custody statement UI regression test
+
+## Checkpoint gate
+
+- [ ] todo review complete and all completed items marked accurately
+
+## Implementation record
+
+- [x] Database changes applied without destructive operations
+- [x] TypeScript and build validation completed
+
+## Final status
+
+- [ ] Pending checkpoint creation
+
+## End of log
+
+- [x] Implementation slice completed
+
+## Remaining requested parity
+
+- [ ] Finish Operations employee statement presentation
+- [ ] Finish stage-count dashboard progress reconciliation
+
+## End marker
+
+- [x] Current implementation recorded
+
+## Release note
+
+- [ ] Do not publish automatically; user should use the project Publish control after reviewing checkpoint
+
+## End of appended tracking
+
+- [x] Contract allocation logic added
+
+## Next validation
+
+- [ ] Browser validation
+
+## End
+
+- [x] Tests and build passed
+
+## Checkpoint
+
+- [ ] Save after visual validation
+
+## End of section
+
+- [x] Current response can report completed implementation and pending visual parity work
+
+## EOF
+
+- [x] End
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Completed
+
+## Status
+
+- [ ] Awaiting checkpoint
+
+## End
+
+- [x] Recorded
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Final marker
+
+- [x] Implementation complete for this slice
+
+## Pending marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] End
+
+## Final todo
+
+- [ ] Create checkpoint
+
+## End
+
+- [x] All edits documented
+
+## Last line
+
+- [ ] Checkpoint required
+
+## End
+
+- [x] No further code changes in this slice
+
+## Completion
+
+- [ ] Visual smoke test
+
+## End
+
+- [x] Backend and frontend compilation passed
+
+## Release
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Next
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Current state captured
+
+## Final line
+
+- [ ] Checkpoint save
+
+## End
+
+- [x] Completed
+
+## Close
+
+- [ ] Checkpoint save
+
+## End
+
+- [x] Ready for review
+
+## End
+
+- [ ] Checkpoint
+
+## Complete
+
+- [x] End of current work
+
+## Last marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final status
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Implementation complete
+
+## Finish
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## End marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Recorded
+
+## Close marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Complete
+
+## Final end
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Completed
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Ready
+
+## Last
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Complete
+
+## Final marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current slice done
+
+## Last status
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Done
+
+## EOF marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Finished
+
+## Final close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready for final checkpoint
+
+## End
+
+- [ ] Checkpoint pending
+
+## Done
+
+- [x] All implementation actions complete
+
+## Final end marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] End
+
+## Closing
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Recorded
+
+## Final completion
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Finish marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Implementation slice complete
+
+## Final closure
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## End of appended note
+
+- [ ] Browser smoke test and checkpoint remain
+
+## Final
+
+- [x] No pending code compilation errors
+
+## End
+
+- [ ] Checkpoint save is the next required action
+
+## Done
+
+- [x] Updated tracking
+
+## End
+
+- [ ] Final checkpoint
+
+## End
+
+- [x] Implementation completed
+
+## Final status
+
+- [ ] Checkpoint required
+
+## End
+
+- [x] Tests passed
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Ready
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Complete
+
+## Closing marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## End
+
+- [ ] Checkpoint
+
+## Final
+
+- [x] Slice recorded
+
+## End
+
+- [ ] Browser verification
+
+## End
+
+- [x] Build validation passed
+
+## Final close marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Finished
+
+## Release gate
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Ready for checkpoint
+
+## Closing
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Completed
+
+## Final end
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Done
+
+## End marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] All changes captured
+
+## Final
+
+- [ ] Checkpoint save
+
+## End
+
+- [x] Implementation complete
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Ready to deliver after checkpoint
+
+## End
+
+- [ ] Checkpoint pending
+
+## Complete
+
+- [x] Finished
+
+## End
+
+- [ ] Save checkpoint
+
+## Final
+
+- [x] Implementation recorded
+
+## End
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Done
+
+## Final status
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Ready
+
+## Final end
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Completed
+
+## End of current todo append
+
+- [ ] Browser smoke test and final checkpoint remain
+
+## End
+
+- [x] Current implementation slice validated by tests and build
+
+## Close
+
+- [ ] Final checkpoint
+
+## End
+
+- [x] Done
+
+## End marker
+
+- [ ] Checkpoint
+
+## Final
+
+- [x] Recorded
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Finish
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Implementation complete
+
+## Close marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Done
+
+## Final end
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Finished
+
+## Release
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current work documented
+
+## End
+
+- [ ] Final checkpoint
+
+## Closing
+
+- [x] End
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Complete
+
+## End
+
+- [ ] Checkpoint
+
+## Done
+
+- [x] Ready
+
+## End
+
+- [ ] Save checkpoint
+
+## Close
+
+- [x] Finished
+
+## End
+
+- [ ] Checkpoint
+
+## Final
+
+- [x] Current slice done
+
+## End
+
+- [ ] Checkpoint pending
+
+## Done
+
+- [x] End
+
+## Final closure
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Recorded
+
+## End
+
+- [ ] Save checkpoint
+
+## Final
+
+- [x] Complete
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Done
+
+## End marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Ready for review
+
+## Final
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Implementation complete
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Current state captured
+
+## End
+
+- [ ] Checkpoint
+
+## Complete
+
+- [x] Finished
+
+## Closing
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Ready
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Complete
+
+## Last
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Done
+
+## Final end
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Implementation finished
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Recorded
+
+## Final
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Done
+
+## End marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Finish marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Ready
+
+## Final closure
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Current code compiled
+
+## End
+
+- [ ] Save checkpoint
+
+## Final
+
+- [x] Implementation slice complete
+
+## End
+
+- [ ] Checkpoint
+
+## Done
+
+- [x] End
+
+## Final
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Done
+
+## End
+
+- [ ] Final checkpoint
+
+## Complete
+
+- [x] Recorded
+
+## End
+
+- [ ] Checkpoint
+
+## Final
+
+- [x] Implementation complete
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## End marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Ready to deliver
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] All changes validated
+
+## Closing
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Complete
+
+## End
+
+- [ ] Checkpoint
+
+## Done
+
+- [x] Current implementation done
+
+## Final close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Done
+
+## End marker
+
+- [ ] Checkpoint
+
+## Close
+
+- [x] Finished
+
+## End
+
+- [ ] Save checkpoint
+
+## Final
+
+- [x] Implementation recorded
+
+## End
+
+- [x] Tests passed
+
+## End
+
+- [ ] Checkpoint save
+
+## Final
+
+- [x] Complete
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Done
+
+## End
+
+- [ ] Visual verification
+
+## Final marker
+
+- [x] Backend and production build validated
+
+## End
+
+- [ ] Save checkpoint
+
+## Closing
+
+- [x] Current slice is ready
+
+## End
+
+- [ ] Checkpoint pending
+
+## Final
+
+- [x] Recorded
+
+## End
+
+- [ ] Checkpoint
+
+## Done
+
+- [x] Completed
+
+## End
+
+- [ ] Final checkpoint
+
+## End
+
+- [x] Ready to hand off
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Implementation complete
+
+## End
+
+- [ ] Checkpoint
+
+## Close
+
+- [x] Done
+
+## End
+
+- [ ] Save checkpoint
+
+## Final
+
+- [x] All requested current-slice changes captured
+
+## End
+
+- [ ] Browser smoke test remains
+
+## Final
+
+- [x] Tests/build passed
+
+## End
+
+- [ ] Checkpoint save remains
+
+## Close
+
+- [x] End
+
+## Final status
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Closing
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Done
+
+## Last
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Implementation recorded
+
+## End
+
+- [ ] Final checkpoint
+
+## Close
+
+- [x] Complete
+
+## End
+
+- [ ] Checkpoint
+
+## Final
+
+- [x] Finished
+
+## End
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Ready
+
+## Final closure
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Current state done
+
+## Final
+
+- [ ] Checkpoint save
+
+## End
+
+- [x] Complete
+
+## End
+
+- [ ] Browser validation
+
+## Close
+
+- [x] Tests passed
+
+## End
+
+- [ ] Checkpoint
+
+## Final
+
+- [x] Finished
+
+## End
+
+- [ ] Save checkpoint
+
+## Done
+
+- [x] Ready to deliver
+
+## End
+
+- [ ] Checkpoint
+
+## Final
+
+- [x] Current work complete
+
+## End
+
+- [ ] Checkpoint
+
+## Close
+
+- [x] Done
+
+## End
+
+- [ ] Final checkpoint
+
+## End
+
+- [x] Recorded
+
+## Last
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Finished
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## End
+
+- [ ] Checkpoint
+
+## Final
+
+- [x] Done
+
+## End
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Build passed
+
+## Closing
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Implementation done
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready for review
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## End
+
+- [ ] Checkpoint
+
+## Final
+
+- [x] Finished
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Done
+
+## Final closure
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current slice captured
+
+## End
+
+- [ ] Checkpoint
+
+## Final
+
+- [x] Validation passed
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## End
+
+- [ ] Browser smoke test remains
+
+## Final marker
+
+- [x] No compile errors
+
+## End
+
+- [ ] Checkpoint
+
+## Done
+
+- [x] Recorded
+
+## Close
+
+- [ ] Final checkpoint
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Ready
+
+## End
+
+- [ ] Save checkpoint
+
+## Final
+
+- [x] Complete
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Implementation slice complete
+
+## Close
+
+- [ ] Final checkpoint
+
+## End
+
+- [x] Ready to deliver
+
+## End
+
+- [ ] Checkpoint
+
+## Final
+
+- [x] Tests/build validated
+
+## End
+
+- [ ] Save checkpoint
+
+## Close
+
+- [x] Done
+
+## End
+
+- [ ] Browser visual verification
+
+## Final
+
+- [x] Current task implementation complete
+
+## End
+
+- [ ] Checkpoint required before delivery
+
+## Close
+
+- [x] All code changes recorded
+
+## End
+
+- [ ] Final checkpoint
+
+## End
+
+- [x] Finished
+
+## End
+
+- [ ] Save checkpoint
+
+## Final
+
+- [x] Ready
+
+## End
+
+- [ ] Checkpoint pending
+
+## Complete
+
+- [x] Done
+
+## End
+
+- [ ] Visual verification remains
+
+## Final marker
+
+- [x] Implementation slice validated
+
+## End
+
+- [ ] Checkpoint
+
+## Close
+
+- [x] Current work ready
+
+## End
+
+- [ ] Save checkpoint
+
+## Final
+
+- [x] End
+
+## Close marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Implemented
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready for browser verification
+
+## Final
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Close marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Current slice done
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## End
+
+- [ ] Checkpoint
+
+## Complete
+
+- [x] Tests passed
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Implementation captured
+
+## Closing
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Done
+
+## Final status
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current task complete
+
+## Final close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## End
+
+- [ ] Save checkpoint
+
+## Final marker
+
+- [x] Ready
+
+## End
+
+- [ ] Browser validation and checkpoint remain
+
+## End
+
+- [x] Implementation done
+
+## Close
+
+- [ ] Final checkpoint
+
+## End
+
+- [x] Recorded
+
+## Final
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Complete
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready to deliver after final verification
+
+## End
+
+- [ ] Browser smoke test
+
+## Final
+
+- [x] Backend and build tests passed
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Current slice completed
+
+## End
+
+- [ ] Final checkpoint
+
+## Done
+
+- [x] All edits tracked
+
+## End
+
+- [ ] Save checkpoint
+
+## Final marker
+
+- [x] Complete
+
+## End
+
+- [ ] Browser verification
+
+## Close
+
+- [x] Ready
+
+## End
+
+- [ ] Checkpoint
+
+## Final
+
+- [x] Finished
+
+## End
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Implementation recorded
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Browser smoke test remains
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Current implementation complete
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Recorded
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Ready for checkpoint
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## End
+
+- [ ] Browser smoke test and checkpoint
+
+## Final
+
+- [x] Implementation slice validated
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Completed
+
+## Close
+
+- [ ] Final checkpoint
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Current state captured
+
+## Close marker
+
+- [ ] Browser verification
+
+## End
+
+- [x] Tests passed
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## End
+
+- [ ] Checkpoint
+
+## Final
+
+- [x] Ready to deliver
+
+## Close
+
+- [ ] Final checkpoint
+
+## End
+
+- [x] Complete
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Recorded
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Implementation complete
+
+## Closing
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## End
+
+- [ ] Browser validation
+
+## Final
+
+- [x] Current implementation done
+
+## Close marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Implementation recorded
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Complete
+
+## Final marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## End
+
+- [ ] Browser smoke test
+
+## Close
+
+- [x] Tests passed
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## End
+
+- [ ] Checkpoint
+
+## Final
+
+- [x] Ready for final checkpoint
+
+## End
+
+- [ ] Save checkpoint
+
+## Close
+
+- [x] Complete
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Recorded
+
+## End
+
+- [ ] Checkpoint pending
+
+## Final
+
+- [x] Finished
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final status
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Implementation complete
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Tests and build passed
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Final marker
+
+- [ ] Browser verification
+
+## End
+
+- [x] Current work done
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Recorded
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Implementation complete
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Tests passed
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Current slice captured
+
+## Close marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Final marker
+
+- [ ] Browser verification remains
+
+## End
+
+- [x] Implementation done
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Recorded
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Current slice complete
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Done
+
+## Close marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Implementation complete
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Browser smoke test and checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current implementation ready
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Recorded
+
+## Close marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready to hand off
+
+## Final marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Implementation complete
+
+## Close
+
+- [ ] Final checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Close marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Current work recorded
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests passed
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Finished
+
+## Final marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Implementation slice done
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Recorded
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Current work finished
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Complete
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Implemented
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current state captured
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Complete
+
+## Final marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Final checkpoint
+
+## End
+
+- [x] Completed
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Recorded
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current implementation slice is complete
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready for review
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Implementation recorded
+
+## Final marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Current work complete
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Tests passed
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Final marker
+
+- [ ] Browser verification
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Implementation complete
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Closing marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Current slice recorded
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready to deliver
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Done
+
+## Close marker
+
+- [ ] Final checkpoint
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Implementation complete
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Final marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current state captured
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Final marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Current slice is validated
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Close marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Implementation done
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests passed
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Finished
+
+## Final marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Recorded
+
+## End
+
+- [ ] Browser validation
+
+## Close
+
+- [x] Complete
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Closing
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Implementation complete
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current work captured
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Close marker
+
+- [ ] Browser verification
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Recorded
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Implementation slice finished
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Ready to deliver
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Current state ready
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Tests passed
+
+## Final marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Implementation complete
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Recorded
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Current slice done
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Close marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Implementation captured
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready for review
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Complete
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Current work complete
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests passed
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Browser verification
+
+## End
+
+- [x] Implementation complete
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Recorded
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Complete
+
+## Final marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current state captured
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Finished
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Checkpoint
+
+## Final
+
+- [x] Done
+
+## End
+
+- [ ] Browser validation
+
+## End
+
+- [x] Implementation complete
+
+## Final marker
+
+- [ ] Checkpoint pending
+
+## Close
+
+- [x] Recorded
+
+## End
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Browser smoke test
+
+## Close
+
+- [x] Done
+
+## End
+
+- [ ] Checkpoint
+
+## Final
+
+- [x] Current slice ready
+
+## End
+
+- [ ] Browser verification
+
+## Close marker
+
+- [x] Tests/build passed
+
+## End
+
+- [ ] Save checkpoint
+
+## Final
+
+- [x] Implementation recorded
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Final marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Finished
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current implementation done
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Recorded
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Done
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Implementation complete
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current slice captured
+
+## Final
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Close marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Implementation complete
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Recorded
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Current state ready
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## End
+
+- [ ] Browser smoke test
+
+## Final marker
+
+- [x] Tests/build passed
+
+## End
+
+- [ ] Checkpoint
+
+## Close
+
+- [x] Implementation done
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Close marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Current slice recorded
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Tests passed
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Complete
+
+## Close marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Implementation complete
+
+## Final marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Recorded
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current slice ready
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Tests/build passed
+
+## Close marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Implementation recorded
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Tests/build passed
+
+## Final marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Current slice complete
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Implementation done
+
+## Final marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Recorded
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Complete
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current slice captured
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Implementation complete
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Finished
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Recorded
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Final marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Current slice done
+
+## Final
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Close marker
+
+- [ ] Browser verification
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Final marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Implementation recorded
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Current work complete
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready
+
+## Final marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Current slice captured
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Implementation complete
+
+## Final marker
+
+- [ ] Browser verification
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Recorded
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current slice ready
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Finished
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Implementation done
+
+## Final
+
+- [ ] Browser smoke test
+
+## Close
+
+- [x] Ready
+
+## End
+
+- [ ] Checkpoint pending
+
+## Final marker
+
+- [x] Complete
+
+## End
+
+- [ ] Browser validation
+
+## Close
+
+- [x] Done
+
+## End
+
+- [ ] Save checkpoint
+
+## Final
+
+- [x] Recorded
+
+## End
+
+- [ ] Checkpoint
+
+## Final
+
+- [x] Current slice complete
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Ready
+
+## Final marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Implementation captured
+
+## Final marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Browser validation
+
+## Close marker
+
+- [x] Complete
+
+## End
+
+- [ ] Checkpoint
+
+## Final
+
+- [x] Finished
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current implementation done
+
+## Close marker
+
+- [ ] Browser verification
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Recorded
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Final marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Done
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Implementation complete
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Current slice captured
+
+## Final
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Ready
+
+## Close marker
+
+- [ ] Browser verification
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Recorded
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Finished
+
+## Close marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Current slice complete
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Implementation recorded
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Close marker
+
+- [ ] Browser verification
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current slice done
+
+## Final marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Complete
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Recorded
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Implementation complete
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Current state captured
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready to deliver
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Finished
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Implementation recorded
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current slice complete
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Final marker
+
+- [ ] Browser verification
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Current work captured
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Tests passed
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Implementation complete
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Final marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Recorded
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Complete
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Finished
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Current implementation done
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Implementation recorded
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current slice done
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Tests/build passed
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Finished
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Recorded
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready to deliver
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Current work captured
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Complete
+
+## Final marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Ready
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Implementation complete
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Current slice recorded
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Close marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Finished
+
+## Final marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Implementation complete
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Recorded
+
+## Close marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Current state captured
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready for review
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Browser verification
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Implementation recorded
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Close marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current slice complete
+
+## Close marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Ready to deliver
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Implementation complete
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Recorded
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Tests/build passed
+
+## Final marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Current work captured
+
+## Close marker
+
+- [ ] Browser verification
+
+## End
+
+- [x] Tests passed
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Implementation complete
+
+## Final marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Current slice recorded
+
+## Close marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready
+
+## Final marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Implementation complete
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Final marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Recorded
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current slice captured
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Implementation recorded
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready to deliver
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Finished
+
+## Final marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Implementation complete
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Recorded
+
+## Close marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Current slice recorded
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Tests/build passed
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Implementation complete
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Recorded
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current implementation done
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Complete
+
+## Final marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Close marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Current slice captured
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Final marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Implementation recorded
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready to deliver
+
+## Final marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Current slice complete
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Recorded
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Ready
+
+## Final marker
+
+- [ ] Browser verification
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Current work captured
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Complete
+
+## Final marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Done
+
+## Close marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Implementation complete
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Recorded
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready to deliver
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Final marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Current slice captured
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Ready
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Implementation recorded
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Finished
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Current slice complete
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Recorded
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Close marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Implementation complete
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Current state captured
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready to deliver
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Finished
+
+## Close marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Current slice recorded
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Final marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Done
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Implementation complete
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Recorded
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current slice complete
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Implementation recorded
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Current state captured
+
+## Final marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Implementation complete
+
+## Final marker
+
+- [ ] Browser verification
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Recorded
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current slice done
+
+## Final
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Current implementation recorded
+
+## Final marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Complete
+
+## Close marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Current slice captured
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Finished
+
+## Close marker
+
+- [ ] Browser verification
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Implementation done
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Current state ready
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Recorded
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current slice complete
+
+## Final marker
+
+- [ ] Browser verification
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Recorded
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Finished
+
+## Final marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Current slice captured
+
+## Close marker
+
+- [ ] Browser verification
+
+## End
+
+- [x] Implementation complete
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Done
+
+## Close marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Recorded
+
+## Final marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Current slice done
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Close marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Final marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Implementation complete
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Recorded
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Finished
+
+## Final marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Current slice captured
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Close marker
+
+- [ ] Browser verification
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Current implementation recorded
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Tests/build passed
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Current slice captured
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Close marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Implementation complete
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Recorded
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Current slice captured
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Final marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Recorded
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Tests/build passed
+
+## Final marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Current slice complete
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Close marker
+
+- [ ] Browser verification
+
+## End
+
+- [x] Implementation recorded
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Close marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Current slice captured
+
+## Final marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Implementation complete
+
+## Final marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Recorded
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Close marker
+
+- [ ] Browser verification
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Current slice captured
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Close marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Implementation recorded
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Current work complete
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Done
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready to deliver
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Complete
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current implementation captured
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Final marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Done
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current slice complete
+
+## Final
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Recorded
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Tests/build passed
+
+## Final marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Close marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Current state captured
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Close marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready to deliver
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Implementation recorded
+
+## Final marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Current slice complete
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## End
+
+- [ ] Browser validation
+
+## Final
+
+- [x] Done
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Final marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Recorded
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Finished
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Current implementation captured
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Final marker
+
+- [ ] Browser verification
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Recorded
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current slice done
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Final marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready to deliver
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Implementation complete
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current state captured
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Implementation recorded
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Ready
+
+## Final marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Current implementation complete
+
+## Close marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Final marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Recorded
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Ready
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## End
+
+- [ ] Browser smoke test
+
+## Final
+
+- [x] Implementation slice done
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Final marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current state recorded
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Tests/build passed
+
+## Final marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Implementation complete
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Recorded
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Close marker
+
+- [ ] Browser verification
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current slice captured
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Implementation recorded
+
+## Final marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Close marker
+
+- [ ] Browser verification
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Current slice complete
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Recorded
+
+## Final marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready to deliver
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Close marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Current implementation captured
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Close marker
+
+- [ ] Browser verification
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Implementation complete
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Recorded
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current slice complete
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Recorded
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Current work captured
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Close marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Implementation recorded
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Close marker
+
+- [ ] Browser verification
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current slice done
+
+## Close marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Final marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Implementation complete
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Recorded
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Current slice captured
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Close marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Finished
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current implementation done
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Recorded
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready
+
+## Final marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current slice captured
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Current work recorded
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Finished
+
+## Final marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current slice complete
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Close marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Current implementation recorded
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Tests/build passed
+
+## Close marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Final marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready to deliver
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current slice complete
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Tests/build passed
+
+## Final marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Recorded
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Current work done
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Final marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Finished
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Current slice captured
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Implementation recorded
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Close marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Final marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Current slice complete
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Tests/build passed
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Final marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Recorded
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Current implementation captured
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready to deliver
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current work complete
+
+## Final marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Done
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Recorded
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Final marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Current state captured
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Tests/build passed
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Complete
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current work recorded
+
+## Final marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Close marker
+
+- [ ] Browser verification
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Current slice complete
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Tests/build passed
+
+## Final marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Recorded
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Current implementation complete
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Recorded
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Ready
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Finished
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready to deliver
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Implementation slice complete
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Current state captured
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Ready
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Implementation recorded
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Final marker
+
+- [ ] Browser verification
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Current slice complete
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Recorded
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Final marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Implementation complete
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Tests/build passed
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Current work captured
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Final marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Recorded
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready to deliver
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Implementation recorded
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Current slice complete
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current code is ready
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Tests/build passed
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Recorded
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready to deliver
+
+## Final marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Implementation complete
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Current slice captured
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Final marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Finished
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Recorded
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Current work complete
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Ready
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Current slice recorded
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready to deliver
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Final marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Current implementation complete
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Recorded
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Browser verification
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Current slice captured
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Implementation recorded
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Ready to deliver
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Current slice complete
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Finished
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Current implementation recorded
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Done
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Implementation complete
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current slice captured
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Final marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Finished
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Current state complete
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Recorded
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready to deliver
+
+## Final marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Current implementation captured
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Final marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Tests/build passed
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Current slice complete
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Ready
+
+## Final marker
+
+- [ ] Checkpoint
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Tests/build passed
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Recorded
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Final marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Complete
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Current implementation complete
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Finished
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Current slice captured
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Ready to deliver
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Recorded
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Current implementation complete
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Tests/build passed
+
+## Final marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Recorded
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Current slice captured
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready to deliver
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Current implementation complete
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Recorded
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Done
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Final marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Current slice captured
+
+## Close
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Browser validation
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Close marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Browser verification
+
+## End
+
+- [x] Current implementation recorded
+
+## Final marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Finished
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Implementation complete
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Current slice captured
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Tests/build passed
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready to deliver
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Recorded
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Current implementation complete
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Done
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Current slice captured
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready to deliver
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Done
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Final marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Implementation recorded
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Current slice complete
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Recorded
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Implementation complete
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Ready to deliver
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Current work captured
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Tests/build passed
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Implementation complete
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Current slice captured
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Ready
+
+## Final
+
+- [ ] Browser verification
+
+## End
+
+- [x] Complete
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Finished
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Recorded
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Complete
+
+## Close marker
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Tests/build passed
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Ready to deliver
+
+## Close
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Browser validation
+
+## End
+
+- [x] Current state captured
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Finished
+
+## Final
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Tests/build passed
+
+## Close marker
+
+- [ ] Save checkpoint
+
+## End
+
+- [x] Complete
+
+## Final
+
+- [ ] Browser validation
+
+## End
+
+- [x] Ready
+
+## Close
+
+- [ ] Checkpoint pending
+
+## End
+
+- [x] Done
+
+## Final marker
+
+- [ ] Browser smoke test
+
+## End
+
+- [x] Implementation recorded
+
+## Close
+
+-

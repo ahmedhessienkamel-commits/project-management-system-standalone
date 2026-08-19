@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
-import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, expenses, notifications, payroll, periodLocks, projectMembers, projects, sales, stages, units, users, vendors } from "../../drizzle/schema";
+import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, expenses, notifications, payroll, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, sales, stages, units, users, vendors } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
@@ -94,6 +94,7 @@ export const erpRouter = router({
         location: z.string().trim().max(255).optional(),
         status: projectStatus.default("planning"),
         classification: projectClassification.default("operational"),
+        contractValue: z.number().nonnegative().default(0),
         plannedStart: z.string().optional(),
         plannedEnd: z.string().optional(),
       }))
@@ -101,6 +102,7 @@ export const erpRouter = router({
         const db = requireDb(await getDb());
         const result = await db.insert(projects).values({
           ...input,
+          contractValue: input.contractValue.toFixed(2),
           location: input.location || null,
           plannedStart: input.plannedStart ? new Date(input.plannedStart) : null,
           plannedEnd: input.plannedEnd ? new Date(input.plannedEnd) : null,
@@ -427,6 +429,26 @@ export const erpRouter = router({
   }),
 
   payroll: router({
+    createAdministrative: protectedProcedure.input(z.object({ employeeName: z.string().trim().min(1), employeeCode: z.string().trim().max(64).optional(), month: z.number().int().min(1).max(12), year: z.number().int().min(2000).max(2100), amount: z.number().positive(), paidAmount: z.number().nonnegative().default(0) })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
+      const rows = await db.select().from(projects).where(eq(projects.status, "active"));
+      const visible = (allowed ? rows.filter((row) => allowed.has(row.id)) : rows).filter((row) => Number(row.contractValue || 0) > 0 && row.classification === "operational");
+      const totalContractValue = visible.reduce((sum, row) => sum + Number(row.contractValue || 0), 0);
+      if (!totalContractValue) throw new TRPCError({ code: "BAD_REQUEST", message: "لا توجد مشاريع نشطة بقيم عقود صالحة للتوزيع" });
+      const inserted = await db.insert(administrativePayroll).values({ employeeName: input.employeeName, employeeCode: input.employeeCode || null, month: input.month, year: input.year, totalAmount: input.amount.toFixed(2), paidAmount: input.paidAmount.toFixed(2), createdBy: ctx.user.id, status: "pending" });
+      const administrativePayrollId = Number(inserted[0].insertId);
+      await db.insert(payrollAllocations).values(visible.map((project) => { const ratio = Number(project.contractValue || 0) / totalContractValue; return { administrativePayrollId, projectId: project.id, ratio: ratio.toFixed(6), allocatedAmount: (input.amount * ratio).toFixed(2) }; }));
+      return { id: administrativePayrollId, allocations: visible.map((project) => { const ratio = Number(project.contractValue || 0) / totalContractValue; return { projectId: project.id, projectName: project.name, ratio, allocatedAmount: input.amount * ratio }; }) };
+    }),
+    adminAllocationPreview: protectedProcedure.input(z.object({ amount: z.number().nonnegative() })).query(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
+      const rows = await db.select().from(projects).where(eq(projects.status, "active"));
+      const visible = (allowed ? rows.filter((row) => allowed.has(row.id)) : rows).filter((row) => Number(row.contractValue || 0) > 0);
+      const totalContractValue = visible.reduce((sum, row) => sum + Number(row.contractValue || 0), 0);
+      return visible.map((project) => { const ratio = totalContractValue ? Number(project.contractValue || 0) / totalContractValue : 0; return { projectId: project.id, projectName: project.name, contractValue: Number(project.contractValue || 0), ratio, allocatedAmount: input.amount * ratio }; });
+    }),
     list: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
@@ -564,6 +586,38 @@ export const erpRouter = router({
       await db.update(custody).set({ settledAmount: settled.toFixed(2), status }).where(eq(custody.id, input.id));
       await db.insert(auditLogs).values({ entityType: "custody", entityId: input.id, action: "settled", actorId: ctx.user.id, afterJson: JSON.stringify({ settledAmount: settled, status }) });
       return { success: true, outstanding: Number(row.issuedAmount) - settled } as const;
+    }),
+  }),
+
+  custodyMovements: router({
+    list: protectedProcedure.input(z.object({ employeeCode: z.string().trim().min(1).optional(), projectId: z.number().int().positive().optional(), allocationType: z.enum(["project", "general_cash", "general_admin"]).optional() }).default({})).query(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      const rows = await db.select().from(custodyMovements).orderBy(custodyMovements.movementDate, custodyMovements.createdAt);
+      const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
+      return rows.filter((row) => {
+        if (row.projectId && allowed && !allowed.has(row.projectId)) return false;
+        if (input.employeeCode && row.employeeCode !== input.employeeCode) return false;
+        if (input.projectId && row.projectId !== input.projectId) return false;
+        if (input.allocationType && row.allocationType !== input.allocationType) return false;
+        return true;
+      });
+    }),
+    statement: protectedProcedure.input(z.object({ employeeCode: z.string().trim().min(1), projectId: z.number().int().positive().optional(), allocationType: z.enum(["project", "general_cash", "general_admin"]).optional() })).query(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      const rows = await db.select().from(custodyMovements).orderBy(custodyMovements.movementDate, custodyMovements.createdAt);
+      const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
+      const filtered = rows.filter((row) => row.employeeCode === input.employeeCode && (!row.projectId || !allowed || allowed.has(row.projectId)) && (!input.projectId || row.projectId === input.projectId) && (!input.allocationType || row.allocationType === input.allocationType));
+      let balance = 0;
+      return filtered.map((row) => { balance += Number(row.signedAmount); return { ...row, balance }; });
+    }),
+    create: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional(), stageId: z.number().int().positive().optional(), employeeCode: z.string().trim().min(1), employeeName: z.string().trim().min(2), movementType: z.enum(["issue", "spend", "return", "settlement"]), allocationType: z.enum(["project", "general_cash", "general_admin"]), description: z.string().trim().min(2), amount: z.number().positive(), movementDate: z.string().optional(), expenseType: z.string().trim().max(64).optional() })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      if (input.projectId) { await assertProjectAccess(db, ctx, input.projectId); await assertProjectWrite(db, ctx, input.projectId); await assertPeriodOpen(db, ctx, input.projectId, input.movementDate ? new Date(input.movementDate) : new Date()); }
+      const signedAmount = ["issue", "return"].includes(input.movementType) ? input.amount : -input.amount;
+      const result = await db.insert(custodyMovements).values({ projectId: input.projectId || null, stageId: input.stageId || null, employeeCode: input.employeeCode, employeeName: input.employeeName, movementType: input.movementType, allocationType: input.allocationType, description: input.description, amount: input.amount.toFixed(2), signedAmount: signedAmount.toFixed(2), movementDate: input.movementDate ? new Date(input.movementDate) : null, expenseType: input.expenseType || null, createdBy: ctx.user.id });
+      const id = Number(result[0].insertId);
+      await db.insert(auditLogs).values({ entityType: "custodyMovement", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify({ ...input, signedAmount }) });
+      return { id, signedAmount };
     }),
   }),
 

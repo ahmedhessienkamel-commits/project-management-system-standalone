@@ -71,6 +71,27 @@
       "when": 1787085655129,
       "tag": "0009_dusty_wiccan",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1787151212561,
+      "tag": "0010_boring_mojo",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1787151634179,
+      "tag": "0011_brown_bloodscream",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "5",
+      "when": 1787151749699,
+      "tag": "0012_goofy_ben_parker",
+      "breakpoints": true
     }
   ]
 }
