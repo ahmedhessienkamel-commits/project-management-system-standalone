@@ -485,3 +485,39 @@ export const accountingDocumentLines = mysqlTable("accountingDocumentLines", {
   debit: decimal("debit", { precision: 14, scale: 2 }).notNull().default("0"),
   credit: decimal("credit", { precision: 14, scale: 2 }).notNull().default("0"),
 });
+
+
+export const fixedAssets = mysqlTable("fixedAssets", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: int("projectId"),
+  assetCode: varchar("assetCode", { length: 64 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  category: varchar("category", { length: 128 }).notNull().default("معدات وأصول تشغيلية"),
+  acquisitionDate: date("acquisitionDate").notNull(),
+  inServiceDate: date("inServiceDate").notNull(),
+  acquisitionCost: decimal("acquisitionCost", { precision: 14, scale: 2 }).notNull(),
+  residualValue: decimal("residualValue", { precision: 14, scale: 2 }).notNull().default("0"),
+  usefulLifeMonths: int("usefulLifeMonths").notNull(),
+  depreciationMethod: mysqlEnum("depreciationMethod", ["straight_line"]).notNull().default("straight_line"),
+  assetAccountId: int("assetAccountId").notNull(),
+  depreciationExpenseAccountId: int("depreciationExpenseAccountId").notNull(),
+  accumulatedDepreciationAccountId: int("accumulatedDepreciationAccountId").notNull(),
+  sourceDocumentId: int("sourceDocumentId"),
+  status: mysqlEnum("status", ["active", "disposed"]).notNull().default("active"),
+  createdBy: int("createdBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const fixedAssetDepreciation = mysqlTable("fixedAssetDepreciation", {
+  id: int("id").autoincrement().primaryKey(),
+  assetId: int("assetId").notNull(),
+  periodStart: date("periodStart").notNull(),
+  periodEnd: date("periodEnd").notNull(),
+  depreciationAmount: decimal("depreciationAmount", { precision: 14, scale: 2 }).notNull(),
+  accumulatedAmount: decimal("accumulatedAmount", { precision: 14, scale: 2 }).notNull(),
+  netBookValue: decimal("netBookValue", { precision: 14, scale: 2 }).notNull(),
+  journalDocumentId: int("journalDocumentId"),
+  status: mysqlEnum("status", ["planned", "posted"]).notNull().default("planned"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});

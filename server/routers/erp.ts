@@ -1,10 +1,10 @@
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
-import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, dailyTasks, employees, expenses, notifications, payroll, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, sales, stages, units, users, vendors, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems, accounts, accountingDocuments, accountingDocumentLines, costItems } from "../../drizzle/schema";
+import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, dailyTasks, employees, expenses, notifications, payroll, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, sales, stages, units, users, vendors, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems, accounts, accountingDocuments, accountingDocumentLines, costItems, fixedAssets, fixedAssetDepreciation } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
-import { calculateDocumentCompleteness, calculateExpenseTotals, calculateFinancialSummaryTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, canAccessProject, canWriteProject, projectHealthReasons, projectHealthStatus, projectNotificationTriggers } from "../erpCalculations";
+import { calculateDocumentCompleteness, calculateExpenseTotals, calculateFinancialSummaryTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, calculateStraightLineDepreciation, canAccessProject, canWriteProject, projectHealthReasons, projectHealthStatus, projectNotificationTriggers } from "../erpCalculations";
 import { accountingTotals } from "../accountingCalculations";
 
 const projectStatus = z.enum(["planning", "active", "paused", "completed", "archived"]);
@@ -349,6 +349,26 @@ export const erpRouter = router({
       await db.update(costItems).set({ isActive: input.active ? 1 : 0 }).where(eq(costItems.id, input.id));
       await db.insert(auditLogs).values({ entityType: "costItem", entityId: input.id, action: input.active ? "activated" : "deactivated", actorId: ctx.user.id });
       return { id: input.id };
+    }),
+  }),
+  fixedAssets: router({
+    list: protectedProcedure.query(async () => {
+      const db = requireDb(await getDb());
+      const assets = await db.select().from(fixedAssets).where(eq(fixedAssets.status, "active"));
+      return Promise.all(assets.map(async (asset) => ({ ...asset, depreciation: await db.select().from(fixedAssetDepreciation).where(eq(fixedAssetDepreciation.assetId, asset.id)) })));
+    }),
+    create: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional(), assetCode: z.string().trim().min(1).max(64), name: z.string().trim().min(2).max(255), category: z.string().trim().min(2).max(128), acquisitionDate: z.string(), inServiceDate: z.string(), acquisitionCost: z.number().positive(), residualValue: z.number().nonnegative().default(0), usefulLifeMonths: z.number().int().positive(), assetAccountId: z.number().int().positive(), depreciationExpenseAccountId: z.number().int().positive(), accumulatedDepreciationAccountId: z.number().int().positive(), sourceDocumentId: z.number().int().positive().optional() })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      if (input.projectId) await assertProjectWrite(db, ctx, input.projectId);
+      const accountIds = [input.assetAccountId, input.depreciationExpenseAccountId, input.accumulatedDepreciationAccountId];
+      const accountRows = await db.select({ id: accounts.id }).from(accounts);
+      if (accountIds.some((id) => !accountRows.some((row) => row.id === id))) throw new TRPCError({ code: "BAD_REQUEST", message: "اختر حسابات صحيحة للأصل والإهلاك" });
+      const result = await db.insert(fixedAssets).values({ projectId: input.projectId || null, assetCode: input.assetCode, name: input.name, category: input.category, acquisitionDate: new Date(input.acquisitionDate), inServiceDate: new Date(input.inServiceDate), acquisitionCost: input.acquisitionCost.toFixed(2), residualValue: input.residualValue.toFixed(2), usefulLifeMonths: input.usefulLifeMonths, assetAccountId: input.assetAccountId, depreciationExpenseAccountId: input.depreciationExpenseAccountId, accumulatedDepreciationAccountId: input.accumulatedDepreciationAccountId, sourceDocumentId: input.sourceDocumentId || null, createdBy: ctx.user.id });
+      const id = Number(result[0].insertId);
+      const schedule = calculateStraightLineDepreciation({ acquisitionCost: input.acquisitionCost, residualValue: input.residualValue, usefulLifeMonths: input.usefulLifeMonths, inServiceDate: input.inServiceDate });
+      await db.insert(fixedAssetDepreciation).values(schedule.map((row) => ({ assetId: id, periodStart: new Date(row.periodStart), periodEnd: new Date(row.periodEnd), depreciationAmount: row.depreciationAmount.toFixed(2), accumulatedAmount: row.accumulatedAmount.toFixed(2), netBookValue: row.netBookValue.toFixed(2) })));
+      await db.insert(auditLogs).values({ entityType: "fixedAsset", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify({ ...input, id }) });
+      return { id };
     }),
   }),
   expenses: router({
@@ -998,7 +1018,7 @@ export const erpRouter = router({
         const filtered = rows.filter((row) => !input?.documentType || row.documentType === input.documentType);
         return Promise.all(filtered.map(async (row) => ({ ...row, lines: await db.select().from(accountingDocumentLines).where(eq(accountingDocumentLines.documentId, row.id)) })));
       }),
-      create: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional(), documentType: z.enum(["sales_invoice", "purchase_invoice", "journal_entry", "payment_voucher", "receipt_voucher", "quotation", "purchase_order"]), partyName: z.string().max(255).optional(), documentDate: z.string().optional(), dueDate: z.string().optional(), sourceAccountId: z.number().int().positive().optional(), amount: z.number().nonnegative(), taxAmount: z.number().nonnegative(), totalAmount: z.number().nonnegative(), paymentMethod: z.enum(["cash", "bank"]).optional(), notes: z.string().max(2000).optional(), status: z.enum(["draft", "posted"]).default("draft"), lines: z.array(z.object({ accountId: z.number().int().positive(), costItemId: z.number().int().positive().optional(), projectId: z.number().int().positive().optional(), stageId: z.number().int().positive().optional(), description: z.string().max(500).optional(), debit: z.number().nonnegative(), credit: z.number().nonnegative() })).min(1) })).mutation(async ({ ctx, input }) => {
+      create: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional(), documentType: z.enum(["sales_invoice", "purchase_invoice", "journal_entry", "payment_voucher", "receipt_voucher", "quotation", "purchase_order"]), fixedAssetId: z.number().int().positive().optional(), partyName: z.string().max(255).optional(), documentDate: z.string().optional(), dueDate: z.string().optional(), sourceAccountId: z.number().int().positive().optional(), amount: z.number().nonnegative(), taxAmount: z.number().nonnegative(), totalAmount: z.number().nonnegative(), paymentMethod: z.enum(["cash", "bank"]).optional(), notes: z.string().max(2000).optional(), status: z.enum(["draft", "posted"]).default("draft"), lines: z.array(z.object({ accountId: z.number().int().positive(), costItemId: z.number().int().positive().optional(), projectId: z.number().int().positive().optional(), stageId: z.number().int().positive().optional(), description: z.string().max(500).optional(), debit: z.number().nonnegative(), credit: z.number().nonnegative() })).min(1) })).mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
         if (input.projectId) await assertProjectWrite(db, ctx, input.projectId);
         const totals = accountingTotals(input.lines);
@@ -1008,6 +1028,11 @@ export const erpRouter = router({
         const result = await db.insert(accountingDocuments).values({ projectId: input.projectId || null, documentType: input.documentType, documentNumber, partyName: input.partyName || null, documentDate: input.documentDate ? new Date(input.documentDate) : new Date(), dueDate: input.dueDate ? new Date(input.dueDate) : null, sourceAccountId: input.sourceAccountId || null, amount: input.amount.toFixed(2), taxAmount: input.taxAmount.toFixed(2), totalAmount: input.totalAmount.toFixed(2), paymentMethod: input.paymentMethod || null, status: input.status, notes: input.notes || null, createdBy: ctx.user.id });
         const id = Number(result[0].insertId);
         for (const line of input.lines) await db.insert(accountingDocumentLines).values({ documentId: id, accountId: line.accountId, costItemId: line.costItemId || null, projectId: line.projectId || input.projectId || null, stageId: line.stageId || null, description: line.description || null, debit: line.debit.toFixed(2), credit: line.credit.toFixed(2) });
+        if (input.fixedAssetId) {
+          const asset = (await db.select({ id: fixedAssets.id }).from(fixedAssets).where(eq(fixedAssets.id, input.fixedAssetId)).limit(1))[0];
+          if (!asset) throw new TRPCError({ code: "NOT_FOUND", message: "بطاقة الأصل غير موجودة" });
+          await db.update(fixedAssets).set({ sourceDocumentId: id }).where(eq(fixedAssets.id, input.fixedAssetId));
+        }
         await db.insert(auditLogs).values({ entityType: "accountingDocument", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify({ ...input, documentNumber }) });
         return { id, documentNumber };
       }),

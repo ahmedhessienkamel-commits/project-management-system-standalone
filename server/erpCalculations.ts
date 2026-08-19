@@ -108,3 +108,23 @@ export function projectHealthReasons({ budgetUsage, progress, delayedStages, cas
   if (scheduleVariancePct > 10) reasons.push(`تأخر زمني مقداره ${Math.round(scheduleVariancePct)}% عن الخطة`);
   return reasons.length ? reasons : ["المؤشرات ضمن الحدود المخططة"];
 }
+
+
+export function calculateStraightLineDepreciation({ acquisitionCost, residualValue = 0, usefulLifeMonths, inServiceDate }: { acquisitionCost: number; residualValue?: number; usefulLifeMonths: number; inServiceDate: string }) {
+  const safeCost = Math.max(0, acquisitionCost);
+  const safeResidual = Math.min(safeCost, Math.max(0, residualValue));
+  const safeLife = Math.max(1, Math.floor(usefulLifeMonths));
+  const depreciableBase = Number((safeCost - safeResidual).toFixed(2));
+  const monthlyAmount = Number((depreciableBase / safeLife).toFixed(2));
+  let accumulated = 0;
+  return Array.from({ length: safeLife }, (_, index) => {
+    const periodStart = new Date(`${inServiceDate}T00:00:00Z`);
+    periodStart.setUTCMonth(periodStart.getUTCMonth() + index);
+    periodStart.setUTCDate(1);
+    const periodEnd = new Date(Date.UTC(periodStart.getUTCFullYear(), periodStart.getUTCMonth() + 1, 0));
+    const remaining = Number((depreciableBase - accumulated).toFixed(2));
+    const depreciationAmount = index === safeLife - 1 ? Math.max(0, remaining) : Math.min(monthlyAmount, Math.max(0, remaining));
+    accumulated = Number((accumulated + depreciationAmount).toFixed(2));
+    return { periodStart: periodStart.toISOString().slice(0, 10), periodEnd: periodEnd.toISOString().slice(0, 10), depreciationAmount, accumulatedAmount: accumulated, netBookValue: Number((safeCost - accumulated).toFixed(2)) };
+  });
+}

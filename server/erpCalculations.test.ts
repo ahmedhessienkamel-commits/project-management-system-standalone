@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { allocateAdministrativeAmount, calculateExpenseTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, projectHealthStatus } from "./erpCalculations";
+import { allocateAdministrativeAmount, calculateExpenseTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, calculateStraightLineDepreciation, projectHealthStatus } from "./erpCalculations";
 import { calculateAttendanceHours, filterAttendanceByMonth, summarizeAttendanceExceptions } from "../shared/attendance";
 
 describe("ERP financial rules", () => {
@@ -21,6 +21,14 @@ describe("ERP financial rules", () => {
   it("applies absence deduction without payroll tax", () => {
     expect(calculatePayrollTotalsWithDeduction(3000, 500)).toEqual({ preTaxAmount: 2500, taxAmount: 0, totalAmount: 2500, deductionAmount: 500 });
     expect(calculatePayrollTotalsWithDeduction(3000, 4000).totalAmount).toBe(0);
+  });
+
+  it("calculates a straight-line depreciation schedule", () => {
+    const schedule = calculateStraightLineDepreciation({ acquisitionCost: 12000, residualValue: 1200, usefulLifeMonths: 12, inServiceDate: "2026-01-15" });
+    expect(schedule).toHaveLength(12);
+    expect(schedule[0]).toMatchObject({ periodStart: "2026-01-01", depreciationAmount: 900 });
+    expect(schedule.at(-1)?.accumulatedAmount).toBe(10800);
+    expect(schedule.at(-1)?.netBookValue).toBe(1200);
   });
 
   it("returns critical when a stage is delayed or budget is exceeded", () => {
