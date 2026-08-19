@@ -220,7 +220,8 @@ export const erpRouter = router({
           }
           return { weight: acc.weight + weight, actual: acc.actual + actualRatio * weight, expected: acc.expected + expectedRatio * weight };
         }, { weight: 0, actual: 0, expected: 0 });
-        const progress = timeline.weight ? Math.round((timeline.actual / timeline.weight) * 100) : 0;
+        const completedStageCount = projectStages.filter((stage) => stage.status === "completed" || Number(stage.actualProgress || 0) >= 100).length;
+        const progress = projectStages.length ? Math.round((completedStageCount / projectStages.length) * 100) : 0;
         const expectedScheduleProgress = timeline.weight ? Math.round((timeline.expected / timeline.weight) * 100) : 0;
         const scheduleVariancePct = Math.max(expectedScheduleProgress - progress, 0);
         const planned = projectStages.reduce((sum, stage) => sum + Number(stage.plannedBudget || 0), 0);
