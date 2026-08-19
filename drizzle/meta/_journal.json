@@ -127,6 +127,27 @@
       "when": 1787172217427,
       "tag": "0017_quiet_salo",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "5",
+      "when": 1787173042438,
+      "tag": "0018_confused_professor_monster",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "5",
+      "when": 1787173461309,
+      "tag": "0019_complete_killmonger",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "5",
+      "when": 1787173515436,
+      "tag": "0020_lucky_lila_cheney",
+      "breakpoints": true
     }
   ]
 }

@@ -73,6 +73,7 @@ export const expenses = mysqlTable("expenses", {
   projectId: int("projectId").notNull(),
   stageId: int("stageId"),
   vendorId: int("vendorId"),
+  costItemId: int("costItemId"),
   reference: varchar("reference", { length: 128 }),
   description: text("description").notNull(),
   unit: varchar("unit", { length: 64 }),
@@ -201,6 +202,8 @@ export const payroll = mysqlTable("payroll", {
   taxAmount: decimal("taxAmount", { precision: 14, scale: 2 }).default("0").notNull(),
   totalAmount: decimal("totalAmount", { precision: 14, scale: 2 }).default("0").notNull(),
   paidAmount: decimal("paidAmount", { precision: 14, scale: 2 }).default("0").notNull(),
+  absenceDays: int("absenceDays").default(0).notNull(),
+  deductionAmount: decimal("deductionAmount", { precision: 14, scale: 2 }).default("0").notNull(),
   status: mysqlEnum("status", ["draft", "pending", "approved", "paid"]).default("draft").notNull(),
   createdBy: int("createdBy"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -266,7 +269,7 @@ export const custodyMovements = mysqlTable("custodyMovements", {
   employeeId: int("employeeId"),
   employeeName: varchar("employeeName", { length: 255 }).notNull(),
   movementType: mysqlEnum("movementType", ["issue", "spend", "return", "settlement"]).notNull(),
-  allocationType: mysqlEnum("allocationType", ["project", "general_cash", "general_admin"]).notNull(),
+  allocationType: mysqlEnum("allocationType", ["project", "general_cash", "general_admin", "petty_cash", "operating_expense"]).notNull(),
   description: text("description").notNull(),
   amount: decimal("amount", { precision: 14, scale: 2 }).default("0").notNull(),
   signedAmount: decimal("signedAmount", { precision: 14, scale: 2 }).default("0").notNull(),
@@ -458,10 +461,24 @@ export const accountingDocuments = mysqlTable("accountingDocuments", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+export const costItems = mysqlTable("costItems", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: int("projectId"),
+  parentId: int("parentId"),
+  code: varchar("code", { length: 32 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  category: varchar("category", { length: 64 }).notNull().default("materials"),
+  isActive: int("isActive").notNull().default(1),
+  createdBy: int("createdBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
 export const accountingDocumentLines = mysqlTable("accountingDocumentLines", {
   id: int("id").autoincrement().primaryKey(),
   documentId: int("documentId").notNull(),
   accountId: int("accountId").notNull(),
+  costItemId: int("costItemId"),
   projectId: int("projectId"),
   stageId: int("stageId"),
   description: text("description"),

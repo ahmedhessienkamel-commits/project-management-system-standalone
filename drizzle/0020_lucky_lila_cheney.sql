@@ -1,0 +1,1 @@
+ALTER TABLE `custodyMovements` MODIFY COLUMN `allocationType` enum('project','general_cash','general_admin','petty_cash','operating_expense') NOT NULL;
