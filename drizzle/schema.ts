@@ -571,6 +571,8 @@ export const accountingDocuments = mysqlTable("accountingDocuments", {
   partyName: varchar("partyName", { length: 255 }),
   voucherCategory: mysqlEnum("voucherCategory", ["contractor", "supplier", "materials", "payroll", "operating", "administrative", "petty_cash"]),
   contractorId: int("contractorId"),
+  supplierId: int("supplierId"),
+  purchaseInvoiceId: int("purchaseInvoiceId"),
   documentDate: date("documentDate"),
   dueDate: date("dueDate"),
   sourceAccountId: int("sourceAccountId"),
