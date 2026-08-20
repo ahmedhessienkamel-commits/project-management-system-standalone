@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { startLogin } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { BarChart3, ClipboardList, FileText, Landmark, LayoutDashboard, LogOut, PanelLeft, Settings2, Users, UserRound, WalletCards } from "lucide-react";
+import { BarChart3, Bell, ClipboardList, FileText, Landmark, LayoutDashboard, LogOut, PanelLeft, Plus, Search, Settings2, Users, UserRound, WalletCards } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -132,9 +132,30 @@ function DashboardLayoutContent({
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
+  const [globalSearch, setGlobalSearch] = useState("");
   const sidebarRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const activeMenuItem = menuItems.find(item => item.path === location || (item.path.includes("?") && location.startsWith(item.path.split("?")[0])));
   const isMobile = useIsMobile();
+  const normalizedSearch = globalSearch.trim().toLowerCase();
+  const searchResults = normalizedSearch ? menuItems.filter((item) => item.label.toLowerCase().includes(normalizedSearch)).slice(0, 6) : [];
+  const quickActions = [
+    { label: "إضافة تكلفة أو مصروف", path: "/expenses" },
+    { label: "إنشاء سند صرف أو قبض", path: "/accounting" },
+    { label: "فتح مسير الرواتب", path: "/payroll" },
+    { label: "تسجيل طلب شراء", path: "/operations" },
+  ];
+
+  useEffect(() => {
+    const handleGlobalShortcut = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleGlobalShortcut);
+    return () => window.removeEventListener("keydown", handleGlobalShortcut);
+  }, []);
 
   useEffect(() => {
     if (isCollapsed) {
@@ -278,6 +299,17 @@ function DashboardLayoutContent({
             </div>
           </div>
         )}
+        <div className="sticky top-0 z-30 hidden items-center justify-between gap-3 border-b bg-background/95 px-5 py-3 backdrop-blur supports-[backdrop-filter]:backdrop-blur md:flex" dir="rtl">
+          <div className="relative min-w-0 flex-1 max-w-2xl">
+            <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input ref={searchInputRef} value={globalSearch} onChange={(event) => setGlobalSearch(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && searchResults[0]) { setLocation(searchResults[0].path); setGlobalSearch(""); } }} placeholder="ابحث عن صفحة أو عملية..." aria-label="البحث العام" className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 pr-10 pl-4 text-sm outline-none transition focus:border-[#b28a3b] focus:bg-white focus:ring-2 focus:ring-[#b28a3b]/20" />
+            {searchResults.length > 0 && <div className="absolute right-0 top-12 z-50 w-full rounded-xl border border-slate-200 bg-white p-2 shadow-xl">{searchResults.map((item) => <button key={item.path} type="button" onClick={() => { setLocation(item.path); setGlobalSearch(""); }} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-right text-sm text-slate-700 hover:bg-slate-50"><item.icon className="h-4 w-4 text-[#b28a3b]" />{item.label}</button>)}</div>}
+          </div>
+          <div className="flex items-center gap-2">
+            <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="gap-2 border-[#b28a3b]/40 text-[#18324b]"><Plus className="h-4 w-4" /> إجراء سريع</Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-56">{quickActions.map((action) => <DropdownMenuItem key={action.path} onClick={() => setLocation(action.path)} className="cursor-pointer">{action.label}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
+            <Button variant="outline" size="icon" aria-label="فتح التنبيهات والموافقات" title="التنبيهات والموافقات" onClick={() => setLocation("/approvals")} className="border-slate-200"><Bell className="h-4 w-4 text-[#b28a3b]" /></Button>
+          </div>
+        </div>
         <main className="flex-1 p-4">{children}</main>
       </SidebarInset>
     </>
