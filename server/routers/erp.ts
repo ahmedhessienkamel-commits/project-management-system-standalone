@@ -330,7 +330,10 @@ export const erpRouter = router({
         const projectVendors = vendorRows.filter((vendor) => vendor.projectId === null || vendor.projectId === project.id);
         const projectAttachments = attachmentRows.filter((attachment) => attachment.projectId === project.id);
         const documentCompleteness = calculateDocumentCompleteness({ vendors: projectVendors, attachments: projectAttachments });
-        const projectCertificates = certificateRows.filter((certificate) => certificate.projectId === project.id);
+        const projectCertificates = certificateRows.filter((certificate) => certificate.projectId === project.id && certificate.status !== "rejected");
+        const subcontractorCostsTotal = projectCertificates.reduce((sum, certificate) => sum + Number(certificate.totalAmount || 0), 0);
+        const subcontractorCostsPaid = projectCertificates.reduce((sum, certificate) => sum + Number(certificate.paidAmount || 0), 0);
+        const subcontractorCostsOutstanding = Math.max(subcontractorCostsTotal - subcontractorCostsPaid, 0);
         const missingCertificateDocuments = projectCertificates.filter((certificate) => !certificate.vendorId || !projectAttachments.some((attachment) => attachment.entityType === "certificate" && attachment.entityId === certificate.id)).length;
         const paymentRequests = approvalRows.filter((approval) => approval.projectId === project.id && ["expense", "collection"].includes(approval.entityType));
         const missingPaymentDocuments = paymentRequests.filter((request) => !projectAttachments.some((attachment) => attachment.entityType === request.entityType && attachment.entityId === request.entityId)).length;
@@ -365,8 +368,8 @@ export const erpRouter = router({
         const projectExpensesWithTax = projectExpenses.reduce((sum, expense) => sum + Number(expense.totalAmount || 0), 0);
         const administrativeExpensesPreTax = administrativeExpenseRows.reduce((sum, expense) => sum + Number(expense.preTaxAmount || 0), 0);
         const financialTotals = calculateFinancialSummaryTotals({ sales: projectSales, collections: projectCollections, expenses: projectExpenses, payroll: [...projectPayroll, ...projectAdministrativePayroll.map((row) => ({ preTaxAmount: row.allocatedAmount, totalAmount: row.allocatedAmount, paidAmount: "0", status: "approved" as const }))] });
-        const actual = financialTotals.expensesTotal + financialTotals.payrollTotal;
-        const paid = financialTotals.expensesPaid + financialTotals.payrollPaid;
+        const actual = financialTotals.expensesTotal + financialTotals.payrollTotal + subcontractorCostsTotal;
+        const paid = financialTotals.expensesPaid + financialTotals.payrollPaid + subcontractorCostsPaid;
         const collectionsReceived = financialTotals.collectionsReceived;
         const recognizedRevenue = financialTotals.revenue;
         const payrollOutstanding = financialTotals.payrollOutstanding;
@@ -374,7 +377,7 @@ export const erpRouter = router({
         const budgetUsage = planned ? Math.round((actual / planned) * 100) : 0;
         const delayedStages = projectStages.filter((stage) => stage.status === "delayed").length + overdueStages.length;
         const activeStagePlannedBudget = activeStage ? Number(activeStage.plannedBudget || 0) : 0;
-        const activeStageActualCost = activeStage ? projectExpenses.filter((expense) => expense.stageId === activeStage.id).reduce((sum, expense) => sum + Number(expense.totalAmount || 0), 0) + projectPayroll.filter((row) => row.stageId === activeStage.id).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) : 0;
+        const activeStageActualCost = activeStage ? projectExpenses.filter((expense) => expense.stageId === activeStage.id).reduce((sum, expense) => sum + Number(expense.totalAmount || 0), 0) + projectPayroll.filter((row) => row.stageId === activeStage.id).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) + projectCertificates.filter((certificate) => certificate.stageId === activeStage.id).reduce((sum, certificate) => sum + Number(certificate.totalAmount || 0), 0) : 0;
         const status = projectHealthStatus({ budgetUsage, progress, delayedStages, cashGapRatio: actual ? cashGap / actual : 0, pendingApprovals: projectApprovals.length, overdueApprovals, scheduleVariancePct });
         const reasons = projectHealthReasons({ budgetUsage, progress, delayedStages, cashGap, pendingApprovals: projectApprovals.length, overdueApprovals, scheduleVariancePct });
         return {
@@ -386,6 +389,9 @@ export const erpRouter = router({
           collectionsReceived,
           recognizedRevenue,
            payrollOutstanding,
+           subcontractorCostsTotal,
+           subcontractorCostsPaid,
+           subcontractorCostsOutstanding,
            materialsExpensesTotal,
            operationalExpensesTotal,
            administrativeExpensesTotal,
@@ -393,7 +399,7 @@ export const erpRouter = router({
            projectExpensesWithTax,
            administrativeExpensesPreTax,
            payrollTotal: financialTotals.payrollTotal,
-           totalExpenses: materialsExpensesTotal + operationalExpensesTotal + administrativeExpensesTotal + financialTotals.payrollTotal,
+           totalExpenses: materialsExpensesTotal + operationalExpensesTotal + administrativeExpensesTotal + financialTotals.payrollTotal + subcontractorCostsTotal,
            cashGap,
           pendingApprovals: projectApprovals.length,
           overdueApprovals,

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { trpc } from "@/lib/trpc";
 import { isProjectActive } from "../../../shared/projectStatus";
-import { ArrowLeft, CalendarClock, CheckCircle2, CircleDollarSign, Clock3, FileCheck2, FolderKanban, HandCoins, Landmark, Plus, ReceiptText, ShieldAlert, WalletCards } from "lucide-react";
+import { ArrowLeft, CalendarClock, CheckCircle2, CircleDollarSign, Clock3, FileCheck2, FolderKanban, HandCoins, HardHat, Landmark, Plus, ReceiptText, ShieldAlert, WalletCards } from "lucide-react";
 import { useLocation } from "wouter";
 import { useMemo, useState } from "react";
 
@@ -35,10 +35,11 @@ export default function Home() {
     operationalExpenses: totals.operationalExpenses + item.operationalExpensesTotal,
     administrativeExpenses: totals.administrativeExpenses + item.administrativeExpensesTotal,
     payrollTotal: totals.payrollTotal + item.payrollTotal,
+    subcontractorCostsTotal: totals.subcontractorCostsTotal + item.subcontractorCostsTotal,
     totalExpenses: totals.totalExpenses + item.totalExpenses,
     cashGap: totals.cashGap + item.cashGap,
     pendingApprovals: totals.pendingApprovals + item.pendingApprovals,
-  }), { plannedBudget: 0, actualCost: 0, outstandingCost: 0, recognizedRevenue: 0, collectionsReceived: 0, payrollOutstanding: 0, materialsExpenses: 0, operationalExpenses: 0, administrativeExpenses: 0, payrollTotal: 0, totalExpenses: 0, cashGap: 0, pendingApprovals: 0 });
+  }), { plannedBudget: 0, actualCost: 0, outstandingCost: 0, recognizedRevenue: 0, collectionsReceived: 0, payrollOutstanding: 0, materialsExpenses: 0, operationalExpenses: 0, administrativeExpenses: 0, payrollTotal: 0, subcontractorCostsTotal: 0, totalExpenses: 0, cashGap: 0, pendingApprovals: 0 });
   const totalBudget = shortcutTotals.plannedBudget;
   const totalActual = shortcutTotals.actualCost;
   const totalOutstanding = shortcutTotals.outstandingCost;
@@ -76,7 +77,8 @@ export default function Home() {
 
           {selectedSummary && <DashboardStageDetail rows={selectedDetailReport?.rows.filter((row) => row.rowType === "stage") ?? []} total={selectedDetailReport?.total ?? null} onOpenReport={() => setLocation("/projects")} />}
 
-          <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            <MetricCard icon={HardHat} label="تكاليف مقاولي الباطن" value={`${money.format(selectedSummary ? selectedSummary.subcontractorCostsTotal : shortcutTotals.subcontractorCostsTotal)} ر.س`} hint="من إجمالي المستخلصات المعتمدة" tone="slate" onClick={() => setLocation("/operations?tab=certificates")} />
             <MetricCard icon={Landmark} label="تقرير تكلفة الخامات" value={`${money.format(selectedExpenseTotals.materials)} ر.س`} hint="تفصيل الخامات في قائمة الدخل" tone="gold" onClick={() => setLocation(`/accounting?report=materials${selectedSummary ? `&projectId=${selectedSummary.project.id}` : ""}`)} />
             <MetricCard icon={WalletCards} label="التكلفة التشغيلية" value={`${money.format(selectedExpenseTotals.operational)} ر.س`} hint="تشغيل ومعدات وخدمات" tone="blue" onClick={() => setLocation("/expenses")} />
             <MetricCard icon={Clock3} label="مصروف الرواتب" value={`${money.format(selectedExpenseTotals.payroll)} ر.س`} hint="رواتب محملة على المشروع" tone="violet" onClick={() => setLocation("/payroll")} />

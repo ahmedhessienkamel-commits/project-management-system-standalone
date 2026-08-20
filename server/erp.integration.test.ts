@@ -134,7 +134,7 @@ describe("ERP sales and collections API flow", () => {
     expect(state.payroll).toHaveLength(2);
     expect(state.payroll.find((row) => row.employeeCode === "EMP-001")).toMatchObject({ employeeName: "أحمد", classification: "project", taxAmount: "0.00" });
     expect(state.payroll.find((row) => row.employeeCode === "EMP-002")).toMatchObject({ employeeName: "سارة", classification: "administrative", taxAmount: "0.00" });
-    expect(summary[0]).toMatchObject({ recognizedRevenue: 250000, collectionsReceived: 75000, actualCost: 13150, payrollOutstanding: 12000 });
+    expect(summary[0]).toMatchObject({ recognizedRevenue: 250000, collectionsReceived: 75000, actualCost: 18900, subcontractorCostsTotal: 5750, payrollOutstanding: 12000 });
     expect(summary[0].missingDocumentCount).toBeGreaterThanOrEqual(2);
     expect(report).toMatchObject({ revenue: 250000, collectionsReceived: 75000, expensesPreTax: 1000, payrollTotal: 12000, payrollOutstanding: 12000 });
     const cashFlow = await caller.erp.reports.cashFlow({ projectId: 1 });
