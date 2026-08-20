@@ -37,7 +37,8 @@ const menuItems = [
   { icon: FileText, label: "التكاليف والمصروفات", path: "/expenses" },
   { icon: UserRound, label: "دليل الموظفين", path: "/employees" },
   { icon: WalletCards, label: "مسير الرواتب", path: "/payroll" },
-  { icon: WalletCards, label: "العهد", path: "/custody" },
+  { icon: WalletCards, label: "تسجيل / صرف عهدة", path: "/custody" },
+  { icon: FileText, label: "كشوف حساب العهد", path: "/custody?tab=custodyStatement" },
   { icon: ClipboardList, label: "المقاولون والموردون", path: "/operations?tab=vendors" },
   { icon: FileText, label: "المقاولون والمستخلصات", path: "/operations?tab=certificates" },
   { icon: FileText, label: "كشوف حسابات الموردين", path: "/reports?view=suppliers" },
@@ -45,7 +46,6 @@ const menuItems = [
   { icon: Landmark, label: "المحاسبة", path: "/accounting" },
   { icon: BarChart3, label: "مركز التكلفة", path: "/accounting?report=costItems" },
   { icon: BarChart3, label: "قائمة الدخل", path: "/accounting?report=income" },
-  { icon: FileText, label: "كشوف حسابات العهد", path: "/custody?tab=custodyStatement" },
   { icon: ClipboardList, label: "دورة المشتريات", path: "/operations" },
   { icon: ClipboardList, label: "الحضور والانصراف", path: "/attendance" },
   { icon: ClipboardList, label: "المهام اليومية", path: "/tasks" },
@@ -142,7 +142,7 @@ function DashboardLayoutContent({
   const searchResults = normalizedSearch ? menuItems.filter((item) => item.label.toLowerCase().includes(normalizedSearch)).slice(0, 6) : [];
   const quickActions = [
     { label: "إضافة تكلفة أو مصروف", path: "/expenses" },
-    { label: "تسجيل عهدة", path: "/custody?tab=custody" },
+    { label: "تسجيل / صرف عهدة", path: "/custody?tab=custody" },
     { label: "فاتورة شراء", path: "/accounting?type=purchase_invoice" },
     { label: "فاتورة بيع", path: "/accounting?type=sales_invoice" },
     { label: "فتح مستخلص", path: "/operations?tab=certificates" },
