@@ -630,6 +630,37 @@ export const erpRouter = router({
         });
         return { id: expenseId, taxAmount, totalAmount };
       }),
+    update: protectedProcedure
+      .input(z.object({ id: z.number().int().positive(), projectId: z.number().int().positive().optional(), stageId: z.number().int().positive().optional(), vendorId: z.number().int().positive().optional(), costItemId: z.number().int().positive().optional(), description: z.string().trim().min(2), unit: z.string().trim().max(64).optional(), quantity: z.number().nonnegative().default(1), expenseType: z.enum(["materials", "payroll", "operating_tools", "equipment_rental", "contractor", "transport", "maintenance", "services", "operating", "administrative"]).default("operating"), classification: z.enum(["project", "administrative", "general_cash", "petty_cash"]).default("project"), allocationRatio: z.number().min(0.01).max(1).default(1), preTaxAmount: z.number().nonnegative(), taxRate: z.number().min(0).max(100).default(15), paidAmount: z.number().nonnegative().default(0), expenseDate: z.string().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        await assertOperationPermission(db, ctx, "edit");
+        const before = (await db.select().from(expenses).where(eq(expenses.id, input.id)).limit(1))[0];
+        if (!before) throw new TRPCError({ code: "NOT_FOUND", message: "المصروف غير موجود" });
+        if (before.projectId) { await assertProjectAccess(db, ctx, before.projectId); await assertProjectWrite(db, ctx, before.projectId); await assertPeriodOpen(db, ctx, before.projectId, input.expenseDate ? new Date(input.expenseDate) : new Date(before.expenseDate ?? new Date())); }
+        if (input.projectId) { await assertProjectAccess(db, ctx, input.projectId); await assertProjectWrite(db, ctx, input.projectId); await assertPeriodOpen(db, ctx, input.projectId, input.expenseDate ? new Date(input.expenseDate) : new Date()); }
+        const allocationValidation = validateExpenseAllocation(input);
+        if (!allocationValidation.ok) throw new TRPCError({ code: "BAD_REQUEST", message: allocationValidation.message });
+        const totals = calculateExpenseTotals(input.preTaxAmount, input.taxRate);
+        const approvalStatus = input.projectId ? await resolveApprovalStatus(db, input.projectId, "expense", totals.preTaxAmount) : "pending" as const;
+        await db.update(expenses).set({ projectId: input.projectId || null, stageId: input.stageId || null, vendorId: input.vendorId || null, costItemId: input.costItemId || null, description: input.description, unit: input.unit || null, quantity: input.quantity.toFixed(3), expenseType: input.expenseType, classification: input.classification, allocationRatio: input.classification === "project" ? input.allocationRatio.toFixed(3) : "1.000", preTaxAmount: totals.preTaxAmount.toFixed(2), taxRate: totals.taxRate.toFixed(2), taxAmount: totals.taxAmount.toFixed(2), totalAmount: totals.totalAmount.toFixed(2), paidAmount: input.paidAmount.toFixed(2), expenseDate: input.expenseDate ? new Date(input.expenseDate) : null, status: approvalStatus }).where(eq(expenses.id, input.id));
+        await db.delete(approvalRequests).where(and(eq(approvalRequests.entityType, "expense"), eq(approvalRequests.entityId, input.id)));
+        await db.insert(approvalRequests).values({ projectId: input.projectId || null, entityType: "expense", entityId: input.id, requestedBy: ctx.user.id, status: approvalStatus });
+        await db.insert(auditLogs).values({ entityType: "expense", entityId: input.id, action: "updated", actorId: ctx.user.id, beforeJson: JSON.stringify(before), afterJson: JSON.stringify({ ...input, ...totals, approvalStatus }) });
+        return { id: input.id, taxAmount: totals.taxAmount, totalAmount: totals.totalAmount, status: approvalStatus };
+      }),
+    delete: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      await assertOperationPermission(db, ctx, "delete");
+      const before = (await db.select().from(expenses).where(eq(expenses.id, input.id)).limit(1))[0];
+      if (!before) throw new TRPCError({ code: "NOT_FOUND", message: "المصروف غير موجود" });
+      if (before.projectId) { await assertProjectAccess(db, ctx, before.projectId); await assertProjectWrite(db, ctx, before.projectId); await assertPeriodOpen(db, ctx, before.projectId, new Date(before.expenseDate ?? new Date())); }
+      if (before.status === "posted") throw new TRPCError({ code: "FORBIDDEN", message: "لا يمكن حذف مصروف مرحّل محاسبيًا" });
+      await db.delete(approvalRequests).where(and(eq(approvalRequests.entityType, "expense"), eq(approvalRequests.entityId, input.id)));
+      await db.delete(expenses).where(eq(expenses.id, input.id));
+      await db.insert(auditLogs).values({ entityType: "expense", entityId: input.id, action: "deleted", actorId: ctx.user.id, beforeJson: JSON.stringify(before) });
+      return { success: true } as const;
+    }),
   }),
 
   sales: router({
