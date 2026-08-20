@@ -221,7 +221,7 @@ export default function Accounting() {
     const find = (code: string) => accounts.find((account) => account.code === code)?.id;
     if (documentType === "payment_voucher") { const debitCode = voucherCategory === "materials" || voucherCategory === "supplier" ? "5102" : voucherCategory === "contractor" ? "5201" : voucherCategory === "payroll" ? "5202" : voucherCategory === "operating" ? "5203" : voucherCategory === "administrative" ? "5301" : "5403"; return { debit: find(debitCode) || find("5101"), credit: selectedSourceAccount?.id }; }
     if (documentType === "receipt_voucher") return { debit: selectedSourceAccount?.id, credit: find("4101") };
-    if (documentType === "sales_invoice") return { debit: find("1201"), credit: find("4101") };
+    if (documentType === "sales_invoice") return { debit: undefined, credit: find("4101") };
     if (documentType === "purchase_invoice") return { debit: find("5101"), credit: find("2101") };
     return { debit: undefined, credit: undefined };
   }, [accounts, documentType, selectedSourceAccount, voucherCategory]);
@@ -256,7 +256,7 @@ export default function Accounting() {
     const payrollPartyName = voucherCategory === "payroll" ? (voucherPayrollType === "company_employee" ? employees.find((employee) => employee.id === Number(voucherEmployeeId))?.fullName : partyName.trim()) : partyName.trim();
     const selectedSupplierName = vendors.find((vendor) => vendor.id === Number(voucherSupplierId))?.name;
     const voucherPartyName = voucherCategory === "supplier" ? selectedSupplierName : payrollPartyName;
-    if (!debit || !credit || value <= 0 || ((documentType === "sales_invoice" || documentType === "purchase_invoice") && !partyName.trim()) || (documentType === "sales_invoice" && !invoiceProjectId) || (voucherCategory === "payroll" && !payrollPartyName) || (voucherCategory === "supplier" && (!voucherSupplierId || (voucherSettlementType === "invoice" && !voucherPurchaseInvoiceId)))) return;
+    if ((!credit || (documentType !== "sales_invoice" && !debit)) || value <= 0 || ((documentType === "sales_invoice" || documentType === "purchase_invoice") && !partyName.trim()) || (documentType === "sales_invoice" && !invoiceProjectId) || (voucherCategory === "payroll" && !payrollPartyName) || (voucherCategory === "supplier" && (!voucherSupplierId || (voucherSettlementType === "invoice" && !voucherPurchaseInvoiceId)))) return;
     const documentPayload = {
       documentType: documentType === "sales_invoice" && documentSaveStatus === "quotation" ? "quotation" : documentType,
       projectId: ["sales_invoice", "purchase_invoice"].includes(documentType) && invoiceProjectId ? Number(invoiceProjectId) : documentType === "payment_voucher" && voucherProjectId ? Number(voucherProjectId) : undefined,
@@ -277,7 +277,7 @@ export default function Accounting() {
       notes: voucherCategory === "payroll" ? `${notes || ""}${notes ? " — " : ""}نوع المستفيد: ${voucherPayrollType === "company_employee" ? "موظف شركة" : "عامل / موظف أجير"}` : notes || undefined,
       status: documentType === "sales_invoice" && documentSaveStatus !== "quotation" ? documentSaveStatus : "posted" as const,
       fixedAssetId: documentType !== "sales_invoice" && fixedAssetId ? Number(fixedAssetId) : undefined,
-      lines: [{ accountId: debit, costItemId: undefined, description: documentType === "sales_invoice" ? `ذمم العميل — ${partyName}` : (notes || partyName || "مدين"), debit: value + tax, credit: 0 }, { accountId: credit, costItemId: documentType === "sales_invoice" ? undefined : (costItemId ? Number(costItemId) : undefined), description: documentType === "sales_invoice" ? `إيراد المشروع — ${partyName}` : (notes || partyName || "دائن"), debit: 0, credit: value + tax }],
+      lines: documentType === "sales_invoice" ? [{ accountId: credit, costItemId: undefined, description: `إيراد المشروع — ${partyName}`, debit: 0, credit: value + tax }] : [{ accountId: debit, costItemId: undefined, description: notes || partyName || "مدين", debit: value + tax, credit: 0 }, { accountId: credit, costItemId: costItemId ? Number(costItemId) : undefined, description: notes || partyName || "دائن", debit: 0, credit: value + tax }],
     };
     if (editingDocumentId) updateDocument.mutate({ id: editingDocumentId, projectId: documentPayload.projectId ?? null, partyName: documentPayload.partyName, partyTaxNumber: documentPayload.partyTaxNumber, documentDate: documentPayload.documentDate, amount: documentPayload.amount, taxAmount: documentPayload.taxAmount, totalAmount: documentPayload.totalAmount, notes: documentPayload.notes, status: documentPayload.status, lines: documentPayload.lines });
     else createDocument.mutate(documentPayload);
