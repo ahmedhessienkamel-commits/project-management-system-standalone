@@ -223,19 +223,21 @@ function DashboardLayoutContent({
           <SidebarContent className="gap-0">
             <SidebarMenu className="px-2 py-1">
               {menuItems.map(item => {
-                const isActive = location === item.path;
+                const isActive = location === item.path || (item.path.includes("?") && location.startsWith(item.path.split("?")[0]) && location.includes(item.path.split("?")[1] || ""));
                 return (
                   <SidebarMenuItem key={item.path}>
                     <SidebarMenuButton
+                      asChild
                       isActive={isActive}
-                      onClick={() => setLocation(item.path)}
                       tooltip={item.label}
                       className={`h-10 transition-all font-normal`}
                     >
-                      <item.icon
-                        className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
-                      />
-                      <span>{item.label}</span>
+                      <a href={item.path} aria-label={item.label}>
+                        <item.icon
+                          className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
+                        />
+                        <span>{item.label}</span>
+                      </a>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
