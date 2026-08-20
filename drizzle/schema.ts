@@ -71,7 +71,7 @@ export const vendors = mysqlTable("vendors", {
 
 export const expenses = mysqlTable("expenses", {
   id: int("id").autoincrement().primaryKey(),
-  projectId: int("projectId").notNull(),
+  projectId: int("projectId"),
   stageId: int("stageId"),
   vendorId: int("vendorId"),
   costItemId: int("costItemId"),
@@ -80,7 +80,7 @@ export const expenses = mysqlTable("expenses", {
   unit: varchar("unit", { length: 64 }),
   quantity: decimal("quantity", { precision: 14, scale: 3 }).default("1").notNull(),
   expenseType: varchar("expenseType", { length: 64 }).default("operating").notNull(),
-  classification: mysqlEnum("classification", ["project", "administrative"]).default("project").notNull(),
+  classification: mysqlEnum("classification", ["project", "administrative", "general_cash", "petty_cash"]).default("project").notNull(),
   preTaxAmount: decimal("preTaxAmount", { precision: 14, scale: 2 }).default("0").notNull(),
   taxRate: decimal("taxRate", { precision: 5, scale: 2 }).default("15").notNull(),
   taxAmount: decimal("taxAmount", { precision: 14, scale: 2 }).default("0").notNull(),

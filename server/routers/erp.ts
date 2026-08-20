@@ -7,6 +7,7 @@ import { TRPCError } from "@trpc/server";
 import { calculateDocumentCompleteness, calculateExpenseTotals, calculateFinancialSummaryTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, calculateStraightLineDepreciation, canAccessProject, canWriteProject, projectHealthReasons, projectHealthStatus, projectNotificationTriggers } from "../erpCalculations";
 import { accountingTotals } from "../accountingCalculations";
 import { calculateStageTimeVariance } from "../../shared/stageTiming";
+import { validateExpenseAllocation } from "../../shared/expenseAllocation";
 
 const projectStatus = z.enum(["planning", "active", "paused", "completed", "archived"]);
 const projectClassification = z.enum(["operational", "administrative"]);
@@ -474,11 +475,11 @@ export const erpRouter = router({
       const db = requireDb(await getDb());
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
       const rows = await db.select().from(expenses).orderBy(expenses.createdAt);
-      return allowed ? rows.filter((row) => allowed.has(row.projectId)) : rows;
+      return allowed ? rows.filter((row) => row.projectId === null || allowed.has(row.projectId)) : rows;
     }),
     create: protectedProcedure
       .input(z.object({
-        projectId: z.number().int().positive(),
+        projectId: z.number().int().positive().optional(),
         stageId: z.number().int().positive().optional(),
         vendorId: z.number().int().positive().optional(),
         costItemId: z.number().int().positive().optional(),
@@ -486,7 +487,7 @@ export const erpRouter = router({
         unit: z.string().trim().max(64).optional(),
         quantity: z.number().nonnegative().default(1),
         expenseType: z.enum(["materials", "operating_tools", "equipment_rental", "contractor", "transport", "maintenance", "services", "operating", "administrative"]).default("operating"),
-        classification: z.enum(["project", "administrative"]).default("project"),
+        classification: z.enum(["project", "administrative", "general_cash", "petty_cash"]).default("project"),
         preTaxAmount: z.number().nonnegative(),
         taxRate: z.number().min(0).max(100).default(15),
         paidAmount: z.number().nonnegative().default(0),
@@ -494,16 +495,20 @@ export const erpRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
-        await assertProjectAccess(db, ctx, input.projectId);
-        await assertProjectWrite(db, ctx, input.projectId);
-        await assertPeriodOpen(db, ctx, input.projectId, input.expenseDate ? new Date(input.expenseDate) : new Date());
+        const allocationValidation = validateExpenseAllocation(input);
+        if (!allocationValidation.ok) throw new TRPCError({ code: "BAD_REQUEST", message: allocationValidation.message });
+        if (input.projectId) {
+          await assertProjectAccess(db, ctx, input.projectId);
+          await assertProjectWrite(db, ctx, input.projectId);
+          await assertPeriodOpen(db, ctx, input.projectId, input.expenseDate ? new Date(input.expenseDate) : new Date());
+        }
         const totals = calculateExpenseTotals(input.preTaxAmount, input.taxRate);
-        const approvalStatus = await resolveApprovalStatus(db, input.projectId, "expense", totals.preTaxAmount);
+        const approvalStatus = input.projectId ? await resolveApprovalStatus(db, input.projectId, "expense", totals.preTaxAmount) : "pending" as const;
         const taxRate = totals.taxRate;
         const taxAmount = totals.taxAmount;
         const totalAmount = totals.totalAmount;
         const result = await db.insert(expenses).values({
-          projectId: input.projectId,
+          projectId: input.projectId || null,
           stageId: input.stageId || null,
           vendorId: input.vendorId || null,
           costItemId: input.costItemId || null,
@@ -522,7 +527,7 @@ export const erpRouter = router({
           createdBy: ctx.user.id,
         });
         const expenseId = Number(result[0].insertId);
-        await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "expense", entityId: expenseId, requestedBy: ctx.user.id, status: approvalStatus });
+        await db.insert(approvalRequests).values({ projectId: input.projectId || null, entityType: "expense", entityId: expenseId, requestedBy: ctx.user.id, status: approvalStatus });
         await db.insert(auditLogs).values({
           entityType: "expense",
           entityId: expenseId,

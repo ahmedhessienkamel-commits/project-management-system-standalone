@@ -1,0 +1,2 @@
+ALTER TABLE `expenses` MODIFY COLUMN `projectId` int;--> statement-breakpoint
+ALTER TABLE `expenses` MODIFY COLUMN `classification` enum('project','administrative','general_cash','petty_cash') NOT NULL DEFAULT 'project';
