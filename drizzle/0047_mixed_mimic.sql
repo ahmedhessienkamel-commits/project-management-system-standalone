@@ -1,0 +1,1 @@
+ALTER TABLE `inventoryMovements` MODIFY COLUMN `status` enum('draft','pending_approval','posted','cancelled') NOT NULL DEFAULT 'pending_approval';

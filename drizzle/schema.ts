@@ -108,7 +108,7 @@ export const inventoryMovements = mysqlTable("inventoryMovements", {
   reference: varchar("reference", { length: 128 }),
   description: text("description"),
   sourceDocumentId: int("sourceDocumentId"),
-  status: mysqlEnum("status", ["draft", "posted", "cancelled"]).default("posted").notNull(),
+  status: mysqlEnum("status", ["draft", "pending_approval", "posted", "cancelled"]).default("pending_approval").notNull(),
   createdBy: int("createdBy"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });

@@ -8,7 +8,7 @@ import { calculateCertificateProgress, calculateDocumentCompleteness, calculateE
 import { accountingTotals } from "../accountingCalculations";
 import { calculateStageTimeVariance } from "../../shared/stageTiming";
 import { allocateAdministrativeExpense, normalizeExpenseTaxRate, validateExpenseAllocation } from "../../shared/expenseAllocation";
-import { calculateInventoryBalance } from "../../shared/inventory";
+import { calculateInventoryBalance, canReviewInventoryStage, nextInventoryApprovalStage } from "../../shared/inventory";
 
 const projectStatus = z.enum(["planning", "active", "paused", "completed", "archived"]);
 const operationKey = z.enum(["payment_voucher", "receipt_voucher", "expense", "certificate", "payroll", "custody", "purchase_invoice", "sales_invoice", "purchase_request", "inventory_item", "inventory_receipt", "inventory_issue", "edit", "delete", "approve"]);
@@ -1897,10 +1897,35 @@ export const erpRouter = router({
         const balance = existing.reduce((total, row) => total + ((row.movementType === "receipt" || row.movementType === "adjustment_in" ? 1 : -1) * Number(row.quantity || 0)), 0);
         if (!incoming && input.quantity > balance + 0.0005) throw new TRPCError({ code: "BAD_REQUEST", message: `الرصيد المتاح لا يكفي. الرصيد الحالي ${balance.toFixed(3)} ${item.unit}` });
         const totalAmount = input.quantity * input.unitCost;
-        const result = await db.insert(inventoryMovements).values({ projectId: input.projectId, stageId: input.stageId ?? null, itemId: input.itemId, vendorId: input.vendorId ?? null, movementType: input.movementType, quantity: input.quantity.toFixed(3), unitCost: input.unitCost.toFixed(4), totalAmount: totalAmount.toFixed(2), movementDate: input.movementDate ? new Date(input.movementDate) : new Date(), reference: input.reference || null, description: input.description || null, status: "posted", createdBy: ctx.user.id });
+        const result = await db.insert(inventoryMovements).values({ projectId: input.projectId, stageId: input.stageId ?? null, itemId: input.itemId, vendorId: input.vendorId ?? null, movementType: input.movementType, quantity: input.quantity.toFixed(3), unitCost: input.unitCost.toFixed(4), totalAmount: totalAmount.toFixed(2), movementDate: input.movementDate ? new Date(input.movementDate) : new Date(), reference: input.reference || null, description: input.description || null, status: "pending_approval", createdBy: ctx.user.id });
         const id = Number(result[0].insertId);
-        await db.insert(auditLogs).values({ entityType: "inventoryMovement", entityId: id, action: incoming ? "receipt" : "issue", actorId: ctx.user.id, afterJson: JSON.stringify({ ...input, totalAmount }) });
-        return { id, balanceAfter: balance + (incoming ? input.quantity : -input.quantity) };
+        await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "inventoryMovement", entityId: id, requestedBy: ctx.user.id, status: "pending", approvalStage: "mostafa", stageOrder: 1 });
+        await db.insert(auditLogs).values({ entityType: "inventoryMovement", entityId: id, action: incoming ? "submitted_for_mostafa_approval" : "submitted_for_mostafa_approval", actorId: ctx.user.id, afterJson: JSON.stringify({ ...input, totalAmount, status: "pending_approval" }) });
+        return { id, status: "pending_approval" as const, approvalStage: "mostafa" as const, balanceAfter: balance + (incoming ? input.quantity : -input.quantity) };
+      }),
+      decide: protectedProcedure.input(z.object({ id: z.number().int().positive(), decision: z.enum(["approved", "rejected"]), note: z.string().max(1000).optional() })).mutation(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        const movement = (await db.select().from(inventoryMovements).where(eq(inventoryMovements.id, input.id)).limit(1))[0];
+        if (!movement) throw new TRPCError({ code: "NOT_FOUND", message: "حركة المخزون غير موجودة" });
+        const request = (await db.select().from(approvalRequests).where(and(eq(approvalRequests.entityType, "inventoryMovement"), eq(approvalRequests.entityId, input.id), eq(approvalRequests.status, "pending"))).limit(1))[0];
+        if (!request) throw new TRPCError({ code: "BAD_REQUEST", message: "لا توجد مرحلة اعتماد معلقة لهذه الحركة" });
+        const approvalStage = request.approvalStage === "owner" ? "owner" : "mostafa";
+        if (!canReviewInventoryStage(approvalStage, { id: Number(ctx.user.id), role: ctx.user.role })) throw new TRPCError({ code: "FORBIDDEN", message: approvalStage === "mostafa" ? "اعتماد المرحلة الأولى مخصص لمصطفى أو المالك" : "اعتماد المرحلة النهائية مخصص للمالك فقط" });
+        if (input.decision === "rejected") {
+          await db.update(approvalRequests).set({ status: "rejected", reviewedBy: ctx.user.id, note: input.note || null, reviewedAt: new Date() }).where(eq(approvalRequests.id, request.id));
+          await db.update(inventoryMovements).set({ status: "cancelled" }).where(eq(inventoryMovements.id, input.id));
+          await db.insert(auditLogs).values({ entityType: "inventoryMovement", entityId: input.id, action: "rejected", actorId: ctx.user.id, afterJson: JSON.stringify({ stage: request.approvalStage, note: input.note || null }) });
+          return { success: true, status: "cancelled" as const };
+        }
+        await db.update(approvalRequests).set({ status: "approved", reviewedBy: ctx.user.id, note: input.note || null, reviewedAt: new Date() }).where(eq(approvalRequests.id, request.id));
+        if (nextInventoryApprovalStage(approvalStage, "approved") === "owner") {
+          await db.insert(approvalRequests).values({ projectId: movement.projectId, entityType: "inventoryMovement", entityId: input.id, requestedBy: movement.createdBy || ctx.user.id, status: "pending", approvalStage: "owner", stageOrder: 2 });
+          await db.insert(auditLogs).values({ entityType: "inventoryMovement", entityId: input.id, action: "mostafa_approved_owner_pending", actorId: ctx.user.id, afterJson: JSON.stringify({ note: input.note || null }) });
+          return { success: true, status: "pending_approval" as const, approvalStage: "owner" as const };
+        }
+        await db.update(inventoryMovements).set({ status: "posted" }).where(eq(inventoryMovements.id, input.id));
+        await db.insert(auditLogs).values({ entityType: "inventoryMovement", entityId: input.id, action: "owner_approved_posted", actorId: ctx.user.id, afterJson: JSON.stringify({ note: input.note || null }) });
+        return { success: true, status: "posted" as const, approvalStage: "complete" as const };
       }),
     }),
   }),

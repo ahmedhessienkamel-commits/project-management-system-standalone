@@ -20,3 +20,18 @@ export function calculateInventoryBalance(movements: InventoryMovementLike[]) {
     { received: 0, issued: 0, quantity: 0, value: 0 },
   );
 }
+
+export type InventoryApprovalStage = "mostafa" | "owner" | "complete";
+
+export function canReviewInventoryStage(stage: InventoryApprovalStage, user: { id: number; role: string }) {
+  if (stage === "mostafa") return user.role === "admin" || user.id === 13170001;
+  if (stage === "owner") return user.role === "admin";
+  return false;
+}
+
+export function nextInventoryApprovalStage(stage: InventoryApprovalStage, decision: "approved" | "rejected") {
+  if (decision === "rejected") return "rejected" as const;
+  if (stage === "mostafa") return "owner" as const;
+  if (stage === "owner") return "complete" as const;
+  return "complete" as const;
+}
