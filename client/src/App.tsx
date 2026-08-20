@@ -35,7 +35,7 @@ function Router() {
       <Route path={"/projects"} component={Projects} />
       <Route path={"/sales"} component={SalesCollections} />
       <Route path={"/transactions"} component={Accounting} />
-      <Route path={"/expenses"} component={() => <Accounting />} />
+      <Route path={"/expenses"} component={Finance} />
       <Route path={"/finance"} component={Finance} />
       <Route path={"/accounting"} component={Accounting} />
       <Route path={"/accounting-documents"} component={Accounting} />
