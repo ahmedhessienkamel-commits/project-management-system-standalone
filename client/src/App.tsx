@@ -38,6 +38,9 @@ function Router() {
       <Route path={"/expenses"} component={Finance} />
       <Route path={"/finance"} component={Finance} />
       <Route path={"/accounting"} component={Accounting} />
+      <Route path={"/accounting-documents"} component={Accounting} />
+      <Route path={"/accounting-settings"} component={Accounting} />
+      <Route path={"/accounting-reports"} component={Accounting} />
       <Route path={"/payroll"} component={Finance} />
       <Route path={"/operations"} component={Operations} />
       <Route path={"/inventory"} component={Inventory} />
