@@ -1006,6 +1006,18 @@ export const erpRouter = router({
       await db.insert(auditLogs).values({ entityType: "certificate", entityId: input.id, action: "updated_and_re submitted", actorId: ctx.user.id, beforeJson: JSON.stringify(before), afterJson: JSON.stringify({ ...input, ...totals }) });
       return { success: true, status: "pending" as const, totalAmount: totals.totalAmount };
     }),
+    delete: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      const before = (await db.select().from(certificates).where(eq(certificates.id, input.id)).limit(1))[0];
+      if (!before) throw new TRPCError({ code: "NOT_FOUND", message: "المستخلص غير موجود" });
+      await assertProjectAccess(db, ctx, before.projectId);
+      await assertProjectWrite(db, ctx, before.projectId);
+      if (before.status === "approved" && ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "لا يمكن حذف مستخلص معتمد إلا بواسطة المسؤول" });
+      await db.delete(approvalRequests).where(and(eq(approvalRequests.entityType, "certificate"), eq(approvalRequests.entityId, input.id)));
+      await db.delete(certificates).where(eq(certificates.id, input.id));
+      await db.insert(auditLogs).values({ entityType: "certificate", entityId: input.id, action: "deleted", actorId: ctx.user.id, beforeJson: JSON.stringify(before), afterJson: null });
+      return { success: true };
+    }),
     approveStage: adminProcedure.input(z.object({ id: z.number().int().positive(), decision: z.enum(["approved", "rejected"]), note: z.string().max(1000).optional() })).mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
         const certificate = (await db.select().from(certificates).where(eq(certificates.id, input.id)).limit(1))[0];
