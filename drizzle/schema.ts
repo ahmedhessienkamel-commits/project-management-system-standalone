@@ -45,6 +45,16 @@ export const projectMembers = mysqlTable("projectMembers", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
+export const userOperationPermissions = mysqlTable("userOperationPermissions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  operationKey: varchar("operationKey", { length: 64 }).notNull(),
+  mode: mysqlEnum("mode", ["allow", "approval", "deny"]).default("approval").notNull(),
+  updatedBy: int("updatedBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
 export const stages = mysqlTable("stages", {
   id: int("id").autoincrement().primaryKey(),
   projectId: int("projectId").notNull(),

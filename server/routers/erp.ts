@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
-import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, dailyTasks, employees, expenses, notifications, payroll, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, sales, stages, units, users, vendors, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems, accounts, accountingDocuments, accountingDocumentLines, costItems, fixedAssets, fixedAssetDepreciation, companyProfiles, cashAccounts, contractorContracts } from "../../drizzle/schema";
+import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, dailyTasks, employees, expenses, notifications, payroll, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, sales, stages, units, users, vendors, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems, accounts, accountingDocuments, accountingDocumentLines, costItems, fixedAssets, fixedAssetDepreciation, companyProfiles, cashAccounts, contractorContracts, userOperationPermissions } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
@@ -10,6 +10,13 @@ import { calculateStageTimeVariance } from "../../shared/stageTiming";
 import { allocateAdministrativeExpense, validateExpenseAllocation } from "../../shared/expenseAllocation";
 
 const projectStatus = z.enum(["planning", "active", "paused", "completed", "archived"]);
+const operationKey = z.enum(["payment_voucher", "receipt_voucher", "expense", "certificate", "payroll", "custody", "purchase_invoice", "sales_invoice", "purchase_request", "edit", "delete", "approve"]);
+const operationCatalog = [
+  { key: "payment_voucher", label: "سند صرف" }, { key: "receipt_voucher", label: "سند قبض" }, { key: "expense", label: "المصروفات" },
+  { key: "certificate", label: "المستخلصات" }, { key: "payroll", label: "الرواتب" }, { key: "custody", label: "العهد" },
+  { key: "purchase_invoice", label: "فاتورة شراء" }, { key: "sales_invoice", label: "فاتورة بيع" }, { key: "purchase_request", label: "طلب شراء" },
+  { key: "edit", label: "التعديل" }, { key: "delete", label: "الحذف" }, { key: "approve", label: "الاعتماد" },
+] as const;
 const projectClassification = z.enum(["operational", "administrative"]);
 const projectType = z.enum(["real_estate_development", "off_plan_sales", "main_contractor", "subcontractor", "general"]);
 const employeeProfileSchema = z.object({
@@ -38,6 +45,13 @@ async function assertProjectWrite(db: NonNullable<Awaited<ReturnType<typeof getD
   if (!member || !canWriteProject(ctx.user.role, member.projectRole)) throw new TRPCError({ code: "FORBIDDEN", message: "دور المستخدم لا يسمح بتسجيل حركة جديدة في هذا المشروع" });
 }
 
+async function assertOperationPermission(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, ctx: { user: { id: number; role: string } }, key: z.infer<typeof operationKey>) {
+  if (ctx.user.role === "admin") return "allow" as const;
+  const row = (await db.select({ mode: userOperationPermissions.mode }).from(userOperationPermissions).where(and(eq(userOperationPermissions.userId, ctx.user.id), eq(userOperationPermissions.operationKey, key))).limit(1))[0];
+  const mode = row?.mode ?? "approval";
+  if (mode === "deny") throw new TRPCError({ code: "FORBIDDEN", message: `ليس لديك صلاحية لتنفيذ عملية ${key}` });
+  return mode;
+}
 async function assertPeriodOpen(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, ctx: { user: { role: string } }, projectId: number, date: Date) {
   if (ctx.user.role === "admin") return;
   const year = date.getFullYear();
@@ -133,6 +147,23 @@ export const erpRouter = router({
     list: adminProcedure.query(async () => {
       const db = requireDb(await getDb());
       return db.select({ id: users.id, name: users.name, email: users.email, role: users.role, lastSignedIn: users.lastSignedIn }).from(users).orderBy(users.name);
+    }),
+    operationPermissions: adminProcedure.input(z.object({ userId: z.number().int().positive() })).query(async ({ input }) => {
+      const db = requireDb(await getDb());
+      const user = (await db.select({ id: users.id, role: users.role }).from(users).where(eq(users.id, input.userId)).limit(1))[0];
+      if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "المستخدم غير موجود" });
+      const rows = await db.select().from(userOperationPermissions).where(eq(userOperationPermissions.userId, input.userId));
+      return { user, operations: operationCatalog.map((item) => ({ ...item, mode: user.role === "admin" ? "allow" as const : rows.find((row) => row.operationKey === item.key)?.mode ?? "approval" as const })) };
+    }),
+    saveOperationPermissions: adminProcedure.input(z.object({ userId: z.number().int().positive(), permissions: z.array(z.object({ operationKey, mode: z.enum(["allow", "approval", "deny"]) })) })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      const target = (await db.select({ id: users.id, role: users.role }).from(users).where(eq(users.id, input.userId)).limit(1))[0];
+      if (!target) throw new TRPCError({ code: "NOT_FOUND", message: "المستخدم غير موجود" });
+      if (target.role === "admin") throw new TRPCError({ code: "BAD_REQUEST", message: "حساب المسؤول له صلاحيات كاملة ولا يحتاج مصفوفة تشغيل" });
+      await db.delete(userOperationPermissions).where(eq(userOperationPermissions.userId, input.userId));
+      if (input.permissions.length) await db.insert(userOperationPermissions).values(input.permissions.map((permission) => ({ userId: input.userId, operationKey: permission.operationKey, mode: permission.mode, updatedBy: ctx.user.id })));
+      await db.insert(auditLogs).values({ entityType: "userOperationPermissions", entityId: input.userId, action: "updated", actorId: ctx.user.id, afterJson: JSON.stringify(input.permissions) });
+      return { success: true } as const;
     }),
   }),
 
@@ -523,6 +554,7 @@ export const erpRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
+        await assertOperationPermission(db, ctx, "expense");
         const allocationValidation = validateExpenseAllocation(input);
         if (!allocationValidation.ok) throw new TRPCError({ code: "BAD_REQUEST", message: allocationValidation.message });
         if (input.projectId) {
@@ -966,6 +998,7 @@ export const erpRouter = router({
     }),
     create: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), contractId: z.number().int().positive().optional(), stageId: z.number().int().positive().optional(), vendorId: z.number().int().positive().optional(), certificateNumber: z.string().trim().min(1), description: z.string().max(2000).optional(), preTaxAmount: z.number().nonnegative(), taxRate: z.number().min(0).max(100).default(15), paidAmount: z.number().nonnegative().default(0), certificateDate: z.string().optional() })).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
+      await assertOperationPermission(db, ctx, "certificate");
       await assertProjectAccess(db, ctx, input.projectId);
       await assertProjectWrite(db, ctx, input.projectId);
       await assertPeriodOpen(db, ctx, input.projectId, input.certificateDate ? new Date(input.certificateDate) : new Date());
@@ -1088,16 +1121,17 @@ export const erpRouter = router({
         return true;
       });
     }),
-    statement: protectedProcedure.input(z.object({ employeeCode: z.string().trim().min(1), projectId: z.number().int().positive().optional(), allocationType: z.enum(["project", "general_cash", "general_admin", "petty_cash", "operating_expense"]).optional() })).query(async ({ ctx, input }) => {
+    statement: protectedProcedure.input(z.object({ employeeCode: z.string().trim().min(1), allocationType: z.enum(["project", "administrative", "general_cash", "general_admin", "petty_cash", "operating_expense"]).optional() })).query(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
       const rows = await db.select().from(custodyMovements).orderBy(custodyMovements.movementDate, custodyMovements.createdAt);
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
-      const filtered = rows.filter((row) => row.employeeCode === input.employeeCode && (!row.projectId || !allowed || allowed.has(row.projectId)) && (!input.projectId || row.projectId === input.projectId) && (!input.allocationType || row.allocationType === input.allocationType));
+      const filtered = rows.filter((row) => row.employeeCode === input.employeeCode && (!row.projectId || !allowed || allowed.has(row.projectId)) && (!input.allocationType || (input.allocationType === "project" ? row.allocationType === "project" : input.allocationType === "administrative" ? row.allocationType !== "project" : row.allocationType === input.allocationType)));
       let balance = 0;
       return filtered.map((row) => { balance += Number(row.signedAmount); return { ...row, balance }; });
     }),
     create: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional(), stageId: z.number().int().positive().optional(), employeeCode: z.string().trim().min(1), employeeName: z.string().trim().min(2), movementType: z.enum(["issue", "spend", "return", "settlement"]), allocationType: z.enum(["project", "general_cash", "general_admin", "petty_cash", "operating_expense"]), description: z.string().trim().min(2), amount: z.number().positive(), movementDate: z.string().optional(), expenseType: z.string().trim().max(64).optional() })).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
+      await assertOperationPermission(db, ctx, "custody");
       if (input.allocationType === "project" && !input.projectId) throw new TRPCError({ code: "BAD_REQUEST", message: "يجب اختيار المشروع عند تسجيل عهدة مشروع" });
       if (input.projectId) { await assertProjectAccess(db, ctx, input.projectId); await assertProjectWrite(db, ctx, input.projectId); await assertPeriodOpen(db, ctx, input.projectId, input.movementDate ? new Date(input.movementDate) : new Date()); }
       const signedAmount = ["issue", "return"].includes(input.movementType) ? input.amount : -input.amount;
@@ -1238,6 +1272,8 @@ export const erpRouter = router({
       }),
       create: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional(), documentType: z.enum(["sales_invoice", "purchase_invoice", "journal_entry", "payment_voucher", "receipt_voucher", "quotation", "purchase_order"]), fixedAssetId: z.number().int().positive().optional(), partyName: z.string().max(255).optional(), documentDate: z.string().optional(), dueDate: z.string().optional(), sourceAccountId: z.number().int().positive().optional(), amount: z.number().nonnegative(), taxAmount: z.number().nonnegative(), totalAmount: z.number().nonnegative(), paymentMethod: z.enum(["cash", "bank"]).optional(), notes: z.string().max(2000).optional(), status: z.enum(["draft", "posted"]).default("draft"), lines: z.array(z.object({ accountId: z.number().int().positive(), costItemId: z.number().int().positive().optional(), projectId: z.number().int().positive().optional(), stageId: z.number().int().positive().optional(), description: z.string().max(500).optional(), debit: z.number().nonnegative(), credit: z.number().nonnegative() })).min(1) })).mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
+        const accountingOperation = ({ sales_invoice: "sales_invoice", purchase_invoice: "purchase_invoice", journal_entry: "edit", payment_voucher: "payment_voucher", receipt_voucher: "receipt_voucher", quotation: "edit", purchase_order: "purchase_request" } as const)[input.documentType];
+        await assertOperationPermission(db, ctx, accountingOperation);
         if (input.projectId) await assertProjectWrite(db, ctx, input.projectId);
         const totals = accountingTotals(input.lines);
         if (!totals.balanced) throw new TRPCError({ code: "BAD_REQUEST", message: "القيد غير متوازن: إجمالي المدين يجب أن يساوي إجمالي الدائن" });

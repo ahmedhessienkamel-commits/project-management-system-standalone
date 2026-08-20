@@ -42,7 +42,6 @@ const menuItems = [
   { icon: ClipboardList, label: "المقاولون والموردون", path: "/operations?tab=vendors" },
   { icon: FileText, label: "العقود والمستخلصات", path: "/operations?tab=certificates" },
   { icon: FileText, label: "كشوف حسابات الموردين", path: "/reports?view=suppliers" },
-  { icon: Landmark, label: "المعاملات المالية", path: "/transactions" },
   { icon: Landmark, label: "المحاسبة", path: "/accounting" },
   { icon: BarChart3, label: "مركز التكلفة", path: "/accounting?report=costItems" },
   { icon: BarChart3, label: "قائمة الدخل", path: "/accounting?report=income" },

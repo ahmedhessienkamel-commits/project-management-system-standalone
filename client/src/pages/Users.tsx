@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { ArrowRight, ShieldCheck, UserCog } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 
 const roleLabels: Record<string, string> = { manager: "مدير مشروع", finance: "مالي", input: "إدخال", reviewer: "مراجع", viewer: "مشاهدة" };
@@ -22,6 +22,11 @@ export default function Users() {
   const lockPeriod = trpc.erp.controls.lockPeriod.useMutation({ onSuccess: () => utils.erp.controls.locks.invalidate() });
   const unlockPeriod = trpc.erp.controls.unlockPeriod.useMutation({ onSuccess: () => utils.erp.controls.locks.invalidate() });
   const markRead = trpc.erp.controls.markNotificationRead.useMutation({ onSuccess: () => utils.erp.controls.notifications.invalidate() });
+  const [permissionUserId, setPermissionUserId] = useState("");
+  const { data: operationPermissions } = trpc.erp.users.operationPermissions.useQuery({ userId: Number(permissionUserId) }, { enabled: Boolean(permissionUserId) });
+  const saveOperationPermissions = trpc.erp.users.saveOperationPermissions.useMutation({ onSuccess: () => utils.erp.users.operationPermissions.invalidate() });
+  const [permissionModes, setPermissionModes] = useState<Record<string, "allow" | "approval" | "deny">>({});
+  useEffect(() => { if (operationPermissions?.operations) setPermissionModes(Object.fromEntries(operationPermissions.operations.map((item) => [item.key, item.mode]))); }, [operationPermissions]);
   const [form, setForm] = useState({ userId: "", projectId: "", projectRole: "viewer" as "manager" | "finance" | "input" | "reviewer" | "viewer" });
   const [lockForm, setLockForm] = useState({ projectId: "", periodYear: String(new Date().getFullYear()), periodMonth: String(new Date().getMonth() + 1), reason: "" });
 
@@ -39,6 +44,7 @@ export default function Users() {
       <Card className="border-0 shadow-sm"><CardHeader><CardTitle className="text-lg text-[#18324b]">آخر عمليات التدقيق</CardTitle></CardHeader><CardContent className="max-h-[360px] space-y-2 overflow-auto">{audit.slice(-10).reverse().map((entry) => <div key={entry.id} className="rounded-xl bg-slate-50 p-3 text-xs"><p className="font-semibold text-[#18324b]">{entry.entityType} #{entry.entityId} · {entry.action}</p><p className="mt-1 text-slate-500">بواسطة المستخدم #{entry.actorId}</p></div>)}</CardContent></Card>
       <Card className="border-0 shadow-sm"><CardHeader><CardTitle className="text-lg text-[#18324b]">عضويات المشاريع</CardTitle></CardHeader><CardContent className="space-y-2">{members.length ? members.map((member) => <div key={member.id} className="flex justify-between rounded-xl bg-slate-50 p-3 text-sm"><span>مستخدم #{member.userId} · مشروع #{member.projectId}</span><span className="font-semibold text-[#18324b]">{roleLabels[member.projectRole]}</span></div>) : <p className="py-6 text-center text-sm text-slate-400">لم تُسند صلاحيات مشاريع بعد.</p>}</CardContent></Card>
     </section>
+    <Card className="border-0 shadow-sm"><CardHeader><CardTitle className="text-lg text-[#18324b]">مصفوفة صلاحيات العمليات</CardTitle><p className="text-xs leading-6 text-slate-500">اختر الزميل ثم حدد لكل عملية: تنفيذ مباشر، إحالة تلقائية للموافقة، أو منع كامل. حساب المسؤول له صلاحيات كاملة تلقائيًا.</p></CardHeader><CardContent className="space-y-4"><SelectField label="المستخدم المراد ضبطه" value={permissionUserId} options={users.filter((user) => user.role !== "admin").map((user) => ({ value: String(user.id), label: `${user.name || "بدون اسم"} — ${user.email || "بدون بريد"}` }))} onChange={setPermissionUserId} /><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{(operationPermissions?.operations ?? []).map((operation) => <div key={operation.key} className="rounded-xl border border-slate-100 bg-slate-50 p-3"><p className="mb-2 text-sm font-semibold text-[#18324b]">{operation.label}</p><select aria-label={`صلاحية ${operation.label}`} value={permissionModes[operation.key] || "approval"} onChange={(event) => setPermissionModes((current) => ({ ...current, [operation.key]: event.target.value as "allow" | "approval" | "deny" }))} className="h-10 w-full rounded-md border border-slate-200 bg-white px-2 text-sm"><option value="allow">مسموح مباشرة</option><option value="approval">يحتاج موافقة المسؤول</option><option value="deny">ممنوع</option></select></div>)}</div><Button className="w-full bg-[#18324b]" disabled={!permissionUserId || saveOperationPermissions.isPending} onClick={() => saveOperationPermissions.mutate({ userId: Number(permissionUserId), permissions: Object.entries(permissionModes).map(([operationKey, mode]) => ({ operationKey: operationKey as any, mode })) })}>حفظ مصفوفة الصلاحيات</Button></CardContent></Card>
   </div></div></DashboardLayout>;
 }
 
