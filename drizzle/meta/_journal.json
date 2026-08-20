@@ -316,6 +316,13 @@
       "when": 1787240097301,
       "tag": "0044_spooky_stephen_strange",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "5",
+      "when": 1787240678636,
+      "tag": "0045_normal_klaw",
+      "breakpoints": true
     }
   ]
 }

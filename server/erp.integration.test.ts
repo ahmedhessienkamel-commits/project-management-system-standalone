@@ -164,8 +164,11 @@ describe("ERP sales and collections API flow", () => {
   it("records custody movements and returns a complete employee statement", async () => {
     const caller = appRouter.createCaller(context());
     await caller.erp.custodyMovements.create({ employeeCode: "EMP-001", employeeName: "أحمد", movementType: "issue", allocationType: "general_cash", description: "عهدة نثريات", amount: 500, movementDate: "2026-08-18" });
-    await caller.erp.custodyMovements.create({ employeeCode: "EMP-001", employeeName: "أحمد", movementType: "spend", allocationType: "general_cash", description: "شراء مستلزمات", amount: 100, movementDate: "2026-08-19", expenseType: "نثريات" });
+    const spend = await caller.erp.custodyMovements.create({ employeeCode: "EMP-001", employeeName: "أحمد", movementType: "spend", allocationType: "general_cash", description: "شراء مستلزمات", amount: 100, movementDate: "2026-08-19", expenseType: "نثريات" });
     const statement = await caller.erp.custodyMovements.statement({ employeeCode: "EMP-001" });
+    expect(spend.linkedExpenseId).toBeTypeOf("number");
+    expect(state.expenses.filter((row) => row.id === spend.linkedExpenseId)).toHaveLength(1);
+    expect(state.expenses.find((row) => row.id === spend.linkedExpenseId)).toMatchObject({ totalAmount: "100.00", paidAmount: "100.00", status: "approved", classification: "petty_cash" });
     expect(statement).toHaveLength(2);
     expect(statement[0]).toMatchObject({ employeeCode: "EMP-001", movementType: "issue", allocationType: "general_cash", signedAmount: "500.00", balance: 500 });
     expect(statement[1]).toMatchObject({ movementType: "spend", description: "شراء مستلزمات", signedAmount: "-100.00", balance: 400 });
