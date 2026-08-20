@@ -52,6 +52,7 @@ export const stages = mysqlTable("stages", {
   name: varchar("name", { length: 255 }).notNull(),
   status: mysqlEnum("status", ["planned", "active", "completed", "delayed"]).default("planned").notNull(),
   plannedBudget: decimal("plannedBudget", { precision: 14, scale: 2 }).default("0").notNull(),
+  plannedBudgetTaxBasis: mysqlEnum("plannedBudgetTaxBasis", ["pre_tax", "inclusive"]).default("pre_tax").notNull(),
   plannedStart: date("plannedStart"),
   plannedEnd: date("plannedEnd"),
   actualProgress: decimal("actualProgress", { precision: 5, scale: 2 }).default("0").notNull(),
@@ -81,6 +82,7 @@ export const expenses = mysqlTable("expenses", {
   quantity: decimal("quantity", { precision: 14, scale: 3 }).default("1").notNull(),
   expenseType: varchar("expenseType", { length: 64 }).default("operating").notNull(),
   classification: mysqlEnum("classification", ["project", "administrative", "general_cash", "petty_cash"]).default("project").notNull(),
+  allocationRatio: decimal("allocationRatio", { precision: 6, scale: 3 }).default("1").notNull(),
   preTaxAmount: decimal("preTaxAmount", { precision: 14, scale: 2 }).default("0").notNull(),
   taxRate: decimal("taxRate", { precision: 5, scale: 2 }).default("15").notNull(),
   taxAmount: decimal("taxAmount", { precision: 14, scale: 2 }).default("0").notNull(),
@@ -251,11 +253,29 @@ export const payrollAllocations = mysqlTable("payrollAllocations", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
+export const contractorContracts = mysqlTable("contractorContracts", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: int("projectId").notNull(),
+  stageId: int("stageId"),
+  vendorId: int("vendorId").notNull(),
+  contractNumber: varchar("contractNumber", { length: 128 }).notNull(),
+  description: text("description"),
+  preTaxAmount: decimal("preTaxAmount", { precision: 14, scale: 2 }).default("0").notNull(),
+  taxRate: decimal("taxRate", { precision: 5, scale: 2 }).default("15").notNull(),
+  taxAmount: decimal("taxAmount", { precision: 14, scale: 2 }).default("0").notNull(),
+  totalAmount: decimal("totalAmount", { precision: 14, scale: 2 }).default("0").notNull(),
+  status: mysqlEnum("status", ["draft", "active", "closed", "cancelled"]).default("active").notNull(),
+  contractDate: date("contractDate"),
+  createdBy: int("createdBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
 export const certificates = mysqlTable("certificates", {
   id: int("id").autoincrement().primaryKey(),
   projectId: int("projectId").notNull(),
   stageId: int("stageId"),
   vendorId: int("vendorId"),
+  contractId: int("contractId"),
   certificateNumber: varchar("certificateNumber", { length: 128 }).notNull(),
   description: text("description"),
   preTaxAmount: decimal("preTaxAmount", { precision: 14, scale: 2 }).default("0").notNull(),

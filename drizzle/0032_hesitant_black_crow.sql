@@ -1,0 +1,1 @@
+ALTER TABLE `certificates` ADD `contractId` int;

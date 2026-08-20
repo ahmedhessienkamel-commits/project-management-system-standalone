@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { allocateAdministrativeAmount, calculateExpenseTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, calculateStraightLineDepreciation, projectHealthStatus } from "./erpCalculations";
+import { allocateAdministrativeAmount, calculateContractBalance, calculateExpenseTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, calculateStraightLineDepreciation, projectHealthStatus } from "./erpCalculations";
 import { calculateAttendanceHours, filterAttendanceByMonth, summarizeAttendanceExceptions } from "../shared/attendance";
 import { isProjectActive } from "../shared/projectStatus";
 
@@ -76,6 +76,11 @@ describe("ERP financial rules", () => {
     expect(rows.reduce((sum, row) => sum + row.allocatedAmount, 0)).toBe(1500);
   });
 
+  it("calculates contractor contract balance and rejects over-certification", () => {
+    expect(calculateContractBalance(76000, [], 21000)).toEqual({ usedBefore: 0, remainingBefore: 76000, remainingAfter: 55000, exceeds: false });
+    expect(calculateContractBalance(76000, [21000], 55001).exceeds).toBe(true);
+    expect(calculateContractBalance(76000, [21000], 55000).remainingAfter).toBe(0);
+  });
   it("returns critical for a large cash gap or approval backlog", () => {
     expect(projectHealthStatus({ budgetUsage: 40, progress: 60, delayedStages: 0, cashGapRatio: 0.5 })).toBe("critical");
     expect(projectHealthStatus({ budgetUsage: 40, progress: 60, delayedStages: 0, pendingApprovals: 3 })).toBe("critical");

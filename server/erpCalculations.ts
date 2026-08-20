@@ -128,3 +128,10 @@ export function calculateStraightLineDepreciation({ acquisitionCost, residualVal
     return { periodStart: periodStart.toISOString().slice(0, 10), periodEnd: periodEnd.toISOString().slice(0, 10), depreciationAmount, accumulatedAmount: accumulated, netBookValue: Number((safeCost - accumulated).toFixed(2)) };
   });
 }
+
+export function calculateContractBalance(contractTotal: number, certificateTotals: number[], currentCertificateTotal = 0) {
+  const usedBefore = certificateTotals.reduce((sum, amount) => sum + Math.max(0, amount), 0);
+  const remainingBefore = Math.max(0, contractTotal - usedBefore);
+  const remainingAfter = Math.max(0, remainingBefore - Math.max(0, currentCertificateTotal));
+  return { usedBefore, remainingBefore, remainingAfter, exceeds: Math.max(0, currentCertificateTotal) > remainingBefore + 0.01 };
+}

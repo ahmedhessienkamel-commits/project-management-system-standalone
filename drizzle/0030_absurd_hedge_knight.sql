@@ -1,0 +1,1 @@
+ALTER TABLE `stages` ADD `plannedBudgetTaxBasis` enum('pre_tax','inclusive') DEFAULT 'pre_tax' NOT NULL;

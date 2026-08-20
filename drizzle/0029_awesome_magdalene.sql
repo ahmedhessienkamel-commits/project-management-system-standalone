@@ -1,0 +1,1 @@
+ALTER TABLE `expenses` ADD `allocationRatio` decimal(6,3) DEFAULT '1' NOT NULL;
