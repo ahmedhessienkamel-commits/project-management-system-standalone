@@ -1158,7 +1158,7 @@ export const erpRouter = router({
       const rows = await db.select().from(vendors).orderBy(vendors.name);
       return allowed ? rows.filter((row) => !row.projectId || allowed.has(row.projectId)) : rows;
     }),
-    update: protectedProcedure.input(z.object({ id: z.number().int().positive(), projectId: z.number().int().positive().nullable().optional(), name: z.string().trim().min(2), taxNumber: z.string().max(128).optional(), commercialRegistration: z.string().max(128).optional(), iban: z.string().max(128).optional(), contact: z.string().max(255).optional() })).mutation(async ({ ctx, input }) => {
+    update: protectedProcedure.input(z.object({ id: z.number().int().positive(), projectId: z.number().int().positive().nullable().optional(), name: z.string().trim().min(2), partyType: z.enum(["supplier", "customer"]).optional(), entityType: z.enum(["individual", "company"]).optional(), taxNumber: z.string().max(128).optional(), commercialRegistration: z.string().max(128).optional(), nationalAddress: z.string().max(4000).optional(), address: z.string().max(4000).optional(), phone: z.string().max(64).optional(), email: z.string().email().optional().or(z.literal("")), iban: z.string().max(128).optional(), contact: z.string().max(255).optional() })).mutation(async ({ ctx, input }) => {
       if (!canManagePartners(ctx.user)) throw new TRPCError({ code: "FORBIDDEN", message: "لا تملك صلاحية تعديل المورد" });
       const db = requireDb(await getDb());
       const before = (await db.select().from(vendors).where(eq(vendors.id, input.id)).limit(1))[0];
@@ -1166,17 +1166,17 @@ export const erpRouter = router({
       if (before.projectId) { await assertProjectAccess(db, ctx, before.projectId); await assertProjectWrite(db, ctx, before.projectId); }
       if (input.projectId) { await assertProjectAccess(db, ctx, input.projectId); await assertProjectWrite(db, ctx, input.projectId); }
       const { id, ...changes } = input;
-      await db.update(vendors).set({ ...changes, projectId: changes.projectId ?? null, taxNumber: changes.taxNumber || null, commercialRegistration: changes.commercialRegistration || null, iban: changes.iban || null, contact: changes.contact || null }).where(eq(vendors.id, id));
+      await db.update(vendors).set({ ...changes, projectId: changes.projectId ?? null, partyType: changes.partyType || before.partyType || "supplier", entityType: changes.entityType || before.entityType || "company", taxNumber: changes.taxNumber || null, commercialRegistration: changes.commercialRegistration || null, nationalAddress: changes.nationalAddress || null, address: changes.address || null, phone: changes.phone || null, email: changes.email || null, iban: changes.iban || null, contact: changes.contact || null }).where(eq(vendors.id, id));
       await db.insert(auditLogs).values({ entityType: "vendor", entityId: id, action: "updated", actorId: ctx.user.id, beforeJson: JSON.stringify(before), afterJson: JSON.stringify(input) });
       return { id } as const;
     }),
-    create: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional(), name: z.string().trim().min(2), taxNumber: z.string().max(128).optional(), commercialRegistration: z.string().max(128).optional(), iban: z.string().max(128).optional(), contact: z.string().max(255).optional() })).mutation(async ({ ctx, input }) => {
+    create: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional(), name: z.string().trim().min(2), partyType: z.enum(["supplier", "customer"]).optional(), entityType: z.enum(["individual", "company"]).optional(), taxNumber: z.string().max(128).optional(), commercialRegistration: z.string().max(128).optional(), nationalAddress: z.string().max(4000).optional(), address: z.string().max(4000).optional(), phone: z.string().max(64).optional(), email: z.string().email().optional().or(z.literal("")), iban: z.string().max(128).optional(), contact: z.string().max(255).optional() })).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
       if (input.projectId) {
         await assertProjectAccess(db, ctx, input.projectId);
         await assertProjectWrite(db, ctx, input.projectId);
       }
-      const result = await db.insert(vendors).values({ ...input, projectId: input.projectId || null, taxNumber: input.taxNumber || null, commercialRegistration: input.commercialRegistration || null, iban: input.iban || null, contact: input.contact || null });
+      const result = await db.insert(vendors).values({ ...input, projectId: input.projectId || null, partyType: input.partyType || "supplier", entityType: input.entityType || "company", taxNumber: input.taxNumber || null, commercialRegistration: input.commercialRegistration || null, nationalAddress: input.nationalAddress || null, address: input.address || null, phone: input.phone || null, email: input.email || null, iban: input.iban || null, contact: input.contact || null });
       const id = Number(result[0].insertId);
       await db.insert(auditLogs).values({ entityType: "vendor", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
       return { id };
