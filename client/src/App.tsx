@@ -20,6 +20,7 @@ import LegacyImport from "./pages/LegacyImport";
 import Tasks from "./pages/Tasks";
 import CompanySettings from "./pages/CompanySettings";
 import BanksCash from "./pages/BanksCash";
+import StandaloneFinancialReport from "./pages/StandaloneFinancialReport";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -43,6 +44,9 @@ function Router() {
       <Route path={"/custody"} component={Operations} />
       <Route path={"/tasks"} component={Tasks} />
       <Route path={"/approvals"} component={Approvals} />
+      <Route path={"/supplier-statements"} component={StandaloneFinancialReport} />
+      <Route path={"/cost-center"} component={StandaloneFinancialReport} />
+      <Route path={"/income-statement"} component={StandaloneFinancialReport} />
       <Route path={"/reports"} component={Reports} />
       <Route path={"/users"} component={Users} />
       <Route path={"/data-quality"} component={DataQuality} />
