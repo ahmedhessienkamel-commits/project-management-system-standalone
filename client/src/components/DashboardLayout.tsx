@@ -33,6 +33,7 @@ const menuItems = [
   { icon: LayoutDashboard, label: "لوحة التنفيذ", path: "/" },
   { icon: BarChart3, label: "المؤشرات التنفيذية", path: "/indicators" },
   { icon: ClipboardList, label: "المشاريع والمراحل", path: "/projects" },
+  { icon: Boxes, label: "مراقبة المخزون والكميات", path: "/inventory" },
   { icon: WalletCards, label: "المبيعات والتحصيلات", path: "/sales" },
   { icon: FileText, label: "التكاليف والمصروفات", path: "/expenses" },
   { icon: UserRound, label: "دليل الموظفين", path: "/employees" },
@@ -48,7 +49,6 @@ const menuItems = [
   { icon: BarChart3, label: "مركز التكلفة", path: "/cost-center" },
   { icon: BarChart3, label: "قائمة الدخل", path: "/income-statement" },
   { icon: ClipboardList, label: "دورة المشتريات", path: "/operations" },
-  { icon: Boxes, label: "المخزون والخامات", path: "/inventory" },
   { icon: ClipboardList, label: "الحضور والانصراف", path: "/attendance" },
   { icon: ClipboardList, label: "المهام اليومية", path: "/tasks" },
   { icon: FileText, label: "الموافقات والمستندات", path: "/approvals" },
@@ -151,7 +151,7 @@ function DashboardLayoutContent({
     { label: "إنشاء سند صرف أو قبض", path: "/accounting" },
     { label: "فتح مسير الرواتب", path: "/payroll" },
     { label: "تسجيل طلب شراء", path: "/operations" },
-    { label: "تسجيل استلام أو سحب خامات", path: "/inventory" },
+    { label: "مراقبة المخزون والكميات", path: "/inventory" },
   ];
 
   useEffect(() => {
