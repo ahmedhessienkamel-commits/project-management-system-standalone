@@ -244,6 +244,8 @@ export const employees = mysqlTable("employees", {
   birthDate: date("birthDate"),
   hireDate: date("hireDate"),
   workLocation: varchar("workLocation", { length: 255 }),
+  address: text("address"),
+  nationalAddress: text("nationalAddress"),
   bankName: varchar("bankName", { length: 255 }),
   iban: varchar("iban", { length: 128 }),
   insuranceNumber: varchar("insuranceNumber", { length: 128 }),
