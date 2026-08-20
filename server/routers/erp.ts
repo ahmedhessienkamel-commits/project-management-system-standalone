@@ -1180,6 +1180,15 @@ export const erpRouter = router({
         const items = Array.from(grouped.values());
         return { items, total: items.reduce((sum, item) => sum + item.net, 0), rows };
       }),
+      accountStatement: protectedProcedure.input(z.object({ accountId: z.number().int().positive(), projectId: z.number().int().positive().optional(), from: z.string().optional(), to: z.string().optional() })).query(async ({ input }) => {
+        const db = requireDb(await getDb());
+        const account = (await db.select().from(accounts).where(eq(accounts.id, input.accountId)).limit(1))[0];
+        if (!account) throw new TRPCError({ code: "NOT_FOUND", message: "الحساب غير موجود" });
+        const rows = (await loadAccountingLedger(db, input)).filter((row) => row.accountId === input.accountId).sort((a, b) => String(a.document.documentDate || "").localeCompare(String(b.document.documentDate || "")) || a.id - b.id);
+        let balance = 0;
+        const items = rows.map((row) => { const debit = Number(row.debit); const credit = Number(row.credit); balance += debit - credit; return { id: row.id, documentId: row.documentId, documentNumber: row.document.documentNumber, documentType: row.document.documentType, documentDate: row.document.documentDate, partyName: row.document.partyName, description: row.description || row.document.notes || row.document.partyName || "—", debit, credit, balance, projectId: row.projectId ?? row.document.projectId ?? null, costItem: row.costItem ? { code: row.costItem.code, name: row.costItem.name } : null }; });
+        return { account, items, totals: { debit: items.reduce((sum, item) => sum + item.debit, 0), credit: items.reduce((sum, item) => sum + item.credit, 0), balance } };
+      }),
       financialPosition: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional(), from: z.string().optional(), to: z.string().optional() }).optional()).query(async ({ input }) => {
         const db = requireDb(await getDb());
         const rows = await loadAccountingLedger(db, input || {});
