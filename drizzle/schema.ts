@@ -582,6 +582,7 @@ export const accountingDocuments = mysqlTable("accountingDocuments", {
   documentType: mysqlEnum("documentType", ["sales_invoice", "purchase_invoice", "journal_entry", "payment_voucher", "receipt_voucher", "quotation", "purchase_order"]).notNull(),
   documentNumber: varchar("documentNumber", { length: 128 }).notNull().unique(),
   partyName: varchar("partyName", { length: 255 }),
+  partyTaxNumber: varchar("partyTaxNumber", { length: 64 }),
   voucherCategory: mysqlEnum("voucherCategory", ["contractor", "supplier", "materials", "payroll", "operating", "administrative", "petty_cash"]),
   contractorId: int("contractorId"),
   supplierId: int("supplierId"),

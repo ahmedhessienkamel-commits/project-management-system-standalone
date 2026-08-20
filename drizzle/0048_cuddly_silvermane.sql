@@ -1,0 +1,1 @@
+ALTER TABLE `accountingDocuments` ADD `partyTaxNumber` varchar(64);
