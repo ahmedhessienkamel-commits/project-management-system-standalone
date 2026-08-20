@@ -1523,6 +1523,16 @@ export const erpRouter = router({
         await db.insert(auditLogs).values({ entityType: "accountingDocument", entityId: input.id, action: "updated", actorId: ctx.user.id, beforeJson: JSON.stringify(before), afterJson: JSON.stringify(input) });
         return { id: input.id };
       }),
+      delete: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        const before = (await db.select().from(accountingDocuments).where(eq(accountingDocuments.id, input.id)).limit(1))[0];
+        if (!before) throw new TRPCError({ code: "NOT_FOUND", message: "المستند غير موجود" });
+        const lines = await db.select().from(accountingDocumentLines).where(eq(accountingDocumentLines.documentId, input.id));
+        await db.insert(auditLogs).values({ entityType: "accountingDocument", entityId: input.id, action: "deleted", actorId: ctx.user.id, beforeJson: JSON.stringify({ document: before, lines }) });
+        await db.delete(accountingDocumentLines).where(eq(accountingDocumentLines.documentId, input.id));
+        await db.delete(accountingDocuments).where(eq(accountingDocuments.id, input.id));
+        return { id: input.id, deleted: true } as const;
+      }),
       settlePurchase: protectedProcedure.input(z.object({ purchaseInvoiceId: z.number().int().positive(), cashAccountId: z.number().int().positive(), amount: z.number().positive(), paymentDate: z.string().optional(), notes: z.string().max(2000).optional() })).mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
         await assertOperationPermission(db, ctx, "payment_voucher");
