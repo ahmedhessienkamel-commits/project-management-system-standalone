@@ -1622,6 +1622,27 @@ export const erpRouter = router({
         await db.delete(accountingDocuments).where(eq(accountingDocuments.id, input.id));
         return { id: input.id, deleted: true } as const;
       }),
+      settleSales: protectedProcedure.input(z.object({ salesInvoiceId: z.number().int().positive(), cashAccountId: z.number().int().positive(), amount: z.number().positive(), paymentDate: z.string().optional(), notes: z.string().max(2000).optional() })).mutation(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        await assertOperationPermission(db, ctx, "receipt_voucher");
+        const invoice = (await db.select().from(accountingDocuments).where(eq(accountingDocuments.id, input.salesInvoiceId)).limit(1))[0];
+        if (!invoice || invoice.documentType !== "sales_invoice") throw new TRPCError({ code: "NOT_FOUND", message: "فاتورة المبيعات غير موجودة" });
+        const cashAccount = (await db.select().from(cashAccounts).where(and(eq(cashAccounts.id, input.cashAccountId), eq(cashAccounts.isActive, 1))).limit(1))[0];
+        if (!cashAccount?.accountId) throw new TRPCError({ code: "BAD_REQUEST", message: "اختر بنكًا أو خزينة مرتبطة بحساب محاسبي" });
+        const paidBefore = Number(invoice.paidAmount || 0);
+        const remaining = Math.max(Number(invoice.totalAmount || 0) - paidBefore, 0);
+        if (input.amount > remaining + 0.005) throw new TRPCError({ code: "BAD_REQUEST", message: "قيمة المقبوض أكبر من المتبقي على الفاتورة" });
+        const paidAfter = paidBefore + input.amount;
+        const paymentStatus = paidAfter >= Number(invoice.totalAmount || 0) - 0.005 ? "paid" : "partially_paid";
+        const receivable = (await db.select({ id: accounts.id }).from(accounts).where(eq(accounts.code, "1201")).limit(1))[0];
+        if (!receivable) throw new TRPCError({ code: "BAD_REQUEST", message: "حساب العملاء 1201 غير موجود" });
+        const documentNumber = `RV-${Date.now()}`;
+        const result = await db.insert(accountingDocuments).values({ documentType: "receipt_voucher", documentNumber, partyName: invoice.partyName, projectId: invoice.projectId, sourceAccountId: cashAccount.accountId, amount: input.amount.toFixed(2), taxAmount: "0.00", totalAmount: input.amount.toFixed(2), paidAmount: input.amount.toFixed(2), paymentStatus: "paid", paymentMethod: cashAccount.accountType === "bank" ? "bank" : "cash", documentDate: input.paymentDate ? new Date(input.paymentDate) : new Date(), status: "posted", notes: input.notes || `مقبوضات فاتورة ${invoice.documentNumber}`, createdBy: ctx.user.id });
+        const paymentId = Number(result[0].insertId);
+        await db.insert(accountingDocumentLines).values([{ documentId: paymentId, accountId: cashAccount.accountId, projectId: invoice.projectId || null, description: `${cashAccount.name} — ${invoice.documentNumber}`, debit: input.amount.toFixed(2), credit: "0.00" }, { documentId: paymentId, accountId: receivable.id, projectId: invoice.projectId || null, description: `تحصيل من ${invoice.partyName || "العميل"}`, debit: "0.00", credit: input.amount.toFixed(2) }]);
+        await db.update(accountingDocuments).set({ paidAmount: paidAfter.toFixed(2), paymentStatus }).where(eq(accountingDocuments.id, invoice.id));
+        return { paymentId, paymentNumber: documentNumber, paidAmount: paidAfter, remaining: Math.max(Number(invoice.totalAmount || 0) - paidAfter, 0), paymentStatus };
+      }),
       settlePurchase: protectedProcedure.input(z.object({ purchaseInvoiceId: z.number().int().positive(), cashAccountId: z.number().int().positive(), amount: z.number().positive(), paymentDate: z.string().optional(), notes: z.string().max(2000).optional() })).mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
         await assertOperationPermission(db, ctx, "payment_voucher");
