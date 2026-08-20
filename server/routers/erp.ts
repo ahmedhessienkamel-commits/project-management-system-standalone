@@ -4,7 +4,7 @@ import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments,
 import { getDb } from "../db";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
-import { calculateDocumentCompleteness, calculateExpenseTotals, calculateFinancialSummaryTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, calculateStraightLineDepreciation, canAccessProject, canWriteProject, projectHealthReasons, projectHealthStatus, projectNotificationTriggers } from "../erpCalculations";
+import { calculateCertificateProgress, calculateDocumentCompleteness, calculateExpenseTotals, calculateFinancialSummaryTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, calculateStraightLineDepreciation, canAccessProject, canWriteProject, projectHealthReasons, projectHealthStatus, projectNotificationTriggers } from "../erpCalculations";
 import { accountingTotals } from "../accountingCalculations";
 import { calculateStageTimeVariance } from "../../shared/stageTiming";
 import { allocateAdministrativeExpense, normalizeExpenseTaxRate, validateExpenseAllocation } from "../../shared/expenseAllocation";
@@ -291,7 +291,19 @@ export const erpRouter = router({
       const db = requireDb(await getDb());
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
       const rows = await db.select().from(stages).orderBy(stages.createdAt);
-      return allowed ? rows.filter((row) => allowed.has(row.projectId)) : rows;
+      const certificateRows = await db.select().from(certificates);
+      const visibleRows = allowed ? rows.filter((row) => allowed.has(row.projectId)) : rows;
+      return visibleRows.map((row) => {
+        const approvedCertificates = certificateRows.filter((certificate) => certificate.stageId === row.id && ["approved", "paid"].includes(certificate.status));
+        const progress = calculateCertificateProgress({ plannedBudget: Number(row.plannedBudget || 0), certifiedAmounts: approvedCertificates.map((certificate) => certificate.totalAmount) });
+        return {
+          ...row,
+          certifiedAmount: progress.certifiedAmount,
+          certificateCount: approvedCertificates.length,
+          certificateProgressPct: progress.progressPct,
+          progressSource: approvedCertificates.length > 0 ? "contractor_certificates" as const : "manual" as const,
+        };
+      });
     }),
     create: protectedProcedure
       .input(z.object({ projectId: z.number().int().positive(), code: z.string().trim().min(1).max(64), name: z.string().trim().min(2).max(255), plannedBudget: z.number().nonnegative(), plannedBudgetTaxBasis: z.enum(["pre_tax", "inclusive"]).default("pre_tax"), plannedStart: z.string().optional(), plannedEnd: z.string().optional() }))
@@ -1593,7 +1605,9 @@ export const erpRouter = router({
       const rows = stageRows.map((stage) => {
         const stageExpenseRows = actualForStage(stage.id);
         const metrics = makeMetrics(Number(stage.plannedBudget || 0), stageExpenseRows, stage.id);
-        return { rowType: "stage" as const, id: stage.id, code: stage.code, name: stage.name, stageId: stage.id, stageName: stage.name, plannedBudgetTaxBasis: stage.plannedBudgetTaxBasis, status: stage.status, plannedStart: stage.plannedStart, plannedEnd: stage.plannedEnd, actualProgress: Number(stage.actualProgress || 0), contractor: vendorName(stageExpenseRows.map((row) => row.vendorId)), notes: stageExpenseRows.map((row) => row.description).filter(Boolean).slice(0, 3).join("، "), ...timeMetrics(stage.plannedEnd, stage.status), ...metrics };
+        const approvedStageCertificates = certificateForStage(stage.id).filter((certificate) => ["approved", "paid"].includes(certificate.status));
+        const progress = calculateCertificateProgress({ plannedBudget: Number(stage.plannedBudget || 0), certifiedAmounts: approvedStageCertificates.map((certificate) => certificate.totalAmount) });
+        return { rowType: "stage" as const, id: stage.id, code: stage.code, name: stage.name, stageId: stage.id, stageName: stage.name, plannedBudgetTaxBasis: stage.plannedBudgetTaxBasis, status: stage.status, plannedStart: stage.plannedStart, plannedEnd: stage.plannedEnd, actualProgress: approvedStageCertificates.length ? progress.progressPct : Number(stage.actualProgress || 0), certifiedAmount: progress.certifiedAmount, certificateCount: approvedStageCertificates.length, progressSource: approvedStageCertificates.length ? "contractor_certificates" as const : "manual" as const, contractor: vendorName(stageExpenseRows.map((row) => row.vendorId)), notes: stageExpenseRows.map((row) => row.description).filter(Boolean).slice(0, 3).join("، "), ...timeMetrics(stage.plannedEnd, stage.status), ...metrics };
       });
       const costItemRows = costCatalogRows.filter((item) => item.isActive === 1 && (item.projectId === null || item.projectId === input.projectId)).map((item) => {
         const itemExpenses = activeExpenses.filter((row) => row.costItemId === item.id);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { allocateAdministrativeAmount, calculateContractBalance, calculateExpenseTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, calculateStraightLineDepreciation, projectHealthStatus } from "./erpCalculations";
+import { allocateAdministrativeAmount, calculateCertificateProgress, calculateContractBalance, calculateExpenseTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, calculateStraightLineDepreciation, projectHealthStatus } from "./erpCalculations";
 import { calculateAttendanceHours, filterAttendanceByMonth, summarizeAttendanceExceptions } from "../shared/attendance";
 import { isProjectActive } from "../shared/projectStatus";
 
@@ -74,6 +74,12 @@ describe("ERP financial rules", () => {
     expect(rows[0].allocatedAmount).toBe(1000);
     expect(rows[1].allocatedAmount).toBe(500);
     expect(rows.reduce((sum, row) => sum + row.allocatedAmount, 0)).toBe(1500);
+  });
+
+  it("calculates stage progress from approved contractor certificates", () => {
+    expect(calculateCertificateProgress({ plannedBudget: 76911, certifiedAmounts: [21000] })).toEqual({ certifiedAmount: 21000, progressPct: 27.3 });
+    expect(calculateCertificateProgress({ plannedBudget: 0, certifiedAmounts: [21000] })).toEqual({ certifiedAmount: 21000, progressPct: 0 });
+    expect(calculateCertificateProgress({ plannedBudget: 100, certifiedAmounts: [80, 40] }).progressPct).toBe(100);
   });
 
   it("calculates contractor contract balance and rejects over-certification", () => {

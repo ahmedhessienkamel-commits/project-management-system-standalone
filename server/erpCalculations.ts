@@ -6,6 +6,12 @@ export function calculateExpenseTotals(preTaxAmount: number, taxRate: number) {
   return { preTaxAmount: safePreTax, taxRate: safeRate, taxAmount, totalAmount };
 }
 
+export function calculateCertificateProgress({ plannedBudget, certifiedAmounts }: { plannedBudget: number; certifiedAmounts: Array<number | string> }) {
+  const safeBudget = Math.max(0, plannedBudget);
+  const certifiedAmount = certifiedAmounts.reduce<number>((sum, amount) => sum + Math.max(0, Number(amount || 0)), 0);
+  return { certifiedAmount: Number(certifiedAmount.toFixed(2)), progressPct: safeBudget > 0 ? Number(Math.min(100, (certifiedAmount / safeBudget) * 100).toFixed(2)) : 0 };
+}
+
 export function calculatePurchaseInvoiceStatus(invoicedAmount: number, paidAmount: number): "not_received" | "received" | "partially_paid" | "paid" {
   if (invoicedAmount <= 0) return "not_received";
   if (paidAmount >= invoicedAmount) return "paid";
