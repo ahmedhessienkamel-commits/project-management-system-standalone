@@ -1424,6 +1424,31 @@ export const erpRouter = router({
         await db.insert(auditLogs).values({ entityType: "accountingDocument", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify({ ...input, documentNumber }) });
         return { id, documentNumber };
       }),
+      settlePurchase: protectedProcedure.input(z.object({ purchaseInvoiceId: z.number().int().positive(), cashAccountId: z.number().int().positive(), amount: z.number().positive(), paymentDate: z.string().optional(), notes: z.string().max(2000).optional() })).mutation(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        await assertOperationPermission(db, ctx, "payment_voucher");
+        const invoice = (await db.select().from(accountingDocuments).where(eq(accountingDocuments.id, input.purchaseInvoiceId)).limit(1))[0];
+        if (!invoice || invoice.documentType !== "purchase_invoice") throw new TRPCError({ code: "NOT_FOUND", message: "فاتورة الشراء غير موجودة" });
+        const cashAccount = (await db.select().from(cashAccounts).where(and(eq(cashAccounts.id, input.cashAccountId), eq(cashAccounts.isActive, 1))).limit(1))[0];
+        if (!cashAccount) throw new TRPCError({ code: "NOT_FOUND", message: "حساب البنك أو الخزينة غير موجود أو غير نشط" });
+        if (!cashAccount.accountId) throw new TRPCError({ code: "BAD_REQUEST", message: "اربط حساب البنك أو الخزينة بحساب محاسبي أولًا" });
+        const paidBefore = Number(invoice.paidAmount || 0);
+        const remaining = Math.max(Number(invoice.totalAmount || 0) - paidBefore, 0);
+        if (remaining <= 0) throw new TRPCError({ code: "BAD_REQUEST", message: "فاتورة الشراء مسددة بالكامل" });
+        if (input.amount > remaining + 0.005) throw new TRPCError({ code: "BAD_REQUEST", message: `قيمة السداد تتجاوز المتبقي (${remaining.toFixed(2)})` });
+        const payable = (await db.select({ id: accounts.id }).from(accounts).where(and(eq(accounts.code, "2101"), eq(accounts.isActive, 1))).limit(1))[0];
+        if (!payable) throw new TRPCError({ code: "BAD_REQUEST", message: "حساب الموردين 2101 غير موجود في الشجرة" });
+        const paidAfter = paidBefore + input.amount;
+        const paymentStatus = paidAfter >= Number(invoice.totalAmount || 0) - 0.005 ? "paid" : "partially_paid" as const;
+        const documentNumber = `PV-${Date.now()}`;
+        const result = await db.insert(accountingDocuments).values({ projectId: invoice.projectId || null, documentType: "payment_voucher", documentNumber, partyName: invoice.partyName || null, voucherCategory: "supplier", supplierId: invoice.supplierId || null, purchaseInvoiceId: invoice.id, documentDate: input.paymentDate ? new Date(input.paymentDate) : new Date(), sourceAccountId: cashAccount.accountId, amount: input.amount.toFixed(2), taxAmount: "0.00", totalAmount: input.amount.toFixed(2), paymentMethod: cashAccount.accountType === "bank" ? "bank" : "cash", status: "posted", notes: input.notes || `سداد فاتورة شراء ${invoice.documentNumber}`, createdBy: ctx.user.id });
+        const paymentId = Number(result[0].insertId);
+        await db.insert(accountingDocumentLines).values({ documentId: paymentId, accountId: payable.id, projectId: invoice.projectId || null, description: `سداد مورد — ${invoice.documentNumber}`, debit: input.amount.toFixed(2), credit: "0.00" });
+        await db.insert(accountingDocumentLines).values({ documentId: paymentId, accountId: cashAccount.accountId, projectId: invoice.projectId || null, description: `${cashAccount.name} — ${invoice.documentNumber}`, debit: "0.00", credit: input.amount.toFixed(2) });
+        await db.update(accountingDocuments).set({ paidAmount: paidAfter.toFixed(2), paymentStatus }).where(eq(accountingDocuments.id, invoice.id));
+        await db.insert(auditLogs).values({ entityType: "accountingDocument", entityId: invoice.id, action: "purchase_invoice_settled", actorId: ctx.user.id, beforeJson: JSON.stringify({ paidAmount: paidBefore, paymentStatus: invoice.paymentStatus }), afterJson: JSON.stringify({ paidAmount: paidAfter, paymentStatus, paymentId, sourceCashAccountId: input.cashAccountId }) });
+        return { paymentId, paymentNumber: documentNumber, paidAmount: paidAfter, remaining: Math.max(Number(invoice.totalAmount || 0) - paidAfter, 0), paymentStatus };
+      }),
     }),
     reports: router({
       customerStatement: protectedProcedure.input(z.object({ partyName: z.string().min(1), projectId: z.number().int().positive().optional(), from: z.string().optional(), to: z.string().optional() })).query(async ({ input }) => {

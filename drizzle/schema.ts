@@ -579,6 +579,8 @@ export const accountingDocuments = mysqlTable("accountingDocuments", {
   amount: decimal("amount", { precision: 14, scale: 2 }).notNull().default("0"),
   taxAmount: decimal("taxAmount", { precision: 14, scale: 2 }).notNull().default("0"),
   totalAmount: decimal("totalAmount", { precision: 14, scale: 2 }).notNull().default("0"),
+  paidAmount: decimal("paidAmount", { precision: 14, scale: 2 }).notNull().default("0"),
+  paymentStatus: mysqlEnum("paymentStatus", ["unpaid", "partially_paid", "paid"]).notNull().default("unpaid"),
   paymentMethod: mysqlEnum("paymentMethod", ["cash", "bank"]),
   status: mysqlEnum("status", ["draft", "posted", "cancelled"]).notNull().default("draft"),
   notes: text("notes"),
