@@ -77,6 +77,7 @@ export default function Home() {
           {selectedSummary && <DashboardStageDetail rows={selectedDetailReport?.rows.filter((row) => row.rowType === "stage") ?? []} total={selectedDetailReport?.total ?? null} onOpenReport={() => setLocation("/projects")} />}
 
           <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            <MetricCard icon={Landmark} label="تقرير تكلفة الخامات" value={`${money.format(selectedExpenseTotals.materials)} ر.س`} hint="تفصيل الخامات في قائمة الدخل" tone="gold" onClick={() => setLocation(`/accounting?report=materials${selectedSummary ? `&projectId=${selectedSummary.project.id}` : ""}`)} />
             <MetricCard icon={WalletCards} label="التكلفة التشغيلية" value={`${money.format(selectedExpenseTotals.operational)} ر.س`} hint="تشغيل ومعدات وخدمات" tone="blue" onClick={() => setLocation("/expenses")} />
             <MetricCard icon={Clock3} label="مصروف الرواتب" value={`${money.format(selectedExpenseTotals.payroll)} ر.س`} hint="رواتب محملة على المشروع" tone="violet" onClick={() => setLocation("/payroll")} />
             <MetricCard icon={ReceiptText} label="المصاريف الإدارية والعمومية" value={`${money.format(selectedExpenseTotals.administrative)} ر.س`} hint="مصروفات إدارية معتمدة" tone="amber" onClick={() => setLocation("/expenses")} />

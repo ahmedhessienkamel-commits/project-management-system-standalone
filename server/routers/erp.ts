@@ -1196,8 +1196,8 @@ export const erpRouter = router({
       costItemStatement: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional(), costItemId: z.number().int().positive().optional(), from: z.string().optional(), to: z.string().optional() }).optional()).query(async ({ input }) => {
         const db = requireDb(await getDb());
         const rows = (await loadAccountingLedger(db, input || {})).filter((row) => row.costItem && (!input?.costItemId || row.costItem.id === input.costItemId));
-        const grouped = new Map<number, { costItemId: number; code: string; name: string; debit: number; credit: number; net: number }>();
-        for (const row of rows) { const item = row.costItem!; const current = grouped.get(item.id) || { costItemId: item.id, code: item.code, name: item.name, debit: 0, credit: 0, net: 0 }; current.debit += Number(row.debit); current.credit += Number(row.credit); current.net += Number(row.debit) - Number(row.credit); grouped.set(item.id, current); }
+        const grouped = new Map<number, { costItemId: number; code: string; name: string; category: string; debit: number; credit: number; net: number }>();
+        for (const row of rows) { const item = row.costItem!; const current = grouped.get(item.id) || { costItemId: item.id, code: item.code, name: item.name, category: item.category, debit: 0, credit: 0, net: 0 }; current.debit += Number(row.debit); current.credit += Number(row.credit); current.net += Number(row.debit) - Number(row.credit); grouped.set(item.id, current); }
         const items = Array.from(grouped.values());
         return { items, total: items.reduce((sum, item) => sum + item.net, 0), rows };
       }),
