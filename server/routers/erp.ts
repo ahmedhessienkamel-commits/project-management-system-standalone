@@ -4,7 +4,7 @@ import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments,
 import { getDb } from "../db";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
-import { calculateCertificateProgress, calculateDocumentCompleteness, calculateExpenseTotals, calculateFinancialSummaryTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, calculateStraightLineDepreciation, canAccessProject, canWriteProject, projectHealthReasons, projectHealthStatus, projectNotificationTriggers } from "../erpCalculations";
+import { calculateCertificateProgress, calculateDocumentCompleteness, calculateExpenseTotals, calculateFinancialSummaryTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, calculateStraightLineDepreciation, allocateAdministrativeAmount, canAccessProject, canWriteProject, projectHealthReasons, projectHealthStatus, projectNotificationTriggers } from "../erpCalculations";
 import { accountingTotals } from "../accountingCalculations";
 import { calculateStageTimeVariance } from "../../shared/stageTiming";
 import { allocateAdministrativeExpense, normalizeExpenseTaxRate, validateExpenseAllocation } from "../../shared/expenseAllocation";
@@ -472,6 +472,30 @@ export const erpRouter = router({
         for (const trigger of triggers) await notifyOnce(db, ctx.user.id, trigger.type, trigger.title, trigger.message);
       }
       return summary;
+    }),
+    companySummary: protectedProcedure.query(async ({ ctx }) => {
+      const db = requireDb(await getDb());
+      const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
+      const [projectRows, expenseRows, payrollRows, administrativePayrollRows, allocationRows, salesRows, certificateRows, inventoryRows] = await Promise.all([
+        db.select().from(projects), db.select().from(expenses), db.select().from(payroll), db.select().from(administrativePayroll), db.select().from(payrollAllocations), db.select().from(sales), db.select().from(certificates), db.select().from(inventoryMovements),
+      ]);
+      const visibleProjects = projectRows.filter((project) => !allowed || allowed.has(project.id));
+      const activeProjects = visibleProjects.filter((project) => project.status !== "archived" && Number(project.contractValue || 0) > 0);
+      const approved = (status: string) => ["approved", "posted", "paid"].includes(status);
+      const visibleProjectIds = new Set(visibleProjects.map((project) => project.id));
+      const projectExpenses = expenseRows.filter((row) => row.projectId !== null && visibleProjectIds.has(row.projectId) && row.classification !== "administrative" && approved(row.status)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+      const projectPayroll = payrollRows.filter((row) => row.projectId !== null && visibleProjectIds.has(row.projectId) && row.classification !== "administrative" && approved(row.status)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+      const subcontractorCosts = certificateRows.filter((row) => visibleProjectIds.has(row.projectId) && row.status !== "rejected").reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+      const inventoryCosts = inventoryRows.filter((row) => row.projectId !== null && visibleProjectIds.has(row.projectId) && row.status === "posted" && ["issue", "adjustment_out"].includes(row.movementType)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+      const projectRevenue = salesRows.filter((row) => visibleProjectIds.has(row.projectId) && row.status === "confirmed").reduce((sum, row) => sum + Number(row.recognizedRevenue || 0), 0);
+      const companyExpenses = expenseRows.filter((row) => row.projectId === null && ["administrative", "general_cash", "petty_cash"].includes(row.classification) && approved(row.status));
+      const administrativeExpenses = companyExpenses.filter((row) => row.classification === "administrative").reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+      const pettyCashExpenses = companyExpenses.filter((row) => ["general_cash", "petty_cash"].includes(row.classification)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+      const legacyAdministrativePayroll = payrollRows.filter((row) => row.projectId === null && row.classification === "administrative" && approved(row.status)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+      const administrativePayrollTotal = administrativePayrollRows.filter((row: typeof administrativePayrollRows[number]) => ["approved", "paid"].includes(row.status)).reduce((sum: number, row: typeof administrativePayrollRows[number]) => sum + Number(row.totalAmount || 0), 0) + legacyAdministrativePayroll;
+      const sharedTotal = administrativeExpenses + pettyCashExpenses + administrativePayrollTotal;
+      const allocation = allocateAdministrativeAmount(sharedTotal, activeProjects.map((project) => ({ projectId: project.id, projectName: project.name, contractValue: Number(project.contractValue || 0) })));
+      return { projectCosts: projectExpenses + projectPayroll + subcontractorCosts + inventoryCosts, projectRevenue, administrativeExpenses, pettyCashExpenses, administrativePayroll: administrativePayrollTotal, sharedTotal, activeProjects: allocation, allocationBasis: "contract_value" as const };
     }),
   }),
 
