@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, dailyTasks, employees, expenses, notifications, payroll, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, sales, stages, units, users, vendors, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems, inventoryItems, inventoryMovements, accounts, accountingDocuments, accountingDocumentLines, costItems, fixedAssets, fixedAssetDepreciation, companyProfiles, cashAccounts, contractorContracts, userOperationPermissions } from "../../drizzle/schema";
+import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, dailyTasks, employees, expenses, notifications, payroll, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, sales, stages, units, users, userInvitations, vendors, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems, inventoryItems, inventoryMovements, accounts, accountingDocuments, accountingDocumentLines, costItems, fixedAssets, fixedAssetDepreciation, companyProfiles, cashAccounts, contractorContracts, userOperationPermissions } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
@@ -174,7 +175,36 @@ export const erpRouter = router({
   users: router({
     list: adminProcedure.query(async () => {
       const db = requireDb(await getDb());
-      return db.select({ id: users.id, name: users.name, email: users.email, role: users.role, lastSignedIn: users.lastSignedIn }).from(users).orderBy(users.name);
+      return db.select({ id: users.id, name: users.name, email: users.email, role: users.role, jobTitle: users.jobTitle, defaultProjectId: users.defaultProjectId, lastSignedIn: users.lastSignedIn }).from(users).orderBy(users.name);
+    }),
+    invitations: adminProcedure.query(async () => {
+      const db = requireDb(await getDb());
+      return db.select().from(userInvitations).orderBy(userInvitations.createdAt);
+    }),
+    invite: adminProcedure.input(z.object({ email: z.string().email(), name: z.string().trim().max(255).optional(), jobTitle: z.string().trim().min(2).max(255), role: z.enum(["user", "general_manager", "project_manager", "procurement_manager"]), projectId: z.number().int().positive().optional() })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      const pending = (await db.select({ id: userInvitations.id }).from(userInvitations).where(and(eq(userInvitations.email, input.email), eq(userInvitations.status, "pending"))).limit(1))[0];
+      if (pending) throw new TRPCError({ code: "CONFLICT", message: "توجد دعوة معلقة لهذا البريد بالفعل" });
+      const token = randomUUID().replaceAll("-", "");
+      const expiresAt = new Date(Date.now() + 7 * 86400000);
+      const result = await db.insert(userInvitations).values({ email: input.email, name: input.name || null, jobTitle: input.jobTitle, role: input.role, projectId: input.projectId || null, token, invitedBy: ctx.user.id, expiresAt });
+      const id = Number(result[0].insertId);
+      await db.insert(auditLogs).values({ entityType: "userInvitation", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
+      return { id, token, email: input.email, expiresAt } as const;
+    }),
+    cancelInvitation: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      await db.update(userInvitations).set({ status: "cancelled" }).where(eq(userInvitations.id, input.id));
+      await db.insert(auditLogs).values({ entityType: "userInvitation", entityId: input.id, action: "cancelled", actorId: ctx.user.id });
+      return { success: true } as const;
+    }),
+    updateProfile: adminProcedure.input(z.object({ userId: z.number().int().positive(), jobTitle: z.string().trim().max(255).optional(), defaultProjectId: z.number().int().positive().nullable().optional() })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      const target = (await db.select({ id: users.id, jobTitle: users.jobTitle, defaultProjectId: users.defaultProjectId }).from(users).where(eq(users.id, input.userId)).limit(1))[0];
+      if (!target) throw new TRPCError({ code: "NOT_FOUND", message: "المستخدم غير موجود" });
+      await db.update(users).set({ jobTitle: input.jobTitle || null, defaultProjectId: input.defaultProjectId ?? null }).where(eq(users.id, input.userId));
+      await db.insert(auditLogs).values({ entityType: "user", entityId: input.userId, action: "profile_updated", actorId: ctx.user.id, beforeJson: JSON.stringify(target), afterJson: JSON.stringify(input) });
+      return { success: true } as const;
     }),
     updateRole: adminProcedure.input(z.object({ userId: z.number().int().positive(), role: z.enum(["admin", "user", "general_manager", "project_manager", "procurement_manager"]) })).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb());

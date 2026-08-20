@@ -16,9 +16,25 @@ export const users = mysqlTable("users", {
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin", "general_manager", "project_manager", "procurement_manager"]).default("user").notNull(),
+  jobTitle: varchar("jobTitle", { length: 255 }),
+  defaultProjectId: int("defaultProjectId"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+});
+
+export const userInvitations = mysqlTable("userInvitations", {
+  id: int("id").autoincrement().primaryKey(),
+  email: varchar("email", { length: 320 }).notNull(),
+  name: varchar("name", { length: 255 }),
+  jobTitle: varchar("jobTitle", { length: 255 }).notNull(),
+  role: mysqlEnum("role", ["user", "general_manager", "project_manager", "procurement_manager"]).default("user").notNull(),
+  projectId: int("projectId"),
+  status: mysqlEnum("status", ["pending", "accepted", "cancelled", "expired"]).default("pending").notNull(),
+  token: varchar("token", { length: 128 }).notNull().unique(),
+  invitedBy: int("invitedBy").notNull(),
+  expiresAt: timestamp("expiresAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
 export const projects = mysqlTable("projects", {
@@ -175,6 +191,8 @@ export const auditLogs = mysqlTable("auditLogs", {
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
+export type UserInvitation = typeof userInvitations.$inferSelect;
+export type InsertUserInvitation = typeof userInvitations.$inferInsert;
 export type Project = typeof projects.$inferSelect;
 export type InsertProject = typeof projects.$inferInsert;
 export type Stage = typeof stages.$inferSelect;
