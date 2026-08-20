@@ -127,6 +127,7 @@ describe("ERP sales and collections API flow", () => {
     state.payroll.forEach((row) => { row.status = "approved"; });
     state.expenses.forEach((row) => { row.status = "approved"; });
     const summary = await caller.erp.dashboard.summary();
+    const quality = await caller.erp.reports.dataQuality();
     const report = await caller.erp.reports.financialSummary({ projectId: 1 });
     expect(sale.recognizedRevenue).toBe(250000);
     expect(state.sales[0]).toMatchObject({ projectId: 1, unitId: 10, stageId: 2, status: "confirmed", recognizedRevenue: "250000.00" });
@@ -136,6 +137,9 @@ describe("ERP sales and collections API flow", () => {
     expect(state.payroll.find((row) => row.employeeCode === "EMP-002")).toMatchObject({ employeeName: "سارة", classification: "administrative", taxAmount: "0.00" });
     expect(summary[0]).toMatchObject({ recognizedRevenue: 250000, collectionsReceived: 75000, actualCost: 18900, subcontractorCostsTotal: 5750, payrollOutstanding: 12000 });
     expect(summary[0].missingDocumentCount).toBeGreaterThanOrEqual(2);
+    expect(quality.score).toBeGreaterThanOrEqual(0);
+    expect(quality.score).toBeLessThanOrEqual(100);
+    expect(Array.isArray(quality.issues)).toBe(true);
     expect(report).toMatchObject({ revenue: 250000, collectionsReceived: 75000, expensesPreTax: 1000, payrollTotal: 12000, payrollOutstanding: 12000 });
     const cashFlow = await caller.erp.reports.cashFlow({ projectId: 1 });
     expect(cashFlow.stages.find((row) => row.stageId === 2)).toMatchObject({ stageName: "الحفر", cashIn: 75000, cashOut: 1500, net: 73500, cumulativeGap: -73500, fundingRequired: 0, allocation: "stage-linked-sales-and-outflows" });

@@ -1525,11 +1525,12 @@ export const erpRouter = router({
     }),
     dataQuality: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
-      const [projectRows, stageRows, vendorRows, employeeRows] = await Promise.all([db.select().from(projects), db.select().from(stages), db.select().from(vendors), db.select().from(employees)]);
+      const [projectRows, stageRows, vendorRows, employeeRows, expenseRows, certificateRows, payrollRows, salesRows, costItemRows] = await Promise.all([db.select().from(projects), db.select().from(stages), db.select().from(vendors), db.select().from(employees), db.select().from(expenses), db.select().from(certificates), db.select().from(payroll), db.select().from(sales), db.select().from(costItems)]);
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
       const visibleProjects = allowed ? projectRows.filter((row) => allowed.has(row.id)) : projectRows;
       const visibleProjectIds = new Set(visibleProjects.map((row) => row.id));
       const issues: Array<{ id: string; entityType: string; entityId: number; title: string; detail: string; severity: "critical" | "warning" | "info"; action: string }> = [];
+      const visible = (projectId: number | null) => projectId === null || visibleProjectIds.has(projectId);
       visibleProjects.forEach((project) => {
         if (!project.plannedStart || !project.plannedEnd) issues.push({ id: `project-dates-${project.id}`, entityType: "project", entityId: project.id, title: "تواريخ المشروع غير مكتملة", detail: `${project.name} يحتاج تاريخ بداية ونهاية مخططين.`, severity: "warning", action: "استكمال بيانات المشروع" });
         if (project.status === "active" && !stageRows.some((stage) => stage.projectId === project.id)) issues.push({ id: `project-stages-${project.id}`, entityType: "project", entityId: project.id, title: "مشروع نشط بلا مراحل", detail: `${project.name} نشط لكن لا توجد مراحل مرتبطة به.`, severity: "critical", action: "إضافة مرحلة للمشروع" });
@@ -1543,6 +1544,35 @@ export const erpRouter = router({
       });
       employeeRows.filter((employee) => employee.status === "active").forEach((employee) => {
         if (Number(employee.basicSalary) <= 0) issues.push({ id: `employee-salary-${employee.id}`, entityType: "employee", entityId: employee.id, title: "راتب أساسي غير مسجل", detail: `${employee.fullName} موظف نشط بلا راتب أساسي موجب.`, severity: "critical", action: "استكمال ملف الموظف" });
+      });
+      expenseRows.filter((expense) => visible(expense.projectId)).forEach((expense) => {
+        const total = Number(expense.totalAmount || 0);
+        const paid = Number(expense.paidAmount || 0);
+        if (total <= 0) issues.push({ id: `expense-total-${expense.id}`, entityType: "expense", entityId: expense.id, title: "مصروف بإجمالي غير صالح", detail: `${expense.description} مسجل بإجمالي ${total.toFixed(2)}؛ راجع قبل الاعتماد.`, severity: "critical", action: "مراجعة المصروف" });
+        else if (paid > total + 0.01) issues.push({ id: `expense-paid-${expense.id}`, entityType: "expense", entityId: expense.id, title: "مدفوع المصروف يتجاوز الإجمالي", detail: `${expense.description} مدفوع ${paid.toFixed(2)} مقابل إجمالي ${total.toFixed(2)}.`, severity: "critical", action: "تصحيح المصروف" });
+        if (expense.classification === "project" && !expense.projectId) issues.push({ id: `expense-project-${expense.id}`, entityType: "expense", entityId: expense.id, title: "مصروف مشروع بلا مشروع", detail: `${expense.description} مصنف كمصروف مشروع دون تحديد مشروع محمل عليه.`, severity: "warning", action: "تحديد المشروع" });
+        if (["approved", "posted"].includes(expense.status) && expense.classification === "project" && !expense.costItemId) issues.push({ id: `expense-cost-item-${expense.id}`, entityType: "expense", entityId: expense.id, title: "مصروف مشروع بلا بند تكلفة", detail: `${expense.description} معتمد دون بطاقة تكلفة؛ لن يظهر تفصيله بشكل صحيح في تقارير البنود.`, severity: "warning", action: "تحديد بند التكلفة" });
+        if (expense.stageId && (!expense.projectId || !stageRows.some((stage) => stage.id === expense.stageId && stage.projectId === expense.projectId))) issues.push({ id: `expense-stage-${expense.id}`, entityType: "expense", entityId: expense.id, title: "مرحلة المصروف غير متطابقة", detail: `${expense.description} مرتبط بمرحلة لا تتبع المشروع المحدد.`, severity: "critical", action: "تصحيح المرحلة" });
+      });
+      certificateRows.filter((certificate) => visible(certificate.projectId) && certificate.status !== "rejected").forEach((certificate) => {
+        const total = Number(certificate.totalAmount || 0);
+        const paid = Number(certificate.paidAmount || 0);
+        if (total <= 0) issues.push({ id: `certificate-total-${certificate.id}`, entityType: "certificate", entityId: certificate.id, title: "مستخلص بإجمالي غير صالح", detail: `المستخلص ${certificate.certificateNumber} لا يحتوي إجماليًا موجبًا.`, severity: "critical", action: "مراجعة المستخلص" });
+        else if (paid > total + 0.01) issues.push({ id: `certificate-paid-${certificate.id}`, entityType: "certificate", entityId: certificate.id, title: "مدفوع المستخلص يتجاوز الإجمالي", detail: `المستخلص ${certificate.certificateNumber} مدفوع ${paid.toFixed(2)} مقابل إجمالي ${total.toFixed(2)}.`, severity: "critical", action: "تصحيح المستخلص" });
+        if (!certificate.contractId) issues.push({ id: `certificate-contract-${certificate.id}`, entityType: "certificate", entityId: certificate.id, title: "مستخلص بلا عقد مقاول", detail: `المستخلص ${certificate.certificateNumber} غير مربوط بعقد؛ لا يمكن تتبع رصيد العقد بدقة.`, severity: "warning", action: "ربط المستخلص بعقد" });
+      });
+      payrollRows.filter((row) => visible(row.projectId)).forEach((row) => {
+        if (row.classification === "project" && !row.projectId) issues.push({ id: `payroll-project-${row.id}`, entityType: "payroll", entityId: row.id, title: "راتب مشروع بلا مشروع", detail: `مسير ${row.month}/${row.year} مصنف كمشروع دون تحديد المشروع.`, severity: "warning", action: "تحديد مشروع الراتب" });
+        if (row.stageId && (!row.projectId || !stageRows.some((stage) => stage.id === row.stageId && stage.projectId === row.projectId))) issues.push({ id: `payroll-stage-${row.id}`, entityType: "payroll", entityId: row.id, title: "مرحلة الراتب غير متطابقة", detail: `مسير ${row.month}/${row.year} مرتبط بمرحلة لا تتبع المشروع المحدد.`, severity: "critical", action: "تصحيح مرحلة الراتب" });
+      });
+      const activeCostItemIds = new Set(costItemRows.filter((item) => item.isActive).map((item) => item.id));
+      expenseRows.filter((expense) => expense.costItemId && !activeCostItemIds.has(expense.costItemId) && visible(expense.projectId)).forEach((expense) => issues.push({ id: `expense-cost-item-inactive-${expense.id}`, entityType: "expense", entityId: expense.id, title: "بند تكلفة غير متاح", detail: `${expense.description} مرتبط ببطاقة تكلفة غير نشطة أو غير موجودة.`, severity: "warning", action: "تحديث بطاقة التكلفة" }));
+      salesRows.filter((sale) => visible(sale.projectId) && sale.status !== "cancelled").forEach((sale) => {
+        const expectedTotal = Number(sale.preTaxAmount || 0) + Number(sale.taxAmount || 0);
+        const total = Number(sale.totalAmount || 0);
+        const recognized = Number(sale.recognizedRevenue || 0);
+        if (Math.abs(expectedTotal - total) > 0.01) issues.push({ id: `sale-total-${sale.id}`, entityType: "sale", entityId: sale.id, title: "إجمالي البيع غير متسق", detail: `البيع رقم ${sale.id} لا يساوي قبل الضريبة مضافًا إليه الضريبة.`, severity: "critical", action: "مراجعة فاتورة البيع" });
+        if (recognized > total + 0.01) issues.push({ id: `sale-revenue-${sale.id}`, entityType: "sale", entityId: sale.id, title: "الإيراد المعترف به يتجاوز البيع", detail: `البيع رقم ${sale.id} يحمل إيرادًا معترفًا به أكبر من إجمالي البيع.`, severity: "critical", action: "تصحيح الإيراد" });
       });
       const score = Math.max(0, 100 - issues.reduce((total, issue) => total + (issue.severity === "critical" ? 12 : issue.severity === "warning" ? 6 : 2), 0));
       return { score, issues, totals: { critical: issues.filter((issue) => issue.severity === "critical").length, warning: issues.filter((issue) => issue.severity === "warning").length, info: issues.filter((issue) => issue.severity === "info").length } };
