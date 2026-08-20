@@ -6,6 +6,7 @@ import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { calculateDocumentCompleteness, calculateExpenseTotals, calculateFinancialSummaryTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, calculateStraightLineDepreciation, canAccessProject, canWriteProject, projectHealthReasons, projectHealthStatus, projectNotificationTriggers } from "../erpCalculations";
 import { accountingTotals } from "../accountingCalculations";
+import { calculateStageTimeVariance } from "../../shared/stageTiming";
 
 const projectStatus = z.enum(["planning", "active", "paused", "completed", "archived"]);
 const projectClassification = z.enum(["operational", "administrative"]);
@@ -1209,6 +1210,49 @@ export const erpRouter = router({
         const stageCertificates = certificateRows.filter((row) => row.stageId === stage.id);
         return { stage, byType: stageExpenses.reduce<Record<string, { total: number; paid: number; outstanding: number }>>((acc, row) => { const key = row.expenseType || "operating"; const current = acc[key] || { total: 0, paid: 0, outstanding: 0 }; current.total += Number(row.totalAmount); current.paid += Number(row.paidAmount); current.outstanding += Math.max(Number(row.totalAmount) - Number(row.paidAmount), 0); acc[key] = current; return acc; }, {}), expenses: stageExpenses, payroll: stagePayroll, custody: stageCustody, certificates: stageCertificates, collections: collectionRows.filter((row) => row.status === "received") };
       });
+    }),
+    projectStageDetail: protectedProcedure.input(z.object({ projectId: z.number().int().positive() })).query(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      await assertProjectAccess(db, ctx, input.projectId);
+      const [stageRows, expenseRows, payrollRows, certificateRows, costCatalogRows, vendorRows] = await Promise.all([
+        db.select().from(stages).where(eq(stages.projectId, input.projectId)),
+        db.select().from(expenses).where(eq(expenses.projectId, input.projectId)),
+        db.select().from(payroll).where(eq(payroll.projectId, input.projectId)),
+        db.select().from(certificates).where(eq(certificates.projectId, input.projectId)),
+        db.select().from(costItems),
+        db.select().from(vendors).where(eq(vendors.projectId, input.projectId)),
+      ]);
+      const vendorName = (ids: Array<number | null>) => Array.from(new Set(ids.filter((id): id is number => Boolean(id)).map((id) => vendorRows.find((vendor) => vendor.id === id)?.name).filter((name): name is string => Boolean(name)))).join("، ");
+      const activeExpenses = expenseRows.filter((row) => row.status !== "rejected" && row.status !== "draft");
+      const actualForStage = (stageId: number) => activeExpenses.filter((row) => row.stageId === stageId);
+      const payrollForStage = (stageId: number) => payrollRows.filter((row) => row.stageId === stageId);
+      const certificateForStage = (stageId: number) => certificateRows.filter((row) => row.stageId === stageId && row.status !== "rejected");
+      const timeMetrics = (plannedEnd: Date | string | null, status: string) => calculateStageTimeVariance(plannedEnd, status);
+      const makeMetrics = (plannedBudget: number, rows: typeof activeExpenses, stageId?: number) => {
+        const expenseTotal = rows.reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+        const paid = rows.reduce((sum, row) => sum + Number(row.paidAmount || 0), 0);
+        const payrollTotal = stageId ? payrollForStage(stageId).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) : 0;
+        const payrollPaid = stageId ? payrollForStage(stageId).reduce((sum, row) => sum + Number(row.paidAmount || 0), 0) : 0;
+        const certificateTotal = stageId ? certificateForStage(stageId).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) : 0;
+        const certificatePaid = stageId ? certificateForStage(stageId).reduce((sum, row) => sum + Number(row.paidAmount || 0), 0) : 0;
+        const actual = expenseTotal + payrollTotal + certificateTotal;
+        const paidAmount = paid + payrollPaid + certificatePaid;
+        const outstanding = Math.max(actual - paidAmount, 0);
+        return { plannedBudget, actual, paidAmount, outstanding, variance: plannedBudget - actual, consumptionPct: plannedBudget > 0 ? (actual / plannedBudget) * 100 : 0 };
+      };
+      const rows = stageRows.map((stage) => {
+        const stageExpenseRows = actualForStage(stage.id);
+        const metrics = makeMetrics(Number(stage.plannedBudget || 0), stageExpenseRows, stage.id);
+        return { rowType: "stage" as const, id: stage.id, code: stage.code, name: stage.name, stageId: stage.id, stageName: stage.name, status: stage.status, plannedStart: stage.plannedStart, plannedEnd: stage.plannedEnd, actualProgress: Number(stage.actualProgress || 0), contractor: vendorName(stageExpenseRows.map((row) => row.vendorId)), notes: stageExpenseRows.map((row) => row.description).filter(Boolean).slice(0, 3).join("، "), ...timeMetrics(stage.plannedEnd, stage.status), ...metrics };
+      });
+      const costItemRows = costCatalogRows.filter((item) => item.isActive === 1 && (item.projectId === null || item.projectId === input.projectId)).map((item) => {
+        const itemExpenses = activeExpenses.filter((row) => row.costItemId === item.id);
+        const metrics = makeMetrics(0, itemExpenses);
+        const stage = stageRows.find((candidate) => itemExpenses.some((row) => row.stageId === candidate.id));
+        return { rowType: "costItem" as const, id: item.id, code: item.code, name: item.name, stageId: stage?.id ?? null, stageName: stage?.name ?? "غير محدد", status: stage?.status ?? "planned", plannedStart: stage?.plannedStart ?? null, plannedEnd: stage?.plannedEnd ?? null, actualProgress: stage ? Number(stage.actualProgress || 0) : 0, contractor: vendorName(itemExpenses.map((row) => row.vendorId)), notes: itemExpenses.map((row) => row.description).filter(Boolean).slice(0, 3).join("، "), ...timeMetrics(stage?.plannedEnd ?? null, stage?.status ?? "planned"), ...metrics };
+      });
+      const total = rows.reduce((acc, row) => ({ plannedBudget: acc.plannedBudget + row.plannedBudget, actual: acc.actual + row.actual, paidAmount: acc.paidAmount + row.paidAmount, outstanding: acc.outstanding + row.outstanding }), { plannedBudget: 0, actual: 0, paidAmount: 0, outstanding: 0 });
+      return { rows: [...rows, ...costItemRows], total: { ...total, variance: total.plannedBudget - total.actual, consumptionPct: total.plannedBudget > 0 ? (total.actual / total.plannedBudget) * 100 : 0 } };
     }),
     cashFlow: protectedProcedure.input(z.object({ projectId: z.number().int().positive() })).query(async ({ ctx, input }) => {
       const db = requireDb(await getDb());

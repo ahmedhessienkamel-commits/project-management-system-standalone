@@ -31,6 +31,7 @@ const menuItems = [
   { icon: Settings2, label: "معلومات الشركة", path: "/company-settings" },
   { icon: Landmark, label: "البنوك والنقدية", path: "/company-settings#cash" },
   { icon: LayoutDashboard, label: "لوحة التنفيذ", path: "/" },
+  { icon: BarChart3, label: "المؤشرات التنفيذية", path: "/indicators" },
   { icon: ClipboardList, label: "المشاريع والمراحل", path: "/projects" },
   { icon: WalletCards, label: "المبيعات والتحصيلات", path: "/sales" },
   { icon: FileText, label: "التكاليف والمصروفات", path: "/expenses" },
@@ -132,7 +133,7 @@ function DashboardLayoutContent({
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const activeMenuItem = menuItems.find(item => item.path === location);
+  const activeMenuItem = menuItems.find(item => item.path === location || (item.path.includes("?") && location.startsWith(item.path.split("?")[0])));
   const isMobile = useIsMobile();
 
   useEffect(() => {
