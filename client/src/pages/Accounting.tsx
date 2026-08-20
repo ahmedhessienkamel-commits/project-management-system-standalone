@@ -58,8 +58,10 @@ export default function Accounting() {
   const { value: debitAccountId, setValue: setDebitAccountId, clear: clearDebitAccountId } = useDraft("erp-draft-accounting-debit-account", "");
   const { value: creditAccountId, setValue: setCreditAccountId, clear: clearCreditAccountId } = useDraft("erp-draft-accounting-credit-account", "");
   const initialReportType = (() => { const value = new URLSearchParams(window.location.search).get("report"); return reportTypes.some((report) => report.key === value) ? value as ReportType : "trial"; })();
+  const initialDocumentType = (() => { const value = new URLSearchParams(window.location.search).get("type"); return documentTypes.some((document) => document.key === value) ? value as DocumentType : null; })();
   const [reportType, setReportType] = useState<ReportType>(initialReportType);
-  useEffect(() => { const value = new URLSearchParams(location.split("?")[1] || "").get("report"); if (reportTypes.some((report) => report.key === value)) setReportType(value as ReportType); }, [location]);
+  useEffect(() => { const params = new URLSearchParams(location.split("?")[1] || ""); const report = params.get("report"); const type = params.get("type"); if (reportTypes.some((item) => item.key === report)) setReportType(report as ReportType); if (documentTypes.some((item) => item.key === type)) setDocumentType(type as DocumentType); }, [location, setDocumentType]);
+  useEffect(() => { if (initialDocumentType) setDocumentType(initialDocumentType); }, [initialDocumentType, setDocumentType]);
   const [reportParty, setReportParty] = useState("");
   const [reportFrom, setReportFrom] = useState("");
   const [reportTo, setReportTo] = useState("");

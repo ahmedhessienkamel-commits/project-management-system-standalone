@@ -142,6 +142,10 @@ function DashboardLayoutContent({
   const searchResults = normalizedSearch ? menuItems.filter((item) => item.label.toLowerCase().includes(normalizedSearch)).slice(0, 6) : [];
   const quickActions = [
     { label: "إضافة تكلفة أو مصروف", path: "/expenses" },
+    { label: "تسجيل عهدة", path: "/custody?tab=custody" },
+    { label: "فاتورة شراء", path: "/accounting?type=purchase_invoice" },
+    { label: "فاتورة بيع", path: "/accounting?type=sales_invoice" },
+    { label: "فتح مستخلص", path: "/operations?tab=certificates" },
     { label: "إنشاء سند صرف أو قبض", path: "/accounting" },
     { label: "فتح مسير الرواتب", path: "/payroll" },
     { label: "تسجيل طلب شراء", path: "/operations" },
