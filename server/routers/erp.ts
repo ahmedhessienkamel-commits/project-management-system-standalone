@@ -333,7 +333,7 @@ export const erpRouter = router({
     summary: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
-      const [allProjectRows, stageRows, expenseRows, collectionRows, approvalRows, attachmentRows, salesRows, payrollRows, vendorRows, certificateRows, administrativePayrollRows, payrollAllocationRows] = await Promise.all([
+      const [allProjectRows, stageRows, expenseRows, collectionRows, approvalRows, attachmentRows, salesRows, payrollRows, vendorRows, certificateRows, administrativePayrollRows, payrollAllocationRows, inventoryMovementRows] = await Promise.all([
         db.select().from(projects),
         db.select().from(stages),
         db.select().from(expenses),
@@ -346,6 +346,7 @@ export const erpRouter = router({
         db.select().from(certificates),
         db.select().from(administrativePayroll),
         db.select().from(payrollAllocations),
+        db.select().from(inventoryMovements),
       ]);
       const projectRows = allowed ? allProjectRows.filter((row) => allowed.has(row.id)) : allProjectRows;
       const summary = projectRows.map((project) => {
@@ -361,6 +362,8 @@ export const erpRouter = router({
         const projectAttachments = attachmentRows.filter((attachment) => attachment.projectId === project.id);
         const documentCompleteness = calculateDocumentCompleteness({ vendors: projectVendors, attachments: projectAttachments });
         const projectCertificates = certificateRows.filter((certificate) => certificate.projectId === project.id && certificate.status !== "rejected");
+        const projectInventoryIssues = inventoryMovementRows.filter((movement) => movement.projectId === project.id && movement.status === "posted" && (movement.movementType === "issue" || movement.movementType === "adjustment_out"));
+        const inventoryIssuedTotal = projectInventoryIssues.reduce((sum, movement) => sum + Number(movement.totalAmount || 0), 0);
         const subcontractorCostsTotal = projectCertificates.reduce((sum, certificate) => sum + Number(certificate.totalAmount || 0), 0);
         const subcontractorCostsPaid = projectCertificates.reduce((sum, certificate) => sum + Number(certificate.paidAmount || 0), 0);
         const subcontractorCostsOutstanding = Math.max(subcontractorCostsTotal - subcontractorCostsPaid, 0);
@@ -400,7 +403,7 @@ export const erpRouter = router({
         const projectExpensesWithTax = projectExpenses.reduce((sum, expense) => sum + Number(expense.totalAmount || 0), 0);
         const administrativeExpensesPreTax = administrativeExpenseRows.reduce((sum, expense) => sum + Number(expense.preTaxAmount || 0), 0);
         const financialTotals = calculateFinancialSummaryTotals({ sales: projectSales, collections: projectCollections, expenses: projectExpenses, payroll: [...projectPayroll, ...projectAdministrativePayroll.map((row) => ({ preTaxAmount: row.allocatedAmount, totalAmount: row.allocatedAmount, paidAmount: "0", status: "approved" as const }))] });
-        const actual = financialTotals.expensesTotal + financialTotals.payrollTotal + subcontractorCostsTotal;
+        const actual = financialTotals.expensesTotal + financialTotals.payrollTotal + subcontractorCostsTotal + inventoryIssuedTotal;
         const paid = financialTotals.expensesPaid + financialTotals.payrollPaid + subcontractorCostsPaid;
         const collectionsReceived = financialTotals.collectionsReceived;
         const recognizedRevenue = financialTotals.revenue;
@@ -409,7 +412,7 @@ export const erpRouter = router({
         const budgetUsage = planned ? Math.round((actual / planned) * 100) : 0;
         const delayedStages = projectStages.filter((stage) => stage.status === "delayed").length + overdueStages.length;
         const activeStagePlannedBudget = activeStage ? Number(activeStage.plannedBudget || 0) : 0;
-        const activeStageActualCost = activeStage ? projectExpenses.filter((expense) => expense.stageId === activeStage.id).reduce((sum, expense) => sum + Number(expense.totalAmount || 0), 0) + projectPayroll.filter((row) => row.stageId === activeStage.id).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) + projectCertificates.filter((certificate) => certificate.stageId === activeStage.id).reduce((sum, certificate) => sum + Number(certificate.totalAmount || 0), 0) : 0;
+        const activeStageActualCost = activeStage ? projectExpenses.filter((expense) => expense.stageId === activeStage.id).reduce((sum, expense) => sum + Number(expense.totalAmount || 0), 0) + projectPayroll.filter((row) => row.stageId === activeStage.id).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) + projectCertificates.filter((certificate) => certificate.stageId === activeStage.id).reduce((sum, certificate) => sum + Number(certificate.totalAmount || 0), 0) + projectInventoryIssues.filter((movement) => movement.stageId === activeStage.id).reduce((sum, movement) => sum + Number(movement.totalAmount || 0), 0) : 0;
         const status = projectHealthStatus({ budgetUsage, progress, delayedStages, cashGapRatio: actual ? cashGap / actual : 0, pendingApprovals: projectApprovals.length, overdueApprovals, scheduleVariancePct });
         const reasons = projectHealthReasons({ budgetUsage, progress, delayedStages, cashGap, pendingApprovals: projectApprovals.length, overdueApprovals, scheduleVariancePct });
         return {
@@ -424,6 +427,7 @@ export const erpRouter = router({
            subcontractorCostsTotal,
            subcontractorCostsPaid,
            subcontractorCostsOutstanding,
+           inventoryIssuedTotal,
            materialsExpensesTotal,
            operationalExpensesTotal,
            administrativeExpensesTotal,
@@ -431,7 +435,7 @@ export const erpRouter = router({
            projectExpensesWithTax,
            administrativeExpensesPreTax,
            payrollTotal: financialTotals.payrollTotal,
-           totalExpenses: materialsExpensesTotal + operationalExpensesTotal + administrativeExpensesTotal + financialTotals.payrollTotal + subcontractorCostsTotal,
+           totalExpenses: materialsExpensesTotal + operationalExpensesTotal + administrativeExpensesTotal + financialTotals.payrollTotal + subcontractorCostsTotal + inventoryIssuedTotal,
            cashGap,
           pendingApprovals: projectApprovals.length,
           overdueApprovals,
