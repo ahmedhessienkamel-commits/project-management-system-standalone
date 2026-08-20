@@ -341,6 +341,8 @@ export const erpRouter = router({
         const approvalSlaMs = 3 * 24 * 60 * 60 * 1000;
         const overdueApprovals = projectApprovals.filter((approval) => approval.createdAt && now.getTime() - new Date(approval.createdAt).getTime() > approvalSlaMs).length;
         const overdueStages = projectStages.filter((stage) => stage.status !== "completed" && stage.plannedEnd && new Date(stage.plannedEnd) < now);
+        const projectTime = calculateStageTimeVariance(project.plannedEnd, project.status, now);
+        const projectDurationDays = project.plannedStart && project.plannedEnd ? Math.max(1, Math.ceil((new Date(project.plannedEnd).getTime() - new Date(project.plannedStart).getTime()) / 86400000)) : 0;
         const timeline = projectStages.reduce((acc, stage) => {
           const weight = Number(stage.plannedBudget || 0) || 1;
           const actualRatio = Math.min(1, Math.max(0, Number(stage.actualProgress || (stage.status === "completed" ? 100 : 0)) / 100));
@@ -355,7 +357,7 @@ export const erpRouter = router({
         const completedStageCount = projectStages.filter((stage) => stage.status === "completed" || Number(stage.actualProgress || 0) >= 100).length;
         const progress = projectStages.length ? Math.round((completedStageCount / projectStages.length) * 100) : 0;
         const expectedScheduleProgress = timeline.weight ? Math.round((timeline.expected / timeline.weight) * 100) : 0;
-        const scheduleVariancePct = Math.max(expectedScheduleProgress - progress, 0);
+        const scheduleVariancePct = projectTime.timeVarianceDays > 0 && projectDurationDays > 0 ? Math.round((projectTime.timeVarianceDays / projectDurationDays) * 100) : 0;
         const planned = projectStages.reduce((sum, stage) => sum + Number(stage.plannedBudget || 0), 0);
         const activeStage = [...projectStages].sort((a, b) => (a.plannedStart ? new Date(a.plannedStart).getTime() : Number.MAX_SAFE_INTEGER) - (b.plannedStart ? new Date(b.plannedStart).getTime() : Number.MAX_SAFE_INTEGER)).find((stage) => stage.status !== "completed" && Number(stage.actualProgress || 0) < 100) ?? null;
         const administrativeExpenseRows = expenseRows.filter((expense) => expense.projectId === project.id && ["approved", "posted"].includes(expense.status) && (expense.classification === "administrative" || expense.expenseType === "administrative"));
@@ -405,6 +407,8 @@ export const erpRouter = router({
           overdueApprovals,
           expectedScheduleProgress,
           scheduleVariancePct,
+          projectTimeVarianceDays: projectTime.timeVarianceDays,
+          projectTimeStatus: projectTime.timeStatus,
           progress,
           budgetUsage,
           status,
