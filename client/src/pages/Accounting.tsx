@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useLocation } from "wouter";
-import { ArrowRight, Banknote, BarChart3, BookOpen, ClipboardPenLine, FileCheck2, FilePlus2, Landmark, Pencil, Plus, Receipt, ShoppingCart, WalletCards } from "lucide-react";
+import { ArrowRight, Banknote, BarChart3, BookOpen, ClipboardPenLine, FileCheck2, FilePlus2, Landmark, Pencil, Plus, Receipt, ShoppingCart, Trash2, WalletCards } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,9 +47,46 @@ function AccountSelect({ label, value, accounts, onChange }: { label: string; va
 }
 
 function DocumentActivityPanel({ documents, loading, activityType, onTypeChange, onEdit }: { documents: Array<{ id: number; documentType: string; documentNumber?: string | null; partyName?: string | null; documentDate?: Date | string | null; totalAmount?: string | number | null; status: string }>; loading: boolean; activityType: DocumentType; onTypeChange: (value: DocumentType) => void; onEdit: (document: any) => void }) {
+  const utils = trpc.useUtils();
+  const { data: me } = trpc.auth.me.useQuery();
+  const canDelete = me?.role === "admin";
+  const deleteDocument = trpc.erp.accounting.documents.delete.useMutation({ onSuccess: () => { utils.erp.accounting.documents.list.invalidate(); } });
   const visible = documents.filter((item) => item.documentType === activityType);
   const label = documentTypes.find((item) => item.key === activityType)?.label || "المستندات";
-  return <Card className="order-1 border-0 shadow-sm"><CardHeader><CardTitle className="flex items-center justify-between gap-3 text-lg text-[#18324b]"><span>حركة المستندات</span><span className="text-xs font-normal text-slate-500">{visible.length} مستند</span></CardTitle><p className="text-xs text-slate-500">اختر القسم لعرض الحركات وتعديل المستندات من نفس الصفحة.</p></CardHeader><CardContent className="space-y-3"><select value={activityType} onChange={(event) => onTypeChange(event.target.value as DocumentType)} className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700">{documentTypes.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select>{loading ? <p className="py-8 text-center text-sm text-slate-500">جارٍ تحميل حركة {label}...</p> : visible.length ? <div className="max-h-[560px] space-y-2 overflow-y-auto">{visible.map((item) => <div key={item.id} className="rounded-xl border border-slate-100 bg-slate-50 p-3"><div className="flex items-start justify-between gap-2"><div><p className="font-bold text-[#18324b]">{item.documentNumber || `#${item.id}`}</p><p className="mt-1 text-xs text-slate-500">{item.partyName || "بدون طرف"} · {item.documentDate ? String(item.documentDate).slice(0, 10) : "بدون تاريخ"}</p></div><span className="rounded-full bg-white px-2 py-1 text-[11px] text-slate-600">{item.status === "posted" ? "نهائي" : item.status === "draft" ? "مسودة" : item.status}</span></div><div className="mt-2 flex items-center justify-between gap-2 text-xs"><span className="font-semibold text-[#18324b]">{money.format(Number(item.totalAmount || 0))} ر.س</span><Button type="button" size="sm" variant="outline" className="gap-1" onClick={() => onEdit(item)}><Pencil className="h-3.5 w-3.5" />تعديل</Button></div></div>)}</div> : <p className="py-8 text-center text-sm text-slate-500">لا توجد حركة مسجلة في قسم {label}.</p>}</CardContent></Card>;
+  return (
+    <Card className="order-1 border-0 shadow-sm">
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between gap-3 text-lg text-[#18324b]">
+          <span>حركة المستندات</span><span className="text-xs font-normal text-slate-500">{visible.length} مستند</span>
+        </CardTitle>
+        <p className="text-xs text-slate-500">اختر القسم لعرض الحركات وتعديل المستندات من نفس الصفحة.</p>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <select value={activityType} onChange={(event) => onTypeChange(event.target.value as DocumentType)} className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700">
+          {documentTypes.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
+        </select>
+        {loading ? <p className="py-8 text-center text-sm text-slate-500">جارٍ تحميل حركة {label}...</p> : visible.length ? (
+          <div className="max-h-[560px] space-y-2 overflow-y-auto">
+            {visible.map((item) => (
+              <div key={item.id} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div><p className="font-bold text-[#18324b]">{item.documentNumber || `#${item.id}`}</p><p className="mt-1 text-xs text-slate-500">{item.partyName || "بدون طرف"} · {item.documentDate ? String(item.documentDate).slice(0, 10) : "بدون تاريخ"}</p></div>
+                  <span className="rounded-full bg-white px-2 py-1 text-[11px] text-slate-600">{item.status === "posted" ? "نهائي" : item.status === "draft" ? "مسودة" : item.status}</span>
+                </div>
+                <div className="mt-2 flex items-center justify-between gap-2 text-xs">
+                  <span className="font-semibold text-[#18324b]">{money.format(Number(item.totalAmount || 0))} ر.س</span>
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" size="sm" variant="outline" className="gap-1" onClick={() => onEdit(item)}><Pencil className="h-3.5 w-3.5" />تعديل</Button>
+                    {canDelete && <Button type="button" size="sm" variant="outline" className="gap-1 border-rose-200 text-rose-700 hover:bg-rose-50" disabled={deleteDocument.isPending} onClick={() => { if (window.confirm("سيتم حذف المستند من السجل والقيد المرتبط. هل تريد المتابعة؟")) deleteDocument.mutate({ id: item.id }); }}><Trash2 className="h-3.5 w-3.5" />{deleteDocument.isPending ? "جارٍ الحذف..." : "حذف"}</Button>}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : <p className="py-8 text-center text-sm text-slate-500">لا توجد حركة مسجلة في قسم {label}.</p>}
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function Accounting() {
