@@ -13,11 +13,13 @@ import SalesCollections from "./pages/SalesCollections";
 import Reports from "@/pages/Reports";
 import Accounting from "@/pages/Accounting";
 import Users from "@/pages/Users";
+import DataQuality from "@/pages/DataQuality";
 import Employees from "@/pages/Employees";
 import Operations from "@/pages/Operations";
 import LegacyImport from "./pages/LegacyImport";
 import Tasks from "./pages/Tasks";
 import CompanySettings from "./pages/CompanySettings";
+import BanksCash from "./pages/BanksCash";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -25,6 +27,7 @@ function Router() {
     <Switch>
       <Route path={"/"} component={Home} />
       <Route path={"/company-settings"} component={CompanySettings} />
+      <Route path={"/banks-cash"} component={BanksCash} />
       <Route path={"/indicators"} component={Reports} />
       <Route path={"/projects/:id"} component={ProjectDetails} />
       <Route path={"/projects"} component={Projects} />
@@ -42,6 +45,7 @@ function Router() {
       <Route path={"/approvals"} component={Approvals} />
       <Route path={"/reports"} component={Reports} />
       <Route path={"/users"} component={Users} />
+      <Route path={"/data-quality"} component={DataQuality} />
       <Route path={"/employees"} component={Employees} />
       <Route path={"/settings"} component={LegacyImport} />
       <Route path={"/404"} component={NotFound} />

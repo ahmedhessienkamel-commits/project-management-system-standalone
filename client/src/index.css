@@ -175,3 +175,61 @@
     }
   }
 }
+
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 12mm;
+  }
+
+  body {
+    background: #fff !important;
+    color: #18324b !important;
+    direction: rtl;
+  }
+
+  .report-shell {
+    min-height: auto !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  .report-shell .report-header {
+    border-bottom: 2px solid #18324b;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+  }
+
+  .report-shell .border-0,
+  .report-shell .shadow-sm {
+    border: 1px solid #d7dee7 !important;
+    box-shadow: none !important;
+  }
+
+  .report-shell table {
+    width: 100% !important;
+    border-collapse: collapse;
+    font-size: 10pt;
+  }
+
+  .report-shell th,
+  .report-shell td {
+    border: 1px solid #cbd5e1 !important;
+    padding: 6px !important;
+    color: #18324b !important;
+    background: #fff !important;
+  }
+
+  .report-shell th {
+    font-weight: 700;
+    background: #f5f0e5 !important;
+  }
+
+  .report-shell .print\:hidden,
+  nav,
+  aside,
+  [data-sidebar] {
+    display: none !important;
+  }
+}

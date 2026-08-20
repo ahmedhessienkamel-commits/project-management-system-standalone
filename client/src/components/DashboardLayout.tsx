@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { startLogin } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { BarChart3, Bell, ClipboardList, FileText, Landmark, LayoutDashboard, LogOut, PanelLeft, Plus, Search, Settings2, Users, UserRound, WalletCards } from "lucide-react";
+import { BarChart3, Bell, ClipboardList, FileText, Landmark, LayoutDashboard, LogOut, PanelLeft, Plus, Search, Settings2, ShieldAlert, Users, UserRound, WalletCards } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -29,7 +29,7 @@ import { Button } from "./ui/button";
 
 const menuItems = [
   { icon: Settings2, label: "معلومات الشركة", path: "/company-settings" },
-  { icon: Landmark, label: "البنوك والنقدية", path: "/company-settings#cash" },
+  { icon: Landmark, label: "البنوك والخزائن", path: "/banks-cash" },
   { icon: LayoutDashboard, label: "لوحة التنفيذ", path: "/" },
   { icon: BarChart3, label: "المؤشرات التنفيذية", path: "/indicators" },
   { icon: ClipboardList, label: "المشاريع والمراحل", path: "/projects" },
@@ -52,6 +52,7 @@ const menuItems = [
   { icon: FileText, label: "الموافقات والمستندات", path: "/approvals" },
   { icon: BarChart3, label: "التقارير", path: "/reports" },
   { icon: Users, label: "المستخدمون والصلاحيات", path: "/users" },
+  { icon: ShieldAlert, label: "مركز جودة البيانات", path: "/data-quality" },
   { icon: Settings2, label: "الإعدادات", path: "/settings" },
 ];
 

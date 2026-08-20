@@ -330,6 +330,9 @@ export const erpRouter = router({
         const materialsExpensesTotal = materialsExpenseRows.reduce((sum, expense) => sum + Number(expense.totalAmount || 0), 0);
         const operationalExpensesTotal = operationalExpenseRows.reduce((sum, expense) => sum + Number(expense.totalAmount || 0), 0);
         const administrativeExpensesTotal = administrativeExpenseRows.reduce((sum, expense) => sum + Number(expense.totalAmount || 0), 0);
+        const projectExpensesPreTax = projectExpenses.reduce((sum, expense) => sum + Number(expense.preTaxAmount || 0), 0);
+        const projectExpensesWithTax = projectExpenses.reduce((sum, expense) => sum + Number(expense.totalAmount || 0), 0);
+        const administrativeExpensesPreTax = administrativeExpenseRows.reduce((sum, expense) => sum + Number(expense.preTaxAmount || 0), 0);
         const financialTotals = calculateFinancialSummaryTotals({ sales: projectSales, collections: projectCollections, expenses: projectExpenses, payroll: [...projectPayroll, ...projectAdministrativePayroll.map((row) => ({ preTaxAmount: row.allocatedAmount, totalAmount: row.allocatedAmount, paidAmount: "0", status: "approved" as const }))] });
         const actual = financialTotals.expensesTotal + financialTotals.payrollTotal;
         const paid = financialTotals.expensesPaid + financialTotals.payrollPaid;
@@ -355,6 +358,9 @@ export const erpRouter = router({
            materialsExpensesTotal,
            operationalExpensesTotal,
            administrativeExpensesTotal,
+           projectExpensesPreTax,
+           projectExpensesWithTax,
+           administrativeExpensesPreTax,
            payrollTotal: financialTotals.payrollTotal,
            totalExpenses: materialsExpensesTotal + operationalExpensesTotal + administrativeExpensesTotal + financialTotals.payrollTotal,
            cashGap,
@@ -1075,10 +1081,20 @@ export const erpRouter = router({
     lockPeriod: adminProcedure.input(z.object({ projectId: z.number().int().positive(), periodYear: z.number().int().min(2000).max(2100), periodMonth: z.number().int().min(1).max(12), reason: z.string().max(1000).optional() })).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
       await assertProjectAccess(db, ctx, input.projectId);
+      const existing = await db.select().from(periodLocks).where(eq(periodLocks.projectId, input.projectId));
+      if (existing.some((lock) => lock.periodYear === input.periodYear && lock.periodMonth === input.periodMonth)) throw new TRPCError({ code: "CONFLICT", message: "هذه الفترة مقفلة بالفعل لهذا المشروع" });
       const result = await db.insert(periodLocks).values({ ...input, reason: input.reason || null, lockedBy: ctx.user.id });
       const id = Number(result[0].insertId);
       await db.insert(auditLogs).values({ entityType: "periodLock", entityId: id, action: "locked", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
       return { id };
+    }),
+    unlockPeriod: adminProcedure.input(z.object({ id: z.number().int().positive(), reason: z.string().trim().min(2).max(1000) })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      const existing = (await db.select().from(periodLocks).where(eq(periodLocks.id, input.id)).limit(1))[0];
+      if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "فترة الإقفال غير موجودة" });
+      await db.delete(periodLocks).where(eq(periodLocks.id, input.id));
+      await db.insert(auditLogs).values({ entityType: "periodLock", entityId: input.id, action: "unlocked", actorId: ctx.user.id, beforeJson: JSON.stringify(existing), afterJson: JSON.stringify({ reason: input.reason }) });
+      return { success: true } as const;
     }),
   }),
 
@@ -1328,6 +1344,30 @@ export const erpRouter = router({
       const scopedCollections = collectionRows.filter((row) => inRange(row.collectionDate));
       const totals = calculateFinancialSummaryTotals({ sales: scopedSales, collections: scopedCollections, expenses: scopedExpenses, payroll: scopedPayroll });
       return { ...totals, expenseRows: scopedExpenses, payrollRows: scopedPayroll, salesRows: scopedSales, collectionRows: scopedCollections };
+    }),
+    dataQuality: protectedProcedure.query(async ({ ctx }) => {
+      const db = requireDb(await getDb());
+      const [projectRows, stageRows, vendorRows, employeeRows] = await Promise.all([db.select().from(projects), db.select().from(stages), db.select().from(vendors), db.select().from(employees)]);
+      const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
+      const visibleProjects = allowed ? projectRows.filter((row) => allowed.has(row.id)) : projectRows;
+      const visibleProjectIds = new Set(visibleProjects.map((row) => row.id));
+      const issues: Array<{ id: string; entityType: string; entityId: number; title: string; detail: string; severity: "critical" | "warning" | "info"; action: string }> = [];
+      visibleProjects.forEach((project) => {
+        if (!project.plannedStart || !project.plannedEnd) issues.push({ id: `project-dates-${project.id}`, entityType: "project", entityId: project.id, title: "تواريخ المشروع غير مكتملة", detail: `${project.name} يحتاج تاريخ بداية ونهاية مخططين.`, severity: "warning", action: "استكمال بيانات المشروع" });
+        if (project.status === "active" && !stageRows.some((stage) => stage.projectId === project.id)) issues.push({ id: `project-stages-${project.id}`, entityType: "project", entityId: project.id, title: "مشروع نشط بلا مراحل", detail: `${project.name} نشط لكن لا توجد مراحل مرتبطة به.`, severity: "critical", action: "إضافة مرحلة للمشروع" });
+      });
+      stageRows.filter((stage) => visibleProjectIds.has(stage.projectId)).forEach((stage) => {
+        if (!stage.plannedStart || !stage.plannedEnd) issues.push({ id: `stage-dates-${stage.id}`, entityType: "stage", entityId: stage.id, title: "مرحلة بلا برنامج زمني", detail: `المرحلة ${stage.name} تحتاج بداية ونهاية مخططتين.`, severity: "warning", action: "تحديث البرنامج الزمني" });
+        if (Number(stage.plannedBudget) <= 0) issues.push({ id: `stage-budget-${stage.id}`, entityType: "stage", entityId: stage.id, title: "مرحلة بلا ميزانية", detail: `المرحلة ${stage.name} لا تحتوي ميزانية مخططة موجبة.`, severity: "warning", action: "تسجيل ميزانية المرحلة" });
+      });
+      vendorRows.filter((vendor) => !vendor.projectId || visibleProjectIds.has(vendor.projectId)).forEach((vendor) => {
+        if (!vendor.taxNumber && !vendor.commercialRegistration) issues.push({ id: `vendor-id-${vendor.id}`, entityType: "vendor", entityId: vendor.id, title: "بيانات المورد النظامية ناقصة", detail: `${vendor.name} بلا رقم ضريبي أو سجل تجاري.`, severity: "warning", action: "استكمال بطاقة المورد" });
+      });
+      employeeRows.filter((employee) => employee.status === "active").forEach((employee) => {
+        if (Number(employee.basicSalary) <= 0) issues.push({ id: `employee-salary-${employee.id}`, entityType: "employee", entityId: employee.id, title: "راتب أساسي غير مسجل", detail: `${employee.fullName} موظف نشط بلا راتب أساسي موجب.`, severity: "critical", action: "استكمال ملف الموظف" });
+      });
+      const score = Math.max(0, 100 - issues.reduce((total, issue) => total + (issue.severity === "critical" ? 12 : issue.severity === "warning" ? 6 : 2), 0));
+      return { score, issues, totals: { critical: issues.filter((issue) => issue.severity === "critical").length, warning: issues.filter((issue) => issue.severity === "warning").length, info: issues.filter((issue) => issue.severity === "info").length } };
     }),
   }),
 });
