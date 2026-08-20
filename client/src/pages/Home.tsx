@@ -15,7 +15,7 @@ const statusLabels = {
   critical: { label: "خطر / متأخر", className: "bg-rose-50 text-rose-700 border-rose-200" },
 };
 
-const money = new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 0 });
+const money = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
 const classificationLabels: Record<string, string> = { operational: "تشغيلي", administrative: "إداري" };
 
 export default function Home() {
@@ -167,7 +167,7 @@ function TimeGauge({ title, subtitle, start, end }: { title: string; subtitle?: 
   const elapsed = startDate && endDate ? Math.min(100, Math.max(0, ((now - startDate.getTime()) / Math.max(1, endDate.getTime() - startDate.getTime())) * 100)) : 0;
   const status = !startDate || !endDate ? "بدون تواريخ" : now < startDate.getTime() ? "لم تبدأ" : now > endDate.getTime() ? "متأخرة" : "جارية";
   const statusTone = status === "جارية" ? "text-emerald-300" : status === "متأخرة" ? "text-rose-300" : "text-amber-300";
-  return <div className="rounded-2xl bg-white/10 p-4"><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-semibold text-slate-200">{title}</p>{subtitle && <p className="mt-1 text-xs text-slate-300">{subtitle}</p>}</div><Clock3 className="h-5 w-5 text-[#e0b95c]" /></div><div className="mt-3 flex items-end justify-between gap-2"><p className="text-3xl font-bold">{remainingDays === null ? "—" : `${remainingDays} يوم`}</p><span className={`text-xs font-semibold ${statusTone}`}>{status}</span></div><p className="mt-1 text-xs text-slate-300">{startDate && endDate ? `${startDate.toLocaleDateString("ar-SA")} → ${endDate.toLocaleDateString("ar-SA")} · ${totalDays} يوم` : "أدخل تاريخي البداية والنهاية"}</p><div className="mt-3 h-2 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-md bg-[#e0b95c]" style={{ width: `${elapsed}%` }} /></div></div>;
+  return <div className="rounded-2xl bg-white/10 p-4"><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-semibold text-slate-200">{title}</p>{subtitle && <p className="mt-1 text-xs text-slate-300">{subtitle}</p>}</div><Clock3 className="h-5 w-5 text-[#e0b95c]" /></div><div className="mt-3 flex items-end justify-between gap-2"><p className="text-3xl font-bold">{remainingDays === null ? "—" : `${remainingDays} يوم`}</p><span className={`text-xs font-semibold ${statusTone}`}>{status}</span></div><p className="mt-1 text-xs text-slate-300">{startDate && endDate ? `${startDate.toLocaleDateString("en-US")} → ${endDate.toLocaleDateString("en-US")} · ${totalDays} يوم` : "أدخل تاريخي البداية والنهاية"}</p><div className="mt-3 h-2 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-md bg-[#e0b95c]" style={{ width: `${elapsed}%` }} /></div></div>;
 }
 
 function Indicator({ label, value }: { label: string; value: string }) { return <div className="rounded-xl bg-white/10 p-3"><p className="text-[11px] text-slate-300">{label}</p><p className="mt-1 text-sm font-bold text-white">{value}</p></div>; }

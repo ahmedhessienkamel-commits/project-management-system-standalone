@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
 import { useDraft } from "@/hooks/useDraft";
 
-const money = new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 2 });
+const money = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 const documentTypes = [
   { key: "sales_invoice", label: "فاتورة مبيعات", icon: Receipt },
   { key: "purchase_invoice", label: "فاتورة مشتريات", icon: FileCheck2 },

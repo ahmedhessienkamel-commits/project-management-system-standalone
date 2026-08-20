@@ -9,7 +9,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 
 const emptyCash = { code: "", name: "", accountType: "cash" as "bank" | "cash", bankName: "", accountNumber: "", iban: "", currency: "SAR", accountId: "", openingBalance: "0" };
-const money = new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 2 });
+const money = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 
 export default function BanksCash() {
   const [, setLocation] = useLocation();

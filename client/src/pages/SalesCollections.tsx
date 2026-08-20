@@ -9,7 +9,7 @@ import { ArrowRight, Building2, CircleDollarSign, Plus } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
 
-const money = new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 2 });
+const money = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 
 export default function SalesCollections() {
   const [, setLocation] = useLocation();

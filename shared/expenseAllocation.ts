@@ -16,9 +16,13 @@ export function allocateAdministrativeExpense(amount: number, projects: Contract
   });
 }
 
-export function validateExpenseAllocation(input: { projectId?: number; stageId?: number; classification: ExpenseAllocation }) {
-  if (input.classification === "project" && !input.projectId) {
-    return { ok: false as const, message: "اختر المشروع عند تحميل المصروف على مشروع" };
+export function validateExpenseAllocation(input: { projectId?: number; stageId?: number; classification: ExpenseAllocation; expenseType?: string }) {
+  const requiresProject = input.classification === "project" || (input.expenseType && input.expenseType !== "administrative");
+  if (requiresProject && !input.projectId) {
+    return { ok: false as const, message: "اختر المشروع عند تحميل المصروف على مشروع أو كمصروف تشغيلي للمشروع" };
+  }
+  if (input.expenseType && input.expenseType !== "administrative" && input.classification !== "project") {
+    return { ok: false as const, message: "المصروف التشغيلي للمشروع يجب تصنيفه كمصروف مشروع" };
   }
   if (input.classification !== "project" && input.stageId) {
     return { ok: false as const, message: "المرحلة متاحة فقط للمصروف المحمل على مشروع" };

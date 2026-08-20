@@ -8,7 +8,7 @@ import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import * as XLSX from "xlsx";
 
-const money = new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 2 });
+const money = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 type ReportKind = "supplier" | "cost" | "income";
 
 function exportRows(rows: Array<Record<string, unknown>>, fileName: string) {

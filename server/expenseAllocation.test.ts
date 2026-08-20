@@ -3,12 +3,17 @@ import { allocateAdministrativeExpense, validateExpenseAllocation } from "../sha
 
 describe("expense allocation rules", () => {
   it("requires a project only for project allocation", () => {
-    expect(validateExpenseAllocation({ classification: "project" })).toEqual({ ok: false, message: "اختر المشروع عند تحميل المصروف على مشروع" });
+    expect(validateExpenseAllocation({ classification: "project" })).toEqual({ ok: false, message: "اختر المشروع عند تحميل المصروف على مشروع أو كمصروف تشغيلي للمشروع" });
     expect(validateExpenseAllocation({ classification: "project", projectId: 3 })).toEqual({ ok: true });
   });
 
+  it("requires a project for project operating expenses", () => {
+    expect(validateExpenseAllocation({ classification: "project", expenseType: "operating" })).toEqual({ ok: false, message: "اختر المشروع عند تحميل المصروف على مشروع أو كمصروف تشغيلي للمشروع" });
+    expect(validateExpenseAllocation({ classification: "project", expenseType: "operating", projectId: 12 })).toEqual({ ok: true });
+  });
+
   it("allows general and petty-cash expenses without a project", () => {
-    expect(validateExpenseAllocation({ classification: "administrative" })).toEqual({ ok: true });
+    expect(validateExpenseAllocation({ classification: "administrative", expenseType: "administrative" })).toEqual({ ok: true });
     expect(validateExpenseAllocation({ classification: "general_cash" })).toEqual({ ok: true });
     expect(validateExpenseAllocation({ classification: "petty_cash" })).toEqual({ ok: true });
   });

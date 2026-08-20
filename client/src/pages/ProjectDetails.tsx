@@ -10,7 +10,7 @@ import { ArrowRight, CalendarClock, CircleDollarSign, FileCheck2, WalletCards } 
 import { useState } from "react";
 import { useRoute, useLocation } from "wouter";
 
-const money = new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 2 });
+const money = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 const labels: Record<string, { label: string; color: string }> = { on_track: { label: "على المسار", color: "bg-emerald-50 text-emerald-700" }, warning: { label: "يحتاج متابعة", color: "bg-amber-50 text-amber-700" }, critical: { label: "حالة حرجة", color: "bg-rose-50 text-rose-700" } };
 
 export default function ProjectDetails() {

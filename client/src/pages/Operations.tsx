@@ -11,7 +11,7 @@ import * as XLSX from "xlsx";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 
-const money = new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 2 });
+const money = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 function normalizeDateInput(value?: string | Date | null) { if (!value) return ""; const raw = String(value); if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw; const slash = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/); if (slash) return `${slash[3]}-${slash[1]}-${slash[2]}`; const parsed = new Date(raw); return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString().slice(0, 10); }
 const attendanceMonths = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
 function hoursBetween(checkIn?: string | null, checkOut?: string | null) { const hours = calculateAttendanceHours(checkIn, checkOut); return hours === null ? "—" : `${hours.toFixed(1)} س`; }

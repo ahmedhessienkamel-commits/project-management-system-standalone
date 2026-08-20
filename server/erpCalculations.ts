@@ -101,7 +101,7 @@ export function projectHealthReasons({ budgetUsage, progress, delayedStages, cas
   if (budgetUsage >= 100) reasons.push("تجاوز الميزانية المخططة");
   else if (budgetUsage >= 80) reasons.push("استخدام أكثر من 80% من الميزانية");
   if (delayedStages > 0) reasons.push(`${delayedStages} مرحلة متأخرة`);
-  if (cashGap > 0) reasons.push(`فجوة سيولة ${cashGap.toLocaleString("ar-SA")} ر.س`);
+  if (cashGap > 0) reasons.push(`فجوة سيولة ${cashGap.toLocaleString("en-US")} ر.س`);
   if (pendingApprovals > 0) reasons.push(`${pendingApprovals} طلب موافقة معلق`);
   if (overdueApprovals > 0) reasons.push(`${overdueApprovals} موافقة تجاوزت المدة المحددة`);
   if (scheduleVariancePct > 10) reasons.push(`تأخر زمني مقداره ${Math.round(scheduleVariancePct)}% عن الخطة`);
