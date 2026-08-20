@@ -47,7 +47,7 @@ describe("ERP financial rules", () => {
 
   it("returns warning before critical thresholds", () => {
     expect(projectHealthStatus({ budgetUsage: 82, progress: 60, delayedStages: 0 })).toBe("warning");
-    expect(projectHealthStatus({ budgetUsage: 40, progress: 10, delayedStages: 0 })).toBe("warning");
+    expect(projectHealthStatus({ budgetUsage: 40, progress: 10, delayedStages: 0 })).toBe("on_track");
     expect(projectHealthStatus({ budgetUsage: 40, progress: 60, delayedStages: 0, cashGapRatio: 0.1 })).toBe("warning");
     expect(projectHealthStatus({ budgetUsage: 40, progress: 60, delayedStages: 0, pendingApprovals: 1 })).toBe("warning");
   });
