@@ -235,6 +235,28 @@ export const erpRouter = router({
         await db.insert(auditLogs).values({ entityType: "project", entityId: input.id, action: "updated", actorId: ctx.user.id, beforeJson: JSON.stringify(before), afterJson: JSON.stringify(input) });
         return { success: true } as const;
       }),
+    delete: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      const before = (await db.select().from(projects).where(eq(projects.id, input.id)).limit(1))[0];
+      if (!before) throw new TRPCError({ code: "NOT_FOUND", message: "المشروع غير موجود" });
+      const [stageRows, expenseRows, payrollRows, certificateRows, contractRows, salesRows, collectionRows, memberRows, approvalRows, attachmentRows] = await Promise.all([
+        db.select({ id: stages.id }).from(stages).where(eq(stages.projectId, input.id)),
+        db.select({ id: expenses.id }).from(expenses).where(eq(expenses.projectId, input.id)),
+        db.select({ id: payroll.id }).from(payroll).where(eq(payroll.projectId, input.id)),
+        db.select({ id: certificates.id }).from(certificates).where(eq(certificates.projectId, input.id)),
+        db.select({ id: contractorContracts.id }).from(contractorContracts).where(eq(contractorContracts.projectId, input.id)),
+        db.select({ id: sales.id }).from(sales).where(eq(sales.projectId, input.id)),
+        db.select({ id: collections.id }).from(collections).where(eq(collections.projectId, input.id)),
+        db.select({ id: projectMembers.id }).from(projectMembers).where(eq(projectMembers.projectId, input.id)),
+        db.select({ id: approvalRequests.id }).from(approvalRequests).where(eq(approvalRequests.projectId, input.id)),
+        db.select({ id: attachments.id }).from(attachments).where(eq(attachments.projectId, input.id)),
+      ]);
+      const relatedCount = stageRows.length + expenseRows.length + payrollRows.length + certificateRows.length + contractRows.length + salesRows.length + collectionRows.length + memberRows.length + approvalRows.length + attachmentRows.length;
+      if (relatedCount > 0) throw new TRPCError({ code: "CONFLICT", message: "لا يمكن حذف مشروع مرتبط بمراحل أو حركات أو مستندات. استخدم الأرشفة بدلًا من الحذف." });
+      await db.delete(projects).where(eq(projects.id, input.id));
+      await db.insert(auditLogs).values({ entityType: "project", entityId: input.id, action: "deleted", actorId: ctx.user.id, beforeJson: JSON.stringify(before) });
+      return { success: true } as const;
+    }),
   }),
 
   units: router({
