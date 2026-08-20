@@ -31,7 +31,6 @@ const menuItems = [
   { icon: Settings2, label: "معلومات الشركة", path: "/company-settings" },
   { icon: Landmark, label: "البنوك والخزائن", path: "/banks-cash" },
   { icon: LayoutDashboard, label: "لوحة التنفيذ", path: "/" },
-  { icon: BarChart3, label: "المؤشرات التنفيذية", path: "/indicators" },
   { icon: ClipboardList, label: "المشاريع والمراحل", path: "/projects" },
   { icon: Boxes, label: "مراقبة المخزون والكميات", path: "/inventory" },
   { icon: WalletCards, label: "المبيعات والتحصيلات", path: "/sales" },
@@ -56,6 +55,7 @@ const menuItems = [
   { icon: Users, label: "المستخدمون والصلاحيات", path: "/users" },
   { icon: ShieldAlert, label: "مركز جودة البيانات", path: "/data-quality" },
   { icon: Settings2, label: "الإعدادات", path: "/settings" },
+  { icon: BarChart3, label: "المؤشرات التنفيذية", path: "/indicators" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
