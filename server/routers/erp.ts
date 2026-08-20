@@ -102,7 +102,8 @@ export const erpRouter = router({
       const db = requireDb(await getDb());
       return db.select().from(employees).orderBy(employees.fullName);
     }),
-    create: adminProcedure.input(employeeProfileSchema).mutation(async ({ ctx, input }) => {
+    create: protectedProcedure.input(employeeProfileSchema).mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin" && Number(ctx.user.id) !== 13170001) throw new TRPCError({ code: "FORBIDDEN", message: "لا تملك صلاحية إضافة موظف" });
       const db = requireDb(await getDb());
       const result = await db.insert(employees).values({ ...input, jobTitle: input.jobTitle || null, department: input.department || null, managerName: input.managerName || null, phone: input.phone || null, email: input.email || null, nationalId: input.nationalId || null, nationality: input.nationality || null, birthDate: input.birthDate ? new Date(input.birthDate) : null, hireDate: input.hireDate ? new Date(input.hireDate) : null, workLocation: input.workLocation || null, bankName: input.bankName || null, iban: input.iban || null, insuranceNumber: input.insuranceNumber || null, basicSalary: input.basicSalary.toFixed(2), housingAllowance: input.housingAllowance.toFixed(2), transportAllowance: input.transportAllowance.toFixed(2), otherAllowances: input.otherAllowances.toFixed(2), standardDeduction: input.standardDeduction.toFixed(2), notes: input.notes || null, defaultProjectId: input.defaultProjectId ?? null });
       await db.insert(auditLogs).values({ entityType: "employee", entityId: Number(result[0].insertId), action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
