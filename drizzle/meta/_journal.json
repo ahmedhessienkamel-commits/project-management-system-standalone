@@ -302,6 +302,20 @@
       "when": 1787237189788,
       "tag": "0042_dark_daredevil",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "5",
+      "when": 1787239817292,
+      "tag": "0043_uneven_grim_reaper",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "5",
+      "when": 1787240097301,
+      "tag": "0044_spooky_stephen_strange",
+      "breakpoints": true
     }
   ]
 }
