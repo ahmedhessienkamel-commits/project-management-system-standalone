@@ -41,17 +41,21 @@ const menuItems = [
   { icon: FileText, label: "كشوف حساب العهد", path: "/custody?tab=custodyStatement" },
   { icon: ClipboardList, label: "المقاولون والموردون", path: "/operations?tab=vendors" },
   { icon: FileText, label: "العقود والمستخلصات", path: "/operations?tab=certificates" },
-  { icon: FileText, label: "كشوف حسابات الموردين", path: "/supplier-statements" },
+  { section: true, label: "المحاسبة" },
   { icon: Landmark, label: "المحاسبة", path: "/accounting" },
+  { section: true, label: "إعدادات المحاسبة" },
   { icon: BookOpen, label: "شجرة الحسابات", path: "/accounting?focus=chart" },
   { icon: Boxes, label: "الأصول الثابتة", path: "/accounting?focus=assets" },
+  { section: true, label: "التقارير المحاسبية" },
   { icon: BarChart3, label: "مركز التكلفة", path: "/cost-center" },
   { icon: BarChart3, label: "قائمة الدخل", path: "/income-statement" },
+  { icon: FileText, label: "كشوف حسابات الموردين", path: "/supplier-statements" },
+  { icon: BarChart3, label: "التقارير", path: "/reports" },
+  { section: true, label: "الإدارة والمتابعة" },
   { icon: ClipboardList, label: "دورة المشتريات", path: "/operations" },
   { icon: ClipboardList, label: "الحضور والانصراف", path: "/attendance" },
   { icon: ClipboardList, label: "المهام اليومية", path: "/tasks" },
   { icon: FileText, label: "الموافقات والمستندات", path: "/approvals" },
-  { icon: BarChart3, label: "التقارير", path: "/reports" },
   { icon: Users, label: "المستخدمون والصلاحيات", path: "/users" },
   { icon: ShieldAlert, label: "مركز جودة البيانات", path: "/data-quality" },
   { icon: Settings2, label: "الإعدادات", path: "/settings" },
@@ -138,10 +142,10 @@ function DashboardLayoutContent({
   const [globalSearch, setGlobalSearch] = useState("");
   const sidebarRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const activeMenuItem = menuItems.find(item => item.path === location || (item.path.includes("?") && location.startsWith(item.path.split("?")[0])));
+  const activeMenuItem = menuItems.find(item => item.path && (item.path === location || (item.path.includes("?") && location.startsWith(item.path.split("?")[0]))));
   const isMobile = useIsMobile();
   const normalizedSearch = globalSearch.trim().toLowerCase();
-  const searchResults = normalizedSearch ? menuItems.filter((item) => item.label.toLowerCase().includes(normalizedSearch)).slice(0, 6) : [];
+  const searchResults = normalizedSearch ? menuItems.filter((item): item is Extract<(typeof menuItems)[number], { path: string }> => "path" in item && item.label.toLowerCase().includes(normalizedSearch)).slice(0, 6) : [];
   const quickActions = [
     { label: "إضافة تكلفة أو مصروف", path: "/expenses" },
     { label: "تسجيل / صرف عهدة", path: "/custody?tab=custody" },
@@ -230,7 +234,8 @@ function DashboardLayoutContent({
 
           <SidebarContent className="gap-0">
             <SidebarMenu className="px-2 py-1">
-              {menuItems.map(item => {
+              {menuItems.map((item, index) => {
+                if ("section" in item) return <li key={`section-${index}`} className="px-3 pb-1 pt-4 text-xs font-bold text-[#b28a3b]">{item.label}</li>;
                 const isActive = location === item.path || (item.path.includes("?") && location.startsWith(item.path.split("?")[0]) && location.includes(item.path.split("?")[1] || ""));
                 return (
                   <SidebarMenuItem key={item.path}>
