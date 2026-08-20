@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { allocateAdministrativeExpense, validateExpenseAllocation } from "../shared/expenseAllocation";
+import { allocateAdministrativeExpense, normalizeExpenseTaxRate, validateExpenseAllocation } from "../shared/expenseAllocation";
 
 describe("expense allocation rules", () => {
   it("requires a project only for project allocation", () => {
     expect(validateExpenseAllocation({ classification: "project" })).toEqual({ ok: false, message: "اختر المشروع عند تحميل المصروف على مشروع أو كمصروف تشغيلي للمشروع" });
     expect(validateExpenseAllocation({ classification: "project", projectId: 3 })).toEqual({ ok: true });
+  });
+
+  it("exempts project payroll from tax while preserving other tax rates", () => {
+    expect(normalizeExpenseTaxRate("payroll", 15)).toBe(0);
+    expect(normalizeExpenseTaxRate("operating", 15)).toBe(15);
   });
 
   it("requires a project for project operating expenses", () => {

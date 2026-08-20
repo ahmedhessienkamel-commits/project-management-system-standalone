@@ -7,7 +7,7 @@ import { TRPCError } from "@trpc/server";
 import { calculateDocumentCompleteness, calculateExpenseTotals, calculateFinancialSummaryTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, calculateStraightLineDepreciation, canAccessProject, canWriteProject, projectHealthReasons, projectHealthStatus, projectNotificationTriggers } from "../erpCalculations";
 import { accountingTotals } from "../accountingCalculations";
 import { calculateStageTimeVariance } from "../../shared/stageTiming";
-import { allocateAdministrativeExpense, validateExpenseAllocation } from "../../shared/expenseAllocation";
+import { allocateAdministrativeExpense, normalizeExpenseTaxRate, validateExpenseAllocation } from "../../shared/expenseAllocation";
 import { calculateInventoryBalance } from "../../shared/inventory";
 
 const projectStatus = z.enum(["planning", "active", "paused", "completed", "archived"]);
@@ -619,7 +619,7 @@ export const erpRouter = router({
             payrollBeneficiaryName = employee.fullName;
           } else if (!payrollBeneficiaryName) throw new TRPCError({ code: "BAD_REQUEST", message: "اكتب اسم العامل أو الأجير" });
         }
-        const totals = calculateExpenseTotals(input.preTaxAmount, input.expenseType === "payroll" ? 0 : input.taxRate);
+        const totals = calculateExpenseTotals(input.preTaxAmount, normalizeExpenseTaxRate(input.expenseType, input.taxRate));
         const approvalStatus = input.projectId ? await resolveApprovalStatus(db, input.projectId, "expense", totals.preTaxAmount) : "pending" as const;
         const taxRate = totals.taxRate;
         const taxAmount = totals.taxAmount;
@@ -679,7 +679,7 @@ export const erpRouter = router({
             payrollBeneficiaryName = employee.fullName;
           } else if (!payrollBeneficiaryName) throw new TRPCError({ code: "BAD_REQUEST", message: "اكتب اسم العامل أو الأجير" });
         }
-        const totals = calculateExpenseTotals(input.preTaxAmount, input.expenseType === "payroll" ? 0 : input.taxRate);
+        const totals = calculateExpenseTotals(input.preTaxAmount, normalizeExpenseTaxRate(input.expenseType, input.taxRate));
         const approvalStatus = input.projectId ? await resolveApprovalStatus(db, input.projectId, "expense", totals.preTaxAmount) : "pending" as const;
         await db.update(expenses).set({ projectId: input.projectId || null, stageId: input.stageId || null, vendorId: input.vendorId || null, costItemId: input.costItemId || null, description: input.description, unit: input.unit || null, quantity: input.quantity.toFixed(3), expenseType: input.expenseType, payrollBeneficiaryType: input.expenseType === "payroll" ? input.payrollBeneficiaryType || null : null, payrollEmployeeId: input.expenseType === "payroll" ? input.payrollEmployeeId || null : null, payrollBeneficiaryName: input.expenseType === "payroll" ? payrollBeneficiaryName : null, classification: input.classification, allocationRatio: input.classification === "project" ? input.allocationRatio.toFixed(3) : "1.000", preTaxAmount: totals.preTaxAmount.toFixed(2), taxRate: totals.taxRate.toFixed(2), taxAmount: totals.taxAmount.toFixed(2), totalAmount: totals.totalAmount.toFixed(2), paidAmount: input.paidAmount.toFixed(2), expenseDate: input.expenseDate ? new Date(input.expenseDate) : null, status: approvalStatus }).where(eq(expenses.id, input.id));
         await db.delete(approvalRequests).where(and(eq(approvalRequests.entityType, "expense"), eq(approvalRequests.entityId, input.id)));

@@ -16,6 +16,10 @@ export function allocateAdministrativeExpense(amount: number, projects: Contract
   });
 }
 
+export function normalizeExpenseTaxRate(expenseType: string, taxRate: number): number {
+  return expenseType === "payroll" ? 0 : taxRate;
+}
+
 export function validateExpenseAllocation(input: { projectId?: number; stageId?: number; classification: ExpenseAllocation; expenseType?: string }) {
   const requiresProject = input.classification === "project" || (input.expenseType && input.expenseType !== "administrative");
   if (requiresProject && !input.projectId) {
