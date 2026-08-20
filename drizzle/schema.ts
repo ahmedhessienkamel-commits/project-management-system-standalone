@@ -80,6 +80,39 @@ export const vendors = mysqlTable("vendors", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
+export const inventoryItems = mysqlTable("inventoryItems", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: int("projectId"),
+  code: varchar("code", { length: 64 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  category: varchar("category", { length: 128 }).default("materials").notNull(),
+  unit: varchar("unit", { length: 64 }).notNull(),
+  minimumStock: decimal("minimumStock", { precision: 14, scale: 3 }).default("0").notNull(),
+  isActive: int("isActive").default(1).notNull(),
+  createdBy: int("createdBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const inventoryMovements = mysqlTable("inventoryMovements", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: int("projectId").notNull(),
+  stageId: int("stageId"),
+  itemId: int("itemId").notNull(),
+  vendorId: int("vendorId"),
+  movementType: mysqlEnum("movementType", ["receipt", "issue", "adjustment_in", "adjustment_out"]).notNull(),
+  quantity: decimal("quantity", { precision: 14, scale: 3 }).notNull(),
+  unitCost: decimal("unitCost", { precision: 14, scale: 4 }).default("0").notNull(),
+  totalAmount: decimal("totalAmount", { precision: 14, scale: 2 }).default("0").notNull(),
+  movementDate: date("movementDate"),
+  reference: varchar("reference", { length: 128 }),
+  description: text("description"),
+  sourceDocumentId: int("sourceDocumentId"),
+  status: mysqlEnum("status", ["draft", "posted", "cancelled"]).default("posted").notNull(),
+  createdBy: int("createdBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
 export const expenses = mysqlTable("expenses", {
   id: int("id").autoincrement().primaryKey(),
   projectId: int("projectId"),
@@ -139,6 +172,10 @@ export type Stage = typeof stages.$inferSelect;
 export type InsertStage = typeof stages.$inferInsert;
 export type Vendor = typeof vendors.$inferSelect;
 export type InsertVendor = typeof vendors.$inferInsert;
+export type InventoryItem = typeof inventoryItems.$inferSelect;
+export type InsertInventoryItem = typeof inventoryItems.$inferInsert;
+export type InventoryMovement = typeof inventoryMovements.$inferSelect;
+export type InsertInventoryMovement = typeof inventoryMovements.$inferInsert;
 export type Employee = typeof employees.$inferSelect;
 export type InsertEmployee = typeof employees.$inferInsert;
 export type Expense = typeof expenses.$inferSelect;

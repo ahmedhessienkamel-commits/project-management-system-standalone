@@ -253,6 +253,13 @@
       "when": 1787223258448,
       "tag": "0035_mushy_viper",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "5",
+      "when": 1787223937267,
+      "tag": "0036_closed_nightcrawler",
+      "breakpoints": true
     }
   ]
 }

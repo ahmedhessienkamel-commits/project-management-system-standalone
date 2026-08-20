@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { startLogin } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { BarChart3, Bell, ClipboardList, FileText, Landmark, LayoutDashboard, LogOut, PanelLeft, Plus, Search, Settings2, ShieldAlert, Users, UserRound, WalletCards } from "lucide-react";
+import { BarChart3, Bell, Boxes, ClipboardList, FileText, Landmark, LayoutDashboard, LogOut, PanelLeft, Plus, Search, Settings2, ShieldAlert, Users, UserRound, WalletCards } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -46,6 +46,7 @@ const menuItems = [
   { icon: BarChart3, label: "مركز التكلفة", path: "/cost-center" },
   { icon: BarChart3, label: "قائمة الدخل", path: "/income-statement" },
   { icon: ClipboardList, label: "دورة المشتريات", path: "/operations" },
+  { icon: Boxes, label: "المخزون والخامات", path: "/inventory" },
   { icon: ClipboardList, label: "الحضور والانصراف", path: "/attendance" },
   { icon: ClipboardList, label: "المهام اليومية", path: "/tasks" },
   { icon: FileText, label: "الموافقات والمستندات", path: "/approvals" },
@@ -148,6 +149,7 @@ function DashboardLayoutContent({
     { label: "إنشاء سند صرف أو قبض", path: "/accounting" },
     { label: "فتح مسير الرواتب", path: "/payroll" },
     { label: "تسجيل طلب شراء", path: "/operations" },
+    { label: "تسجيل استلام أو سحب خامات", path: "/inventory" },
   ];
 
   useEffect(() => {

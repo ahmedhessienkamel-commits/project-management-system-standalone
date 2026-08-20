@@ -21,6 +21,7 @@ import Tasks from "./pages/Tasks";
 import CompanySettings from "./pages/CompanySettings";
 import BanksCash from "./pages/BanksCash";
 import StandaloneFinancialReport from "./pages/StandaloneFinancialReport";
+import Inventory from "./pages/Inventory";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -39,6 +40,7 @@ function Router() {
       <Route path={"/accounting"} component={Accounting} />
       <Route path={"/payroll"} component={Finance} />
       <Route path={"/operations"} component={Operations} />
+      <Route path={"/inventory"} component={Inventory} />
       <Route path={"/certificates"} component={Operations} />
       <Route path={"/attendance"} component={Operations} />
       <Route path={"/custody"} component={Operations} />
