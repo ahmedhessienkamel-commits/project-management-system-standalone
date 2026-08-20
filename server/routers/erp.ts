@@ -607,6 +607,14 @@ export const erpRouter = router({
       const rows = await db.select().from(sales).orderBy(sales.createdAt);
       return allowed ? rows.filter((row) => allowed.has(row.projectId)) : rows;
     }),
+    updateCustomer: adminProcedure.input(z.object({ id: z.number().int().positive(), customerName: z.string().trim().min(2), customerPhone: z.string().max(64).optional() })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      const before = (await db.select().from(sales).where(eq(sales.id, input.id)).limit(1))[0];
+      if (!before) throw new TRPCError({ code: "NOT_FOUND", message: "عملية البيع غير موجودة" });
+      await db.update(sales).set({ customerName: input.customerName, customerPhone: input.customerPhone || null }).where(eq(sales.id, input.id));
+      await db.insert(auditLogs).values({ entityType: "sale", entityId: input.id, action: "customer_updated", actorId: ctx.user.id, beforeJson: JSON.stringify({ customerName: before.customerName, customerPhone: before.customerPhone }), afterJson: JSON.stringify(input) });
+      return { id: input.id } as const;
+    }),
     create: protectedProcedure
       .input(z.object({ projectId: z.number().int().positive(), unitId: z.number().int().positive(), stageId: z.number().int().positive().optional(), customerName: z.string().trim().min(2), customerPhone: z.string().max(64).optional(), saleDate: z.string().optional(), preTaxAmount: z.number().positive(), taxRate: z.number().min(0).max(100).default(15) }))
       .mutation(async ({ ctx, input }) => {
@@ -940,6 +948,15 @@ export const erpRouter = router({
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
       const rows = await db.select().from(vendors).orderBy(vendors.name);
       return allowed ? rows.filter((row) => !row.projectId || allowed.has(row.projectId)) : rows;
+    }),
+    update: adminProcedure.input(z.object({ id: z.number().int().positive(), projectId: z.number().int().positive().nullable().optional(), name: z.string().trim().min(2), taxNumber: z.string().max(128).optional(), commercialRegistration: z.string().max(128).optional(), iban: z.string().max(128).optional(), contact: z.string().max(255).optional() })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      const before = (await db.select().from(vendors).where(eq(vendors.id, input.id)).limit(1))[0];
+      if (!before) throw new TRPCError({ code: "NOT_FOUND", message: "المورد غير موجود" });
+      const { id, ...changes } = input;
+      await db.update(vendors).set({ ...changes, projectId: changes.projectId ?? null, taxNumber: changes.taxNumber || null, commercialRegistration: changes.commercialRegistration || null, iban: changes.iban || null, contact: changes.contact || null }).where(eq(vendors.id, id));
+      await db.insert(auditLogs).values({ entityType: "vendor", entityId: id, action: "updated", actorId: ctx.user.id, beforeJson: JSON.stringify(before), afterJson: JSON.stringify(input) });
+      return { id } as const;
     }),
     create: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional(), name: z.string().trim().min(2), taxNumber: z.string().max(128).optional(), commercialRegistration: z.string().max(128).optional(), iban: z.string().max(128).optional(), contact: z.string().max(255).optional() })).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
