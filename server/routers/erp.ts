@@ -1181,6 +1181,22 @@ export const erpRouter = router({
       await db.insert(auditLogs).values({ entityType: "vendor", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
       return { id };
     }),
+    remove: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      if (!canManagePartners(ctx.user) || ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "حذف العملاء والموردين متاح للمالك فقط" });
+      const db = requireDb(await getDb());
+      const party = (await db.select().from(vendors).where(eq(vendors.id, input.id)).limit(1))[0];
+      if (!party) throw new TRPCError({ code: "NOT_FOUND", message: "الطرف غير موجود" });
+      const [expenseUse, certificateUse, contractUse, documentRows] = await Promise.all([
+        db.select({ id: expenses.id }).from(expenses).where(eq(expenses.vendorId, input.id)).limit(1),
+        db.select({ id: certificates.id }).from(certificates).where(eq(certificates.vendorId, input.id)).limit(1),
+        db.select({ id: contractorContracts.id }).from(contractorContracts).where(eq(contractorContracts.vendorId, input.id)).limit(1),
+        db.select({ id: accountingDocuments.id, supplierId: accountingDocuments.supplierId, partyName: accountingDocuments.partyName }).from(accountingDocuments),
+      ]);
+      if (expenseUse.length || certificateUse.length || contractUse.length || documentRows.some((row) => row.supplierId === input.id || row.partyName === party.name)) throw new TRPCError({ code: "CONFLICT", message: "لا يمكن حذف طرف مرتبط بمستندات أو مصروفات أو عقود؛ عدّل بياناته بدلًا من الحذف" });
+      await db.delete(vendors).where(eq(vendors.id, input.id));
+      await db.insert(auditLogs).values({ entityType: "vendor", entityId: input.id, action: "deleted", actorId: ctx.user.id, beforeJson: JSON.stringify(party) });
+      return { id: input.id };
+    }),
   }),
 
   contractorContracts: router({
