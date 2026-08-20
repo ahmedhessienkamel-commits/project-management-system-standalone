@@ -1,0 +1,1 @@
+ALTER TABLE `custodyMovements` ADD `paymentVoucherId` int;

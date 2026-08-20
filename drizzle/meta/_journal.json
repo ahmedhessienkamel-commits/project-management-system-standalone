@@ -288,6 +288,13 @@
       "when": 1787230483881,
       "tag": "0040_mute_wolf_cub",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "5",
+      "when": 1787235564293,
+      "tag": "0041_smart_pandemic",
+      "breakpoints": true
     }
   ]
 }

@@ -365,6 +365,7 @@ export const custodyMovements = mysqlTable("custodyMovements", {
   signedAmount: decimal("signedAmount", { precision: 14, scale: 2 }).default("0").notNull(),
   movementDate: date("movementDate"),
   expenseType: varchar("expenseType", { length: 64 }),
+  paymentVoucherId: int("paymentVoucherId"),
   allocationRatio: decimal("allocationRatio", { precision: 5, scale: 2 }).default("100"),
   createdBy: int("createdBy"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
