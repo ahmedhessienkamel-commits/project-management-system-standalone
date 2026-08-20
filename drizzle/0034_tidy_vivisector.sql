@@ -1,0 +1,1 @@
+ALTER TABLE `custodyMovements` ADD `allocationRatio` decimal(5,2) DEFAULT '100';
