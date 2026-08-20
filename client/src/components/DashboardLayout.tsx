@@ -45,7 +45,7 @@ const menuItems = [
   { icon: Landmark, label: "المحاسبة", path: "/accounting" },
   { icon: BarChart3, label: "مركز التكلفة", path: "/accounting?report=costItems" },
   { icon: BarChart3, label: "قائمة الدخل", path: "/accounting?report=income" },
-  { icon: FileText, label: "كشوف حسابات العهد", path: "/custody?view=statement" },
+  { icon: FileText, label: "كشوف حسابات العهد", path: "/custody?tab=custodyStatement" },
   { icon: ClipboardList, label: "دورة المشتريات", path: "/operations" },
   { icon: ClipboardList, label: "الحضور والانصراف", path: "/attendance" },
   { icon: ClipboardList, label: "المهام اليومية", path: "/tasks" },
