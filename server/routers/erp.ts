@@ -983,7 +983,7 @@ export const erpRouter = router({
         return { ...contract, totalCertificates: used, remaining: Math.max(0, Number(contract.totalAmount) - used), executionPct: Number(contract.totalAmount) > 0 ? (used / Number(contract.totalAmount)) * 100 : 0 };
       });
     }),
-    create: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), stageId: z.number().int().positive().optional(), vendorId: z.number().int().positive(), contractNumber: z.string().trim().min(1), description: z.string().max(2000).optional(), preTaxAmount: z.number().nonnegative(), taxRate: z.number().min(0).max(100).default(15), contractDate: z.string().optional() })).mutation(async ({ ctx, input }) => {
+    create: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), stageId: z.number().int().positive(), vendorId: z.number().int().positive(), contractNumber: z.string().trim().min(1), description: z.string().max(2000).optional(), preTaxAmount: z.number().nonnegative(), taxRate: z.number().min(0).max(100).default(15), contractDate: z.string().optional() })).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
       await assertProjectAccess(db, ctx, input.projectId);
       await assertProjectWrite(db, ctx, input.projectId);
