@@ -34,6 +34,13 @@ function canManagePartners(user: { role: string; id: number }) {
   return user.role === "admin" || Number(user.id) === 13170001;
 }
 
+function canReviewApproval(user: { role: string; id: number }, request: { entityType: string; approvalStage?: string | null }) {
+  if (user.role === "admin" || Number(user.id) === 13170001) return true;
+  if (user.role === "general_manager") return request.entityType === "certificate" || request.entityType === "payroll" || request.approvalStage === "general_manager";
+  if (user.role === "project_manager") return request.entityType === "certificate" || request.approvalStage === "project_manager";
+  return false;
+}
+
 async function getAllowedProjectIds(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, userId: number, role: string) {
   if (role === "admin") return null;
   const rows = await db.select({ projectId: projectMembers.projectId }).from(projectMembers).where(eq(projectMembers.userId, userId));
@@ -53,6 +60,13 @@ async function assertProjectWrite(db: NonNullable<Awaited<ReturnType<typeof getD
 
 async function assertOperationPermission(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, ctx: { user: { id: number; role: string } }, key: z.infer<typeof operationKey>) {
   if (ctx.user.role === "admin") return "allow" as const;
+  const restrictedRoleRules: Record<string, Set<string>> = {
+    general_manager: new Set(["approve"]),
+    project_manager: new Set(["certificate", "approve"]),
+    procurement_manager: new Set(["purchase_request", "inventory_item", "inventory_receipt", "inventory_issue"]),
+  };
+  const allowedForRole = restrictedRoleRules[ctx.user.role];
+  if (allowedForRole && !allowedForRole.has(key)) throw new TRPCError({ code: "FORBIDDEN", message: "هذا الدور مخصص للاعتمادات أو عمليات الموقع المحددة فقط" });
   const row = (await db.select({ mode: userOperationPermissions.mode }).from(userOperationPermissions).where(and(eq(userOperationPermissions.userId, ctx.user.id), eq(userOperationPermissions.operationKey, key))).limit(1))[0];
   const fullAccessExceptApproval = new Set(["payroll", "certificate"]);
   const mode = row?.mode ?? (Number(ctx.user.id) === 13170001 ? (fullAccessExceptApproval.has(key) ? "approval" : "allow") : "approval");
@@ -941,12 +955,13 @@ export const erpRouter = router({
       const rows = await db.select().from(approvalRequests).orderBy(approvalRequests.createdAt);
       return allowed ? rows.filter((row) => row.projectId === null || allowed.has(row.projectId)) : rows;
     }),
-    decide: adminProcedure
+    decide: protectedProcedure
       .input(z.object({ id: z.number().int().positive(), decision: z.enum(["approved", "rejected"]), note: z.string().max(1000).optional() }))
       .mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
         const request = (await db.select().from(approvalRequests).where(eq(approvalRequests.id, input.id)).limit(1))[0];
         if (!request) throw new TRPCError({ code: "NOT_FOUND", message: "طلب الموافقة غير موجود" });
+        if (!canReviewApproval(ctx.user, request)) throw new TRPCError({ code: "FORBIDDEN", message: "لا يملك هذا الدور صلاحية اعتماد هذا النوع من المستندات" });
         await db.update(approvalRequests).set({ status: input.decision, reviewedBy: ctx.user.id, note: input.note || null, reviewedAt: new Date() }).where(eq(approvalRequests.id, input.id));
         const approved = input.decision === "approved";
         if (request.entityType === "expense") await db.update(expenses).set({ status: approved ? "approved" : "rejected" }).where(eq(expenses.id, request.entityId));

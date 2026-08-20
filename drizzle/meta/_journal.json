@@ -323,6 +323,13 @@
       "when": 1787240678636,
       "tag": "0045_normal_klaw",
       "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "5",
+      "when": 1787248365976,
+      "tag": "0046_last_moonstone",
+      "breakpoints": true
     }
   ]
 }

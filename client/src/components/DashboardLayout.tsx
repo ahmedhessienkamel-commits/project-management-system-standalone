@@ -146,7 +146,6 @@ function DashboardLayoutContent({
   const activeMenuItem = menuItems.find(item => item.path && (item.path === location || (item.path.includes("?") && location.startsWith(item.path.split("?")[0]))));
   const isMobile = useIsMobile();
   const normalizedSearch = globalSearch.trim().toLowerCase();
-  const searchResults = normalizedSearch ? menuItems.filter((item): item is Extract<(typeof menuItems)[number], { path: string }> => "path" in item && item.label.toLowerCase().includes(normalizedSearch)).slice(0, 6) : [];
   const quickActions = [
     { label: "إضافة تكلفة أو مصروف", path: "/expenses" },
     { label: "تسجيل / صرف عهدة", path: "/custody?tab=custody" },
@@ -158,6 +157,15 @@ function DashboardLayoutContent({
     { label: "تسجيل طلب شراء", path: "/operations" },
     { label: "مراقبة المخزون والكميات", path: "/inventory" },
   ];
+  const roleLabelAllowList: Record<string, string[] | undefined> = {
+    general_manager: ["لوحة التنفيذ", "التقارير", "الموافقات والمستندات"],
+    project_manager: ["لوحة التنفيذ", "المشاريع والمراحل", "العقود والمستخلصات", "الموافقات والمستندات"],
+    procurement_manager: ["لوحة التنفيذ", "مراقبة المخزون والكميات", "دورة المشتريات", "الموافقات والمستندات"],
+  };
+  const allowedLabels = roleLabelAllowList[user?.role || ""];
+  const visibleMenuItems = allowedLabels ? menuItems.filter((item) => "section" in item || allowedLabels.includes(item.label)) : menuItems;
+  const visibleQuickActions = allowedLabels ? quickActions.filter((action) => action.path.includes("/operations") || action.path.includes("/inventory")) : quickActions;
+  const searchResults = normalizedSearch ? visibleMenuItems.filter((item): item is Extract<(typeof menuItems)[number], { path: string }> => "path" in item && item.label.toLowerCase().includes(normalizedSearch)).slice(0, 6) : [];
 
   useEffect(() => {
     const handleGlobalShortcut = (event: KeyboardEvent) => {
@@ -235,7 +243,7 @@ function DashboardLayoutContent({
 
           <SidebarContent className="gap-0">
             <SidebarMenu className="px-2 py-1">
-              {menuItems.map((item, index) => {
+              {visibleMenuItems.map((item, index) => {
                 if ("section" in item) return <li key={`section-${index}`} className="px-3 pb-1 pt-4 text-xs font-bold text-[#b28a3b]">{item.label}</li>;
                 const isActive = location === item.path || (item.path.includes("?") && location.startsWith(item.path.split("?")[0]) && location.includes(item.path.split("?")[1] || ""));
                 return (
@@ -322,7 +330,7 @@ function DashboardLayoutContent({
             {searchResults.length > 0 && <div className="absolute right-0 top-12 z-50 w-full rounded-xl border border-slate-200 bg-white p-2 shadow-xl">{searchResults.map((item) => <button key={item.path} type="button" onClick={() => { setLocation(item.path); setGlobalSearch(""); }} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-right text-sm text-slate-700 hover:bg-slate-50"><item.icon className="h-4 w-4 text-[#b28a3b]" />{item.label}</button>)}</div>}
           </div>
           <div className="flex items-center gap-2">
-            <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="gap-2 border-[#b28a3b]/40 text-[#18324b]"><Plus className="h-4 w-4" /> إجراء سريع</Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-56">{quickActions.map((action) => <DropdownMenuItem key={action.path} onClick={() => setLocation(action.path)} className="cursor-pointer">{action.label}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
+            <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="gap-2 border-[#b28a3b]/40 text-[#18324b]"><Plus className="h-4 w-4" /> إجراء سريع</Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-56">{visibleQuickActions.map((action) => <DropdownMenuItem key={action.path} onClick={() => setLocation(action.path)} className="cursor-pointer">{action.label}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
             <Button variant="outline" size="icon" aria-label="فتح التنبيهات والموافقات" title="التنبيهات والموافقات" onClick={() => setLocation("/approvals")} className="border-slate-200"><Bell className="h-4 w-4 text-[#b28a3b]" /></Button>
           </div>
         </div>
