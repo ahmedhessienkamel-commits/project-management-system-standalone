@@ -1557,6 +1557,18 @@ export const erpRouter = router({
             if (contractor.projectId) await assertProjectAccess(db, ctx, contractor.projectId);
           }
         }
+        if (["sales_invoice", "purchase_invoice"].includes(input.documentType) && !input.partyName?.trim()) throw new TRPCError({ code: "BAD_REQUEST", message: input.documentType === "sales_invoice" ? "اختر العميل أولًا" : "اختر المورد أولًا" });
+        if (input.documentType === "sales_invoice" && !input.projectId) throw new TRPCError({ code: "BAD_REQUEST", message: "اختر مشروع الإيراد قبل حفظ فاتورة المبيعات" });
+        if (["sales_invoice", "purchase_invoice"].includes(input.documentType)) {
+          const invoiceAccounts = await db.select({ id: accounts.id, code: accounts.code }).from(accounts);
+          const codeById = new Map(invoiceAccounts.map((account) => [account.id, account.code]));
+          const debitLines = input.lines.filter((line) => line.debit > 0);
+          const creditLines = input.lines.filter((line) => line.credit > 0);
+          const debitCodes = debitLines.map((line) => codeById.get(line.accountId));
+          const creditCodes = creditLines.map((line) => codeById.get(line.accountId));
+          if (input.documentType === "sales_invoice" && (!creditCodes.includes("4101") || input.lines.some((line) => line.costItemId))) throw new TRPCError({ code: "BAD_REQUEST", message: "فاتورة المبيعات يجب أن تكون دائنة على إيراد المشروع فقط دون بند تكلفة" });
+          if (input.documentType === "purchase_invoice" && (!creditCodes.includes("2101") || debitCodes.includes("2101"))) throw new TRPCError({ code: "BAD_REQUEST", message: "فاتورة المشتريات يجب أن تكون مدينة على بند التكلفة ودائنة على المورد" });
+        }
         const totals = accountingTotals(input.lines);
         if (!totals.balanced) throw new TRPCError({ code: "BAD_REQUEST", message: "القيد غير متوازن: إجمالي المدين يجب أن يساوي إجمالي الدائن" });
         const prefixes = { sales_invoice: "SI", purchase_invoice: "PI", journal_entry: "JE", payment_voucher: "PV", receipt_voucher: "RV", quotation: "QT", purchase_order: "PO" } as const;
