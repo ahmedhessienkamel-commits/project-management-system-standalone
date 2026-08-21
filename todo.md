@@ -35382,12 +35382,11 @@
 - [ ] Run migration, TypeScript, Vitest, build, visual verification, and save the checkpoint.
 
 ## Contract-linked inventory receiving — 2026-08-21
-
-- [ ] Add optional contract and contract-line references to inventory receipt movements.
-- [ ] Show eligible supply and supply-installation contracts after selecting the supplier/project.
-- [ ] Show contract-line options with contracted, received, approved, and remaining quantities.
-- [ ] Validate received quantity against the remaining contractual quantity before saving.
-- [ ] Update contract item supplied quantity and inventory movement references atomically.
-- [ ] Carry the contract and line references into the generated supplier receipt and purchase invoice.
-- [ ] Add regression tests for contract-linked receipts and over-receipt rejection.
-- [ ] Run TypeScript, Vitest, build, visual verification, and save the checkpoint.
+- [x] Add optional contract and contract-line references to inventory receipt movements.
+- [x] Show eligible supply and supply-installation contracts after selecting the supplier/project.
+- [x] Show contract-line options with contracted, received, approved, and remaining quantities.
+- [x] Validate received quantity against the remaining contractual quantity before saving.
+- [x] Update contract item supplied quantity and inventory movement references atomically.
+- [x] Carry the contract and line references into the generated supplier receipt and purchase invoice.
+- [x] Add regression tests for contract-linked receipts and over-receipt rejection.
+- [x] Run TypeScript, Vitest, build, visual verification, and save the checkpoint.
