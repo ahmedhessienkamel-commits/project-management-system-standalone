@@ -393,10 +393,16 @@ export const erpRouter = router({
     }),
   }),
   tasks: router({
-    list: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional() }).optional()).query(async ({ input }) => {
+    list: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional() }).optional()).query(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
       const rows = await db.select().from(dailyTasks).orderBy(dailyTasks.dueDate, dailyTasks.createdAt);
-      return input?.projectId ? rows.filter((task) => task.projectId === input.projectId || task.projectId === null) : rows;
+      const visibleRows = ctx.user.role === "admin" || ctx.user.role === "general_manager" ? rows : (() => {
+        const email = ctx.user.email?.toLowerCase();
+        return email ? rows : rows;
+      })();
+      const assignedIds = ctx.user.role === "admin" || ctx.user.role === "general_manager" ? null : (ctx.user.email ? (await db.select({ id: employees.id }).from(employees).where(eq(employees.email, ctx.user.email))).map((row) => row.id) : []);
+      const scopedRows = assignedIds ? visibleRows.filter((task) => task.createdBy === ctx.user.id || (task.assignedEmployeeId ? assignedIds.includes(task.assignedEmployeeId) : false)) : visibleRows;
+      return input?.projectId ? scopedRows.filter((task) => task.projectId === input.projectId || task.projectId === null) : scopedRows;
     }),
     create: protectedProcedure.input(z.object({ projectId: z.number().int().positive().nullable().optional(), assignedEmployeeId: z.number().int().positive().nullable().optional(), title: z.string().min(1), description: z.string().optional(), dueDate: z.string().optional(), priority: z.enum(["low", "normal", "high"]).default("normal") })).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
@@ -413,6 +419,10 @@ export const erpRouter = router({
       const db = requireDb(await getDb());
       const task = (await db.select().from(dailyTasks).where(eq(dailyTasks.id, input.id)).limit(1))[0];
       if (!task) throw new TRPCError({ code: "NOT_FOUND", message: "المهمة غير موجودة" });
+      if (ctx.user.role !== "admin" && ctx.user.role !== "general_manager") {
+        const employee = ctx.user.email ? (await db.select({ id: employees.id }).from(employees).where(eq(employees.email, ctx.user.email)).limit(1))[0] : undefined;
+        if (!employee || task.assignedEmployeeId !== employee.id) throw new TRPCError({ code: "FORBIDDEN", message: "لا يمكنك تحديث مهمة غير مسندة إليك" });
+      }
       await db.update(dailyTasks).set({ status: input.status, completedAt: input.status === "done" ? new Date() : null }).where(eq(dailyTasks.id, input.id));
       await db.insert(auditLogs).values({ entityType: "daily_task", entityId: input.id, action: "status_updated", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
       await notifyTaskAssignee(db, { employeeId: task.assignedEmployeeId, taskId: input.id, title: `تحديث حالة المهمة: ${task.title}`, message: `تم تحديث حالة المهمة «${task.title}» إلى: ${input.status}.` });
