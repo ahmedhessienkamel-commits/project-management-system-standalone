@@ -408,7 +408,7 @@ export const erpRouter = router({
       const forwardedProto = ctx.req.headers["x-forwarded-proto"] || "https";
       const host = Array.isArray(forwardedHost) ? forwardedHost[0] : forwardedHost;
       const protocol = Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto;
-      const invitationUrl = `${protocol}://${host}/?invite=${encodeURIComponent(token)}`;
+      const invitationUrl = `${protocol}://${host}/accept-invitation?token=${encodeURIComponent(token)}`;
       let emailSent = false;
       let emailError: string | null = null;
       try {

@@ -50,6 +50,7 @@ export const users = mysqlTable("users", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+  passwordHash: varchar("passwordHash", { length: 255 }),
 });
 
 export const userInvitations = mysqlTable("userInvitations", {
@@ -64,6 +65,7 @@ export const userInvitations = mysqlTable("userInvitations", {
   invitedBy: int("invitedBy").notNull(),
   expiresAt: timestamp("expiresAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
+  passwordHash: varchar("passwordHash", { length: 255 }),
 });
 
 export const projects = mysqlTable("projects", {

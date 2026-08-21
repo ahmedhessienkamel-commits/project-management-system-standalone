@@ -23,12 +23,20 @@ import BanksCash from "./pages/BanksCash";
 import StandaloneFinancialReport from "./pages/StandaloneFinancialReport";
 import Inventory from "./pages/Inventory";
 import MyRequests from "./pages/MyRequests";
+import PasswordAuth from "./pages/PasswordAuth";
+
+function Landing() {
+  const legacyToken = new URLSearchParams(window.location.search).get("invite");
+  return legacyToken ? <PasswordAuth invitation /> : <Home />;
+}
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
+      <Route path={"/login"} component={() => <PasswordAuth />} />
+      <Route path={"/accept-invitation"} component={() => <PasswordAuth invitation />} />
+      <Route path={"/"} component={Landing} />
       <Route path={"/company-settings"} component={CompanySettings} />
       <Route path={"/banks-cash"} component={BanksCash} />
       <Route path={"/indicators"} component={Reports} />
