@@ -237,6 +237,7 @@ export const erpRouter = router({
       await db.insert(companyMembers).values({ companyId, userId: ctx.user.id, role: "owner", status: "active" });
       return { id: companyId };
     }),
+    memberships: adminProcedure.query(async () => { const db = requireDb(await getDb()); const rows = await db.select().from(companyMembers); const companyRows = await db.select().from(companies); const userRows = await db.select().from(users); return rows.map((membership) => ({ ...membership, company: companyRows.find((company) => company.id === membership.companyId) || null, user: userRows.find((user) => user.id === membership.userId) || null })); }),
     assignUser: adminProcedure.input(z.object({ userId: z.number().int().positive(), companyId: z.number().int().positive(), role: z.enum(["admin", "general_manager", "project_manager", "procurement_manager", "user"]), status: z.enum(["active", "invited", "suspended"]).default("active") })).mutation(async ({ input }) => {
       const db = requireDb(await getDb());
       const company = (await db.select({ id: companies.id }).from(companies).where(eq(companies.id, input.companyId)).limit(1))[0];
