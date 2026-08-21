@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateInventoryBalance, canReceiveContractQuantity, remainingContractQuantity, selectPurchaseInvoiceForIssue } from "../shared/inventory";
+import { calculateInventoryBalance, calculateServiceEntryTotal, canReceiveContractQuantity, remainingContractQuantity, remainingServiceContractAmount, selectPurchaseInvoiceForIssue } from "../shared/inventory";
 
 describe("inventory balance calculations", () => {
   it("calculates received, issued, available quantity, and value", () => {
@@ -18,6 +18,13 @@ describe("inventory balance calculations", () => {
     expect(remainingContractQuantity(line)).toBe(65);
     expect(canReceiveContractQuantity(line, 65)).toBe(true);
     expect(canReceiveContractQuantity(line, 65.001)).toBe(false);
+  });
+
+  it("calculates equipment rental and labor supply service totals", () => {
+    expect(calculateServiceEntryTotal({ entryType: "equipment_rental", quantity: 2, rentalDays: 5, dailyRate: 750 })).toBe(7500);
+    expect(calculateServiceEntryTotal({ entryType: "labor_supply", headcount: 8, workDays: 12, dailyWage: 125 })).toBe(12000);
+    expect(remainingServiceContractAmount(20000, [7500, 2500])).toBe(10000);
+    expect(remainingServiceContractAmount(20000, [25000])).toBe(0);
   });
 
   it("returns a zero balance when there are no movements", () => {

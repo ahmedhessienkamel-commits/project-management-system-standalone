@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, dailyTasks, employees, expenses, notifications, payroll, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, sales, stages, units, users, userInvitations, vendors, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems, inventoryItems, inventoryMovements, accounts, accountingDocuments, accountingDocumentLines, costItems, fixedAssets, fixedAssetDepreciation, companyProfiles, cashAccounts, contractorContracts, userOperationPermissions } from "../../drizzle/schema";
+import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, dailyTasks, employees, expenses, notifications, payroll, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, sales, stages, units, users, userInvitations, vendors, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems, inventoryItems, inventoryMovements, accounts, accountingDocuments, accountingDocumentLines, costItems, fixedAssets, fixedAssetDepreciation, companyProfiles, cashAccounts, contractorContracts, serviceContractEntries, userOperationPermissions } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
@@ -9,7 +9,7 @@ import { calculateCertificateProgress, calculateDocumentCompleteness, calculateE
 import { accountingTotals } from "../accountingCalculations";
 import { calculateStageTimeVariance } from "../../shared/stageTiming";
 import { allocateAdministrativeExpense, normalizeExpenseTaxRate, validateExpenseAllocation } from "../../shared/expenseAllocation";
-import { calculateInventoryBalance, canReceiveContractQuantity, canReviewInventoryStage, nextInventoryApprovalStage, remainingContractQuantity, selectPurchaseInvoiceForIssue } from "../../shared/inventory";
+import { calculateInventoryBalance, canReceiveContractQuantity, canReviewInventoryStage, nextInventoryApprovalStage, remainingContractQuantity, selectPurchaseInvoiceForIssue, calculateServiceEntryTotal, remainingServiceContractAmount } from "../../shared/inventory";
 
 const projectStatus = z.enum(["planning", "active", "paused", "completed", "archived"]);
 const operationKey = z.enum(["payment_voucher", "receipt_voucher", "expense", "certificate", "payroll", "custody", "purchase_invoice", "sales_invoice", "purchase_request", "inventory_item", "inventory_receipt", "inventory_issue", "edit", "delete", "approve"]);
@@ -1320,7 +1320,7 @@ export const erpRouter = router({
         return { ...contract, contractItems, itemProgress, totalCertificates: used, remaining: Math.max(0, Number(contract.totalAmount) - used), executionPct: Number(contract.totalAmount) > 0 ? (used / Number(contract.totalAmount)) * 100 : 0 };
       });
     }),
-    create: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), stageId: z.number().int().positive().optional(), vendorId: z.number().int().positive(), contractNumber: z.string().trim().min(1), description: z.string().max(2000).optional(), contractType: z.enum(["building_stage", "supply", "supply_installation"]).default("building_stage"), contractItems: z.array(z.object({ description: z.string().trim().min(1), unit: z.string().trim().min(1), contractedQty: z.number().positive(), unitPrice: z.number().nonnegative(), suppliedQty: z.number().nonnegative().default(0), installedQty: z.number().nonnegative().default(0), approvedQty: z.number().nonnegative().default(0) })).default([]), preTaxAmount: z.number().nonnegative(), taxRate: z.number().min(0).max(100).default(15), contractDate: z.string().optional() })).mutation(async ({ ctx, input }) => {
+    create: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), stageId: z.number().int().positive().optional(), vendorId: z.number().int().positive(), contractNumber: z.string().trim().min(1), description: z.string().max(2000).optional(), contractType: z.enum(["building_stage", "supply", "supply_installation", "equipment_rental", "labor_supply"]).default("building_stage"), contractItems: z.array(z.object({ description: z.string().trim().min(1), unit: z.string().trim().min(1), contractedQty: z.number().positive(), unitPrice: z.number().nonnegative(), suppliedQty: z.number().nonnegative().default(0), installedQty: z.number().nonnegative().default(0), approvedQty: z.number().nonnegative().default(0) })).default([]), preTaxAmount: z.number().nonnegative(), taxRate: z.number().min(0).max(100).default(15), contractDate: z.string().optional() })).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
       await assertProjectAccess(db, ctx, input.projectId);
       await assertProjectWrite(db, ctx, input.projectId);
@@ -2116,6 +2116,55 @@ export const erpRouter = router({
         const id = Number(result[0].insertId);
         await db.insert(auditLogs).values({ entityType: "inventoryItem", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
         return { id };
+      }),
+    }),
+    services: router({
+      list: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional(), entryType: z.enum(["equipment_rental", "labor_supply"]).optional() }).optional()).query(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
+        const [rows, projectsRows, stagesRows, vendorsRows, contractsRows] = await Promise.all([db.select().from(serviceContractEntries), db.select().from(projects), db.select().from(stages), db.select().from(vendors), db.select().from(contractorContracts)]);
+        const projectMap = new Map(projectsRows.map((row) => [row.id, row]));
+        const stageMap = new Map(stagesRows.map((row) => [row.id, row]));
+        const vendorMap = new Map(vendorsRows.map((row) => [row.id, row]));
+        const contractMap = new Map(contractsRows.map((row) => [row.id, row]));
+        return rows.filter((row) => row.status !== "cancelled" && (!input?.projectId || row.projectId === input.projectId) && (!input?.entryType || row.entryType === input.entryType) && (!allowed || allowed.has(row.projectId))).map((row) => ({ ...row, project: projectMap.get(row.projectId) ?? null, stage: row.stageId ? stageMap.get(row.stageId) ?? null : null, vendor: vendorMap.get(row.vendorId) ?? null, contract: contractMap.get(row.contractId) ?? null }));
+      }),
+      create: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), stageId: z.number().int().positive().nullable().optional(), contractId: z.number().int().positive(), vendorId: z.number().int().positive(), entryType: z.enum(["equipment_rental", "labor_supply"]), serviceDate: z.string().min(1), periodStart: z.string().optional(), periodEnd: z.string().optional(), description: z.string().trim().min(1).max(4000), equipmentClass: z.string().trim().max(128).optional(), quantity: z.number().positive().default(1), rentalDays: z.number().positive().optional(), dailyRate: z.number().positive().optional(), workerCategory: z.string().trim().max(128).optional(), headcount: z.number().positive().optional(), workDays: z.number().positive().optional(), dailyWage: z.number().positive().optional() })).mutation(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        await assertProjectAccess(db, ctx, input.projectId);
+        await assertProjectWrite(db, ctx, input.projectId);
+        await assertOperationPermission(db, ctx, "expense");
+        const contract = (await db.select().from(contractorContracts).where(eq(contractorContracts.id, input.contractId)).limit(1))[0];
+        if (!contract || contract.projectId !== input.projectId || contract.vendorId !== input.vendorId) throw new TRPCError({ code: "BAD_REQUEST", message: "العقد لا يتطابق مع المشروع أو المورد" });
+        if (contract.contractType !== input.entryType) throw new TRPCError({ code: "BAD_REQUEST", message: "نوع السجل لا يتطابق مع نوع العقد" });
+        if (input.stageId) { const stage = (await db.select({ id: stages.id }).from(stages).where(and(eq(stages.id, input.stageId), eq(stages.projectId, input.projectId))).limit(1))[0]; if (!stage) throw new TRPCError({ code: "BAD_REQUEST", message: "المرحلة لا تتبع المشروع المحدد" }); }
+        const totalAmount = calculateServiceEntryTotal(input);
+        if (totalAmount <= 0) throw new TRPCError({ code: "BAD_REQUEST", message: input.entryType === "equipment_rental" ? "أدخل العدد والأيام والأجرة اليومية للآلة" : "أدخل عدد العمال والأيام والأجر اليومي" });
+        const prior = await db.select().from(serviceContractEntries).where(and(eq(serviceContractEntries.contractId, input.contractId), eq(serviceContractEntries.status, "posted")));
+        const remaining = remainingServiceContractAmount(Number(contract.totalAmount || 0), prior.map((row) => Number(row.totalAmount || 0)));
+        if (totalAmount > remaining + 0.01) throw new TRPCError({ code: "BAD_REQUEST", message: `القيمة تتجاوز المتبقي من العقد. المتبقي ${remaining.toFixed(2)} ر.س` });
+        const result = await db.insert(serviceContractEntries).values({ projectId: input.projectId, stageId: input.stageId ?? null, contractId: input.contractId, vendorId: input.vendorId, entryType: input.entryType, serviceDate: new Date(input.serviceDate), periodStart: input.periodStart ? new Date(input.periodStart) : null, periodEnd: input.periodEnd ? new Date(input.periodEnd) : null, description: input.description, equipmentClass: input.entryType === "equipment_rental" ? input.equipmentClass || null : null, quantity: input.quantity.toFixed(3), rentalDays: Number(input.rentalDays || 0).toFixed(3), dailyRate: Number(input.dailyRate || 0).toFixed(2), workerCategory: input.entryType === "labor_supply" ? input.workerCategory || null : null, headcount: Number(input.headcount || 0).toFixed(3), workDays: Number(input.workDays || 0).toFixed(3), dailyWage: Number(input.dailyWage || 0).toFixed(2), totalAmount: totalAmount.toFixed(2), status: "pending_approval", createdBy: ctx.user.id });
+        const id = Number(result[0].insertId);
+        await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "serviceContractEntry", entityId: id, requestedBy: ctx.user.id, status: "pending", approvalStage: "mostafa", stageOrder: 1 });
+        await db.insert(auditLogs).values({ entityType: "serviceContractEntry", entityId: id, action: "submitted_for_mostafa_approval", actorId: ctx.user.id, afterJson: JSON.stringify({ ...input, totalAmount }) });
+        return { id, totalAmount, status: "pending_approval" as const, approvalStage: "mostafa" as const };
+      }),
+      decide: protectedProcedure.input(z.object({ id: z.number().int().positive(), decision: z.enum(["approved", "rejected"]), note: z.string().max(1000).optional() })).mutation(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        const entry = (await db.select().from(serviceContractEntries).where(eq(serviceContractEntries.id, input.id)).limit(1))[0];
+        if (!entry) throw new TRPCError({ code: "NOT_FOUND", message: "سجل الخدمة غير موجود" });
+        const request = (await db.select().from(approvalRequests).where(and(eq(approvalRequests.entityType, "serviceContractEntry"), eq(approvalRequests.entityId, input.id), eq(approvalRequests.status, "pending"))).limit(1))[0];
+        if (!request) throw new TRPCError({ code: "BAD_REQUEST", message: "لا توجد موافقة معلقة لهذا السجل" });
+        const approvalStage = request.approvalStage === "owner" ? "owner" : "mostafa";
+        if (!canReviewInventoryStage(approvalStage, { id: Number(ctx.user.id), role: ctx.user.role })) throw new TRPCError({ code: "FORBIDDEN", message: approvalStage === "mostafa" ? "اعتماد المرحلة الأولى مخصص لمصطفى أو المالك" : "اعتماد المرحلة النهائية مخصص للمالك فقط" });
+        await db.update(approvalRequests).set({ status: input.decision === "approved" ? "approved" : "rejected", reviewedBy: ctx.user.id, reviewedAt: new Date(), note: input.note || null }).where(eq(approvalRequests.id, request.id));
+        if (input.decision === "rejected") { await db.update(serviceContractEntries).set({ status: "cancelled" }).where(eq(serviceContractEntries.id, input.id)); return { success: true, status: "cancelled" as const }; }
+        if (approvalStage === "mostafa") { await db.insert(approvalRequests).values({ projectId: entry.projectId, entityType: "serviceContractEntry", entityId: entry.id, requestedBy: entry.createdBy || ctx.user.id, status: "pending", approvalStage: "owner", stageOrder: 2 }); return { success: true, status: "pending_approval" as const, approvalStage: "owner" as const }; }
+        const expenseResult = await db.insert(expenses).values({ projectId: entry.projectId, stageId: entry.stageId, vendorId: entry.vendorId, reference: `SERVICE-${entry.id}`, description: `${entry.entryType === "equipment_rental" ? "إيجار آلة" : "توريد عمالة"}: ${entry.description}`, unit: entry.entryType === "equipment_rental" ? "يومية آلة" : "يوم عمل", quantity: (entry.entryType === "equipment_rental" ? Number(entry.quantity) * Number(entry.rentalDays) : Number(entry.headcount) * Number(entry.workDays)).toFixed(3), expenseType: entry.entryType, classification: "project", allocationRatio: "1", preTaxAmount: entry.totalAmount, taxRate: "0", taxAmount: "0", totalAmount: entry.totalAmount, paidAmount: "0", status: "posted", expenseDate: entry.serviceDate, createdBy: ctx.user.id });
+        const expenseId = Number(expenseResult[0].insertId);
+        await db.update(serviceContractEntries).set({ status: "posted", expenseId }).where(eq(serviceContractEntries.id, entry.id));
+        await db.insert(auditLogs).values({ entityType: "serviceContractEntry", entityId: entry.id, action: "owner_approved_posted", actorId: ctx.user.id, afterJson: JSON.stringify({ expenseId, totalAmount: entry.totalAmount, note: input.note || null }) });
+        return { success: true, status: "posted" as const, expenseId };
       }),
     }),
     movements: router({

@@ -35389,3 +35389,14 @@
 - [x] Carry the contract and line references into the generated supplier receipt and purchase invoice.
 - [x] Add regression tests for contract-linked receipts and over-receipt rejection.
 - [x] Run TypeScript, Vitest, build, visual verification, and save the checkpoint.
+
+## Equipment rental and labor supply contracts — 2026-08-21
+- [x] Add contract types for equipment rental and labor supply without mixing them with material supply or contractor construction contracts.
+- [x] Add equipment rental records with equipment class, supplier, daily rate, quantity, rental dates, operating hours, and project/stage allocation.
+- [x] Add labor supply records with worker category, supplier, daily wage, headcount, working days, attendance/period, and project/stage allocation.
+- [x] Link equipment and labor records to their originating contracts and suppliers.
+- [x] Validate rental and labor quantities, dates, and amounts against contractual limits.
+- [x] Post rental and labor costs into project cost centers and financial reports without double counting.
+- [x] Add Arabic RTL UI sections in Inventory for equipment rentals and supplied labor with Excel export where applicable.
+- [x] Add permissions, audit trail, and approval handling consistent with inventory and contract workflows.
+- [x] Add regression tests and perform TypeScript, Vitest, build, visual verification, and checkpoint publication.

@@ -33,6 +33,17 @@ export function canReceiveContractQuantity(line: ContractQuantityLine, requested
   return Number(requestedQty || 0) <= remainingContractQuantity(line) + 0.0005;
 }
 
+export function calculateServiceEntryTotal(input: { entryType: "equipment_rental" | "labor_supply"; quantity?: number; rentalDays?: number; dailyRate?: number; headcount?: number; workDays?: number; dailyWage?: number }) {
+  const total = input.entryType === "equipment_rental"
+    ? Number(input.quantity || 0) * Number(input.rentalDays || 0) * Number(input.dailyRate || 0)
+    : Number(input.headcount || 0) * Number(input.workDays || 0) * Number(input.dailyWage || 0);
+  return Number(total.toFixed(2));
+}
+
+export function remainingServiceContractAmount(contractTotal: number, postedAmounts: number[]) {
+  return Math.max(0, Number(contractTotal || 0) - postedAmounts.reduce((sum, amount) => sum + Number(amount || 0), 0));
+}
+
 export function selectPurchaseInvoiceForIssue(receipts: InventoryReceiptLink[]) {
   return receipts.find((receipt) => Boolean(receipt.purchaseInvoiceId))?.purchaseInvoiceId ?? null;
 }

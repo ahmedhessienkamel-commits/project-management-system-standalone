@@ -209,6 +209,8 @@ export type InsertVendor = typeof vendors.$inferInsert;
 export type InventoryItem = typeof inventoryItems.$inferSelect;
 export type InsertInventoryItem = typeof inventoryItems.$inferInsert;
 export type InventoryMovement = typeof inventoryMovements.$inferSelect;
+export type ServiceContractEntry = typeof serviceContractEntries.$inferSelect;
+export type InsertServiceContractEntry = typeof serviceContractEntries.$inferInsert;
 export type InsertInventoryMovement = typeof inventoryMovements.$inferInsert;
 export type Employee = typeof employees.$inferSelect;
 export type InsertEmployee = typeof employees.$inferInsert;
@@ -348,7 +350,7 @@ export const contractorContracts = mysqlTable("contractorContracts", {
   vendorId: int("vendorId").notNull(),
   contractNumber: varchar("contractNumber", { length: 128 }).notNull(),
   description: text("description"),
-  contractType: mysqlEnum("contractType", ["building_stage", "supply", "supply_installation"]).default("building_stage").notNull(),
+  contractType: mysqlEnum("contractType", ["building_stage", "supply", "supply_installation", "equipment_rental", "labor_supply"]).default("building_stage").notNull(),
   contractItems: json("contractItems").$type<Array<{ description: string; unit: string; contractedQty: number; unitPrice: number; suppliedQty?: number; installedQty?: number; approvedQty?: number }>>(),
   preTaxAmount: decimal("preTaxAmount", { precision: 14, scale: 2 }).default("0").notNull(),
   taxRate: decimal("taxRate", { precision: 5, scale: 2 }).default("15").notNull(),
@@ -376,6 +378,32 @@ export const certificates = mysqlTable("certificates", {
   paidAmount: decimal("paidAmount", { precision: 14, scale: 2 }).default("0").notNull(),
   status: mysqlEnum("status", ["draft", "pending", "approved", "rejected", "paid"]).default("draft").notNull(),
   certificateDate: date("certificateDate"),
+  createdBy: int("createdBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const serviceContractEntries = mysqlTable("serviceContractEntries", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: int("projectId").notNull(),
+  stageId: int("stageId"),
+  contractId: int("contractId").notNull(),
+  vendorId: int("vendorId").notNull(),
+  entryType: mysqlEnum("entryType", ["equipment_rental", "labor_supply"]).notNull(),
+  serviceDate: date("serviceDate").notNull(),
+  periodStart: date("periodStart"),
+  periodEnd: date("periodEnd"),
+  description: text("description").notNull(),
+  equipmentClass: varchar("equipmentClass", { length: 128 }),
+  quantity: decimal("quantity", { precision: 14, scale: 3 }).default("1").notNull(),
+  rentalDays: decimal("rentalDays", { precision: 14, scale: 3 }).default("0").notNull(),
+  dailyRate: decimal("dailyRate", { precision: 14, scale: 2 }).default("0").notNull(),
+  workerCategory: varchar("workerCategory", { length: 128 }),
+  headcount: decimal("headcount", { precision: 14, scale: 3 }).default("0").notNull(),
+  workDays: decimal("workDays", { precision: 14, scale: 3 }).default("0").notNull(),
+  dailyWage: decimal("dailyWage", { precision: 14, scale: 2 }).default("0").notNull(),
+  totalAmount: decimal("totalAmount", { precision: 14, scale: 2 }).default("0").notNull(),
+  expenseId: int("expenseId"),
+  status: mysqlEnum("status", ["pending_approval", "posted", "cancelled"]).default("pending_approval").notNull(),
   createdBy: int("createdBy"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
