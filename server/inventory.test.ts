@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateInventoryBalance, calculateMaterialReceiptCost, calculateServiceEntryTotal, canReceiveContractQuantity, isMaterialContractType, materialReceiptExpenseReference, remainingContractQuantity, remainingServiceContractAmount, selectPurchaseInvoiceForIssue } from "../shared/inventory";
+import { calculateInventoryBalance, calculateMaterialReceiptCost, calculateServiceEntryTotal, canReceiveContractQuantity, isMaterialContractType, materialReceiptExpenseReference, materialIssueExpenseReference, remainingContractQuantity, remainingServiceContractAmount, selectPurchaseInvoiceForIssue } from "../shared/inventory";
 
 describe("inventory balance calculations", () => {
   it("calculates received, issued, available quantity, and value", () => {
@@ -42,6 +42,7 @@ describe("contract-linked material cost posting rules", () => {
   it("calculates receipt cost and produces a stable idempotency reference", () => {
     expect(calculateMaterialReceiptCost(12.5, 80)).toBe(1000);
     expect(materialReceiptExpenseReference(42)).toBe("INV-RECEIPT-42");
+    expect(materialIssueExpenseReference(42)).toBe("INV-ISSUE-42");
   });
 
   it("limits material-card linkage to supply contract types", () => {

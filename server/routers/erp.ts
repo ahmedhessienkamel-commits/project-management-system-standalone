@@ -10,7 +10,7 @@ import { calculateCertificateProgress, calculateDocumentCompleteness, calculateE
 import { accountingTotals } from "../accountingCalculations";
 import { calculateStageTimeVariance } from "../../shared/stageTiming";
 import { allocateAdministrativeExpense, normalizeExpenseTaxRate, validateExpenseAllocation } from "../../shared/expenseAllocation";
-import { calculateInventoryBalance, canReceiveContractQuantity, canReviewInventoryStage, nextInventoryApprovalStage, remainingContractQuantity, selectPurchaseInvoiceForIssue, calculateServiceEntryTotal, remainingServiceContractAmount, calculateMaterialReceiptCost, materialReceiptExpenseReference, isMaterialContractType, resolveMaterialCostAccount } from "../../shared/inventory";
+import { calculateInventoryBalance, canReceiveContractQuantity, canReviewInventoryStage, nextInventoryApprovalStage, remainingContractQuantity, selectPurchaseInvoiceForIssue, calculateServiceEntryTotal, remainingServiceContractAmount, calculateMaterialReceiptCost, materialReceiptExpenseReference, materialIssueExpenseReference, isMaterialContractType, resolveMaterialCostAccount } from "../../shared/inventory";
 import { calculateWipBalance, buildWipClosingLines } from "../../shared/wip";
 import { canAssignTeamTasks } from "../../shared/taskPermissions";
 import { sendApprovalEmail, sendInvitationEmail } from "../email";
@@ -127,6 +127,19 @@ async function postInventoryLinkedDocuments(db: ErpDb, movement: { id?: number; 
       const line = contract && movement.contractItemIndex !== null && movement.contractItemIndex !== undefined ? (contract.contractItems ?? [])[movement.contractItemIndex] : null;
       const totalAmount = calculateMaterialReceiptCost(movement.quantity, movement.unitCost);
       await db.insert(expenses).values({ projectId: movement.projectId, stageId: movement.stageId ?? null, vendorId: movement.vendorId ?? null, costItemId: movement.costItemId ?? line?.costItemId ?? null, reference: expenseReference, description: `تكلفة خامة مستلمة${itemRow ? `: ${itemRow.name}` : ""}${movement.contractId ? ` — عقد #${movement.contractId}` : ""}`, unit: itemRow?.unit || "وحدة", quantity: Number(movement.quantity || 0).toFixed(3), expenseType: "materials_receipt", classification: "project", allocationRatio: "1", preTaxAmount: totalAmount.toFixed(2), taxRate: "0", taxAmount: "0", totalAmount: totalAmount.toFixed(2), paidAmount: "0", status: "posted", expenseDate: movement.movementDate ? new Date(movement.movementDate) : new Date() });
+    }
+  }
+  if (movement.movementType === "issue" && movement.id && movement.projectId && movement.itemId) {
+    const expenseReference = materialIssueExpenseReference(movement.id);
+    const existingExpense = (await db.select({ id: expenses.id }).from(expenses).where(eq(expenses.reference, expenseReference)).limit(1))[0];
+    if (!existingExpense) {
+      const [itemRow] = await db.select().from(inventoryItems).where(eq(inventoryItems.id, movement.itemId)).limit(1);
+      const receiptRows = await db.select().from(inventoryMovements).where(and(eq(inventoryMovements.projectId, movement.projectId), eq(inventoryMovements.itemId, movement.itemId), eq(inventoryMovements.movementType, "receipt"), eq(inventoryMovements.status, "posted")));
+      const receivedQuantity = receiptRows.reduce((sum, row) => sum + Number(row.quantity || 0), 0);
+      const receivedValue = receiptRows.reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+      const averageUnitCost = receivedQuantity > 0 ? receivedValue / receivedQuantity : Number(movement.unitCost || 0);
+      const totalAmount = calculateMaterialReceiptCost(movement.quantity, Number(movement.unitCost || 0) > 0 ? movement.unitCost : averageUnitCost);
+      await db.insert(expenses).values({ projectId: movement.projectId, stageId: movement.stageId ?? null, vendorId: movement.vendorId ?? null, costItemId: movement.costItemId ?? null, reference: expenseReference, description: `تكلفة خامة منصرفة${itemRow ? `: ${itemRow.name}` : ""}`, unit: itemRow?.unit || "وحدة", quantity: Number(movement.quantity || 0).toFixed(3), expenseType: "materials_issue", classification: "project", allocationRatio: "1", preTaxAmount: totalAmount.toFixed(2), taxRate: "0", taxAmount: "0", totalAmount: totalAmount.toFixed(2), paidAmount: "0", status: "posted", expenseDate: movement.movementDate ? new Date(movement.movementDate) : new Date() });
     }
   }
   if (movement.contractId !== null && movement.contractId !== undefined && movement.contractItemIndex !== null && movement.contractItemIndex !== undefined) {

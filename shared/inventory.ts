@@ -71,6 +71,10 @@ export function materialReceiptExpenseReference(movementId: number) {
   return `INV-RECEIPT-${movementId}`;
 }
 
+export function materialIssueExpenseReference(movementId: number) {
+  return `INV-ISSUE-${movementId}`;
+}
+
 export function isMaterialContractType(contractType: string | null | undefined) {
   return contractType === "supply" || contractType === "supply_installation";
 }
