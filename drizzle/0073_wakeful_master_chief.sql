@@ -1,0 +1,1 @@
+ALTER TABLE `inventoryMovements` ADD `costItemId` int;

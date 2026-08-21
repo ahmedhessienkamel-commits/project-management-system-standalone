@@ -36,6 +36,7 @@ const menuItems = [
   { section: true, label: "التشغيل الأساسي" },
   { icon: ClipboardList, label: "المشاريع والمراحل", path: "/projects" },
   { icon: Boxes, label: "مراقبة المخزون والكميات", path: "/inventory" },
+  { icon: ClipboardList, label: "طلبات المواد", path: "/operations?tab=procurement" },
   { icon: WalletCards, label: "المبيعات والتحصيلات", path: "/sales" },
   { icon: FileText, label: "التكاليف والمصروفات", path: "/expenses" },
   { icon: ClipboardList, label: "الموردون والمقاولون", path: "/operations?tab=vendors" },
@@ -170,10 +171,11 @@ function DashboardLayoutContent({
     general_manager: ["لوحة التنفيذ", "الموافقات والمستندات", "مركز التكلفة", "قائمة الدخل", "المبيعات والتحصيلات", "العقود والمستخلصات", "مراقبة المخزون والكميات"],
     project_manager: ["لوحة التنفيذ", "المشاريع والمراحل", "العقود والمستخلصات", "الموردون والمقاولون", "الموافقات والمستندات"],
     procurement_manager: ["لوحة التنفيذ", "مراقبة المخزون والكميات", "التكاليف والمصروفات", "الموافقات والمستندات"],
+    site_worker: ["لوحة التنفيذ", "مراقبة المخزون والكميات", "طلبات المواد", "طلباتي"],
   };
   const allowedLabels = roleLabelAllowList[user?.role || ""];
   const visibleMenuItems = allowedLabels ? menuItems.filter((item) => "section" in item || allowedLabels.includes(item.label)) : menuItems;
-  const visibleQuickActions = user?.role === "general_manager" ? quickActions.filter((action) => action.path === "/operations?tab=certificates" || action.path === "/inventory") : allowedLabels ? quickActions.filter((action) => action.path.includes("/operations") || action.path.includes("/tasks") || action.path.includes("/accounting?type=sales_invoice")) : quickActions;
+  const visibleQuickActions = user?.role === "general_manager" ? quickActions.filter((action) => action.path === "/operations?tab=certificates" || action.path === "/inventory") : user?.role === "site_worker" ? quickActions.filter((action) => action.path === "/inventory" || action.path === "/operations?tab=procurement") : allowedLabels ? quickActions.filter((action) => action.path.includes("/operations") || action.path.includes("/tasks") || action.path.includes("/accounting?type=sales_invoice")) : quickActions;
   const searchResults = normalizedSearch ? visibleMenuItems.filter((item): item is Extract<(typeof menuItems)[number], { path: string }> => "path" in item && item.label.toLowerCase().includes(normalizedSearch)).slice(0, 6) : [];
 
   useEffect(() => {

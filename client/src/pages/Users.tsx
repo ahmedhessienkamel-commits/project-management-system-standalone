@@ -7,13 +7,14 @@ import { ArrowRight, Check, Clipboard, ShieldCheck, UserCog } from "lucide-react
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 
-const roleLabels: Record<string, string> = { manager: "مدير مشروع داخل المشروع", finance: "مالي", input: "إدخال", reviewer: "مراجع", viewer: "مشاهدة", admin: "المالك / إدارة النظام", user: "مستخدم تشغيلي", general_manager: "مدير عام", project_manager: "مدير مشاريع", procurement_manager: "مدير مشتريات / مسؤول موقع" };
-const systemRoles = ["user", "general_manager", "project_manager", "procurement_manager", "admin"] as const;
-const jobOptions = ["مدير عام", "مدير مشاريع", "مهندس مشرف", "موظف إداري", "مسؤول مشتريات / مسؤول موقع"] as const;
+const roleLabels: Record<string, string> = { manager: "مدير مشروع داخل المشروع", finance: "مالي", input: "إدخال", reviewer: "مراجع", viewer: "مشاهدة", admin: "المالك / إدارة النظام", user: "مستخدم تشغيلي", general_manager: "مدير عام", project_manager: "مدير مشاريع", procurement_manager: "مدير مشتريات / مسؤول موقع", site_worker: "موظف موقع" };
+const systemRoles = ["user", "general_manager", "project_manager", "procurement_manager", "site_worker", "admin"] as const;
+const jobOptions = ["مدير عام", "مدير مشاريع", "مهندس مشرف", "موظف إداري", "مسؤول مشتريات / مسؤول موقع", "موظف موقع"] as const;
 const roleTemplates: Record<string, { label: string; permissions: string[] }> = {
   general_manager: { label: "مدير عام", permissions: ["عرض الشاشة الرئيسية", "عرض التقارير", "اعتماد المستخلصات", "اعتماد مسيرات الرواتب"] },
   project_manager: { label: "مدير مشاريع", permissions: ["عرض أداء المشاريع المسندة", "اعتماد مستخلصات المشاريع المسندة"] },
   procurement_manager: { label: "مسؤول مشتريات / موقع", permissions: ["إنشاء طلب شراء", "إضافة خامات للمخزون", "سحب خامات من المخزون"] },
+  site_worker: { label: "موظف موقع", permissions: ["طلب شراء مواد", "استلام خامات", "صرف خامات", "طلب إجازة وسلفة"] },
   user: { label: "موظف إداري / مهندس مشرف", permissions: ["الصلاحيات التي يحددها المالك", "تسجيل العمليات التي يسمح بها المالك"] },
 };
 

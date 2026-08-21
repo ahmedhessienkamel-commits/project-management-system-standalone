@@ -8,9 +8,10 @@ describe("inventory approval chain", () => {
     expect(canReviewInventoryStage("mostafa", { id: 44, role: "user" })).toBe(false);
   });
 
-  it("restricts the final stage to the owner", () => {
+  it("allows only the owner to review the second stage", () => {
     expect(canReviewInventoryStage("owner", { id: 1, role: "admin" })).toBe(true);
-    expect(canReviewInventoryStage("owner", { id: 13170001, role: "user" })).toBe(false);
+    expect(canReviewInventoryStage("owner", { id: 22, role: "project_manager" })).toBe(false);
+    expect(canReviewInventoryStage("owner", { id: 44, role: "site_worker" })).toBe(false);
   });
 
   it("moves from Mostafa to owner and then completes", () => {
