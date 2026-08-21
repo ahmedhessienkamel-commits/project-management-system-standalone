@@ -133,6 +133,7 @@ export const inventoryMovements = mysqlTable("inventoryMovements", {
   reference: varchar("reference", { length: 128 }),
   description: text("description"),
   sourceDocumentId: int("sourceDocumentId"),
+  purchaseInvoiceId: int("purchaseInvoiceId"),
   status: mysqlEnum("status", ["draft", "pending_approval", "posted", "cancelled"]).default("pending_approval").notNull(),
   createdBy: int("createdBy"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -610,7 +611,7 @@ export const accounts = mysqlTable("accounts", {
 export const accountingDocuments = mysqlTable("accountingDocuments", {
   id: int("id").autoincrement().primaryKey(),
   projectId: int("projectId"),
-  documentType: mysqlEnum("documentType", ["sales_invoice", "purchase_invoice", "credit_note", "journal_entry", "payment_voucher", "receipt_voucher", "quotation", "purchase_order"]).notNull(),
+  documentType: mysqlEnum("documentType", ["sales_invoice", "purchase_invoice", "purchase_receipt", "credit_note", "journal_entry", "payment_voucher", "receipt_voucher", "quotation", "purchase_order"]).notNull(),
   documentNumber: varchar("documentNumber", { length: 128 }).notNull().unique(),
   partyName: varchar("partyName", { length: 255 }),
   partyTaxNumber: varchar("partyTaxNumber", { length: 64 }),

@@ -35222,3 +35222,31 @@
 - [x] Add Excel export to accounting reports, cash-flow details, stage ranking, financial summary, and materials/stage cost reports.
 - [x] Run TypeScript, 57 Vitest tests, production build, and visual screenshots for Reports, Home, and Accounting.
 - [ ] Save and publish the final report-binding checkpoint.
+
+## Checkpoint completion — 2026-08-21
+
+- [x] Save and publish the verified report-binding checkpoint 9830e683.
+- [x] Confirm the deployed version is live on the project domain.
+
+## Inventory receiving and issue document linkage — 2026-08-21
+
+- [ ] Add automatic supplier-receipt document creation when an inventory receipt is saved.
+- [ ] Add automatic purchase-invoice creation linked to the supplier receipt and received material.
+- [ ] Preserve supplier, project, material, quantity, unit cost, date, and source reference across the generated documents.
+- [ ] Link material issue movements automatically to the purchase invoice(s) associated with the selected material.
+- [ ] Show the linked receipt, purchase invoice, and source references in inventory history and related reports.
+- [ ] Prevent duplicate automatic documents when an inventory movement is edited or retried.
+- [ ] Add tests for receipt-to-invoice and issue-to-purchase-invoice linkage.
+- [ ] Run TypeScript, Vitest, build, and visual verification, then save and publish the checkpoint.
+
+## Inventory linkage verification — 2026-08-21
+
+- [x] Add automatic supplier-receipt document creation when an inventory receipt is saved.
+- [x] Add automatic purchase-invoice creation linked to the supplier receipt and received material.
+- [x] Preserve supplier, project, material, quantity, unit cost, date, and source reference across generated documents.
+- [x] Link material issue movements automatically to the purchase invoice associated with the selected material.
+- [x] Show linked receipt and purchase invoice references in inventory movement history.
+- [x] Prevent missing supplier data on receipts by making supplier selection mandatory.
+- [x] Add automated linkage logic tests; inventory suite now passes 3 tests.
+- [x] Run TypeScript, 58 Vitest tests, production build, and visual verification.
+- [ ] Save and publish the inventory linkage checkpoint.

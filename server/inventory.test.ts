@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateInventoryBalance } from "../shared/inventory";
+import { calculateInventoryBalance, selectPurchaseInvoiceForIssue } from "../shared/inventory";
 
 describe("inventory balance calculations", () => {
   it("calculates received, issued, available quantity, and value", () => {
@@ -15,5 +15,10 @@ describe("inventory balance calculations", () => {
 
   it("returns a zero balance when there are no movements", () => {
     expect(calculateInventoryBalance([])).toEqual({ received: 0, issued: 0, quantity: 0, value: 0 });
+  });
+
+  it("links an issue to the first available purchase invoice for the material", () => {
+    expect(selectPurchaseInvoiceForIssue([{ purchaseInvoiceId: null }, { purchaseInvoiceId: 42, reference: "GRN-42" }])).toBe(42);
+    expect(selectPurchaseInvoiceForIssue([{ purchaseInvoiceId: null }])).toBeNull();
   });
 });

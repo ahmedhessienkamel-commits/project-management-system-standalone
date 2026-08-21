@@ -21,6 +21,12 @@ export function calculateInventoryBalance(movements: InventoryMovementLike[]) {
   );
 }
 
+export type InventoryReceiptLink = { purchaseInvoiceId: number | null; reference?: string | null };
+
+export function selectPurchaseInvoiceForIssue(receipts: InventoryReceiptLink[]) {
+  return receipts.find((receipt) => Boolean(receipt.purchaseInvoiceId))?.purchaseInvoiceId ?? null;
+}
+
 export type InventoryApprovalStage = "mostafa" | "owner" | "complete";
 
 export function canReviewInventoryStage(stage: InventoryApprovalStage, user: { id: number; role: string }) {

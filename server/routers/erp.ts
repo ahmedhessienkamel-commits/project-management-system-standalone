@@ -9,7 +9,7 @@ import { calculateCertificateProgress, calculateDocumentCompleteness, calculateE
 import { accountingTotals } from "../accountingCalculations";
 import { calculateStageTimeVariance } from "../../shared/stageTiming";
 import { allocateAdministrativeExpense, normalizeExpenseTaxRate, validateExpenseAllocation } from "../../shared/expenseAllocation";
-import { calculateInventoryBalance, canReviewInventoryStage, nextInventoryApprovalStage } from "../../shared/inventory";
+import { calculateInventoryBalance, canReviewInventoryStage, nextInventoryApprovalStage, selectPurchaseInvoiceForIssue } from "../../shared/inventory";
 
 const projectStatus = z.enum(["planning", "active", "paused", "completed", "archived"]);
 const operationKey = z.enum(["payment_voucher", "receipt_voucher", "expense", "certificate", "payroll", "custody", "purchase_invoice", "sales_invoice", "purchase_request", "inventory_item", "inventory_receipt", "inventory_issue", "edit", "delete", "approve"]);
@@ -29,6 +29,46 @@ const employeeProfileSchema = z.object({
 function requireDb(db: Awaited<ReturnType<typeof getDb>>) {
   if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة حاليًا" });
   return db;
+}
+
+type ErpDb = NonNullable<Awaited<ReturnType<typeof getDb>>>;
+
+async function createInventoryPurchaseDocuments(db: ErpDb, ctx: { user: { id: number } }, input: { movementId: number; projectId: number; stageId?: number | null; itemId: number; vendorId?: number | null; quantity: number; unitCost: number; movementDate?: string; description?: string | null }) {
+  const [item, vendor] = await Promise.all([
+    db.select().from(inventoryItems).where(eq(inventoryItems.id, input.itemId)).limit(1),
+    input.vendorId ? db.select().from(vendors).where(eq(vendors.id, input.vendorId)).limit(1) : Promise.resolve([]),
+  ]);
+  const itemRow = item[0];
+  const vendorRow = vendor[0];
+  if (!itemRow) throw new TRPCError({ code: "NOT_FOUND", message: "بطاقة الخامة غير موجودة" });
+  const totalAmount = Number((input.quantity * input.unitCost).toFixed(2));
+  const documentDate = input.movementDate ? new Date(input.movementDate) : new Date();
+  const token = `${Date.now()}-${randomUUID().slice(0, 6).toUpperCase()}`;
+  const receiptNumber = `GRN-${token}`;
+  const invoiceNumber = `PI-INV-${token}`;
+  const partyName = vendorRow?.name || "مورد غير محدد";
+  const common = { projectId: input.projectId, supplierId: input.vendorId ?? null, partyName, partyTaxNumber: vendorRow?.taxNumber || null, voucherCategory: "materials" as const, documentDate, amount: totalAmount.toFixed(2), taxAmount: "0.00", totalAmount: totalAmount.toFixed(2), paidAmount: "0.00", paymentStatus: "unpaid" as const, status: "draft" as const, createdBy: ctx.user.id };
+  const receiptResult = await db.insert(accountingDocuments).values({ ...common, documentType: "purchase_receipt", documentNumber: receiptNumber, relatedDocumentType: "inventory_movement", relatedDocumentId: input.movementId, notes: `سند استلام مورد تلقائي للخامة ${itemRow.name} — الكمية ${input.quantity} ${itemRow.unit}` });
+  const receiptId = Number(receiptResult[0].insertId);
+  const invoiceResult = await db.insert(accountingDocuments).values({ ...common, documentType: "purchase_invoice", documentNumber: invoiceNumber, relatedDocumentType: "purchase_receipt", relatedDocumentId: receiptId, notes: `فاتورة شراء تلقائية من سند الاستلام ${receiptNumber}. ${input.description || ""}`.trim() });
+  const invoiceId = Number(invoiceResult[0].insertId);
+  const accountRows = await db.select().from(accounts);
+  const inventoryAccount = accountRows.find((account) => ["1301", "5101"].includes(account.code) || account.name.includes("مخزون")) ?? null;
+  const payableAccount = accountRows.find((account) => account.code === "2101" || account.name.includes("مورد")) ?? null;
+  if (inventoryAccount && payableAccount) {
+    await db.insert(accountingDocumentLines).values([
+      { documentId: invoiceId, accountId: inventoryAccount.id, projectId: input.projectId, stageId: input.stageId ?? null, description: `إضافة مخزون — ${itemRow.name}`, debit: totalAmount.toFixed(2), credit: "0.00" },
+      { documentId: invoiceId, accountId: payableAccount.id, projectId: input.projectId, stageId: input.stageId ?? null, description: `مستحق المورد — ${partyName}`, debit: "0.00", credit: totalAmount.toFixed(2) },
+    ]);
+  }
+  await db.update(inventoryMovements).set({ sourceDocumentId: receiptId, purchaseInvoiceId: invoiceId, reference: input.description || receiptNumber }).where(eq(inventoryMovements.id, input.movementId));
+  await db.insert(auditLogs).values({ entityType: "inventoryMovement", entityId: input.movementId, action: "auto_documents_created", actorId: ctx.user.id, afterJson: JSON.stringify({ receiptId, receiptNumber, purchaseInvoiceId: invoiceId, invoiceNumber, itemId: input.itemId, quantity: input.quantity, totalAmount }) });
+  return { receiptId, receiptNumber, purchaseInvoiceId: invoiceId, invoiceNumber };
+}
+
+async function postInventoryLinkedDocuments(db: ErpDb, movement: { sourceDocumentId?: number | null; purchaseInvoiceId?: number | null }) {
+  if (movement.sourceDocumentId) await db.update(accountingDocuments).set({ status: "posted" }).where(eq(accountingDocuments.id, movement.sourceDocumentId));
+  if (movement.purchaseInvoiceId) await db.update(accountingDocuments).set({ status: "posted" }).where(eq(accountingDocuments.id, movement.purchaseInvoiceId));
 }
 
 function canManagePartners(user: { role: string; id: number }) {
@@ -1597,15 +1637,15 @@ export const erpRouter = router({
       }),
     }),
     documents: router({
-      list: protectedProcedure.input(z.object({ documentType: z.enum(["sales_invoice", "purchase_invoice", "credit_note", "journal_entry", "payment_voucher", "receipt_voucher", "quotation", "purchase_order"]).optional() }).optional()).query(async ({ input }) => {
+      list: protectedProcedure.input(z.object({ documentType: z.enum(["sales_invoice", "purchase_invoice", "purchase_receipt", "credit_note", "journal_entry", "payment_voucher", "receipt_voucher", "quotation", "purchase_order"]).optional() }).optional()).query(async ({ input }) => {
         const db = requireDb(await getDb());
         const rows = await db.select().from(accountingDocuments);
         const filtered = rows.filter((row) => !input?.documentType || row.documentType === input.documentType);
         return Promise.all(filtered.map(async (row) => { const creditedAmount = row.documentType === "sales_invoice" ? rows.filter((candidate) => candidate.documentType === "credit_note" && candidate.originalDocumentId === row.id).reduce((sum, candidate) => sum + Number(candidate.totalAmount || 0), 0) : 0; const netTotalAmount = Math.max(Number(row.totalAmount || 0) - creditedAmount, 0); return { ...row, creditedAmount, netTotalAmount, netRemainingAmount: Math.max(netTotalAmount - Number(row.paidAmount || 0), 0), lines: await db.select().from(accountingDocumentLines).where(eq(accountingDocumentLines.documentId, row.id)) }; }));
       }),
-      create: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional(), documentType: z.enum(["sales_invoice", "purchase_invoice", "credit_note", "journal_entry", "payment_voucher", "receipt_voucher", "quotation", "purchase_order"]), relatedDocumentType: z.enum(["quotation", "certificate"]).optional(), relatedDocumentId: z.number().int().positive().optional(), originalDocumentId: z.number().int().positive().optional(), returnType: z.enum(["full", "partial"]).optional(), voucherCategory: z.enum(["contractor", "supplier", "materials", "payroll", "operating", "administrative", "petty_cash"]).optional(), contractorId: z.number().int().positive().optional(), supplierId: z.number().int().positive().optional(), purchaseInvoiceId: z.number().int().positive().optional(), settlementType: z.enum(["invoice", "direct"]).optional(), certificateId: z.number().int().positive().optional(), fixedAssetId: z.number().int().positive().optional(), partyName: z.string().max(255).optional(), partyTaxNumber: z.string().max(64).optional(), documentDate: z.string().optional(), dueDate: z.string().optional(), sourceAccountId: z.number().int().positive().optional(), amount: z.number().nonnegative(), taxAmount: z.number().nonnegative(), totalAmount: z.number().nonnegative(), paymentMethod: z.enum(["cash", "bank"]).optional(), notes: z.string().max(2000).optional(), status: z.enum(["draft", "posted"]).default("draft"), lines: z.array(z.object({ accountId: z.number().int().positive(), costItemId: z.number().int().positive().optional(), projectId: z.number().int().positive().optional(), stageId: z.number().int().positive().optional(), description: z.string().max(500).optional(), debit: z.number().nonnegative(), credit: z.number().nonnegative() })).min(1) })).mutation(async ({ ctx, input }) => {
+      create: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional(), documentType: z.enum(["sales_invoice", "purchase_invoice", "purchase_receipt", "credit_note", "journal_entry", "payment_voucher", "receipt_voucher", "quotation", "purchase_order"]), relatedDocumentType: z.enum(["quotation", "certificate"]).optional(), relatedDocumentId: z.number().int().positive().optional(), originalDocumentId: z.number().int().positive().optional(), returnType: z.enum(["full", "partial"]).optional(), voucherCategory: z.enum(["contractor", "supplier", "materials", "payroll", "operating", "administrative", "petty_cash"]).optional(), contractorId: z.number().int().positive().optional(), supplierId: z.number().int().positive().optional(), purchaseInvoiceId: z.number().int().positive().optional(), settlementType: z.enum(["invoice", "direct"]).optional(), certificateId: z.number().int().positive().optional(), fixedAssetId: z.number().int().positive().optional(), partyName: z.string().max(255).optional(), partyTaxNumber: z.string().max(64).optional(), documentDate: z.string().optional(), dueDate: z.string().optional(), sourceAccountId: z.number().int().positive().optional(), amount: z.number().nonnegative(), taxAmount: z.number().nonnegative(), totalAmount: z.number().nonnegative(), paymentMethod: z.enum(["cash", "bank"]).optional(), notes: z.string().max(2000).optional(), status: z.enum(["draft", "posted"]).default("draft"), lines: z.array(z.object({ accountId: z.number().int().positive(), costItemId: z.number().int().positive().optional(), projectId: z.number().int().positive().optional(), stageId: z.number().int().positive().optional(), description: z.string().max(500).optional(), debit: z.number().nonnegative(), credit: z.number().nonnegative() })).min(1) })).mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
-        const accountingOperation = ({ sales_invoice: "sales_invoice", purchase_invoice: "purchase_invoice", journal_entry: "edit", payment_voucher: "payment_voucher", receipt_voucher: "receipt_voucher", quotation: "edit", purchase_order: "purchase_request", credit_note: "edit" } as const)[input.documentType];
+        const accountingOperation = ({ sales_invoice: "sales_invoice", purchase_invoice: "purchase_invoice", purchase_receipt: "inventory_receipt", journal_entry: "edit", payment_voucher: "payment_voucher", receipt_voucher: "receipt_voucher", quotation: "edit", purchase_order: "purchase_request", credit_note: "edit" } as const)[input.documentType];
         await assertOperationPermission(db, ctx, accountingOperation);
         if (input.projectId) await assertProjectWrite(db, ctx, input.projectId);
         if (input.documentType === "payment_voucher") {
@@ -1667,7 +1707,7 @@ export const erpRouter = router({
         }
         const totals = accountingTotals(input.lines);
         if (!totals.balanced && !["sales_invoice", "credit_note"].includes(input.documentType)) throw new TRPCError({ code: "BAD_REQUEST", message: "القيد غير متوازن: إجمالي المدين يجب أن يساوي إجمالي الدائن" });
-        const prefixes = { sales_invoice: "SI", purchase_invoice: "PI", credit_note: "CN", journal_entry: "JE", payment_voucher: "PV", receipt_voucher: "RV", quotation: "QT", purchase_order: "PO" } as const;
+        const prefixes = { sales_invoice: "SI", purchase_invoice: "PI", purchase_receipt: "GRN", credit_note: "CN", journal_entry: "JE", payment_voucher: "PV", receipt_voucher: "RV", quotation: "QT", purchase_order: "PO" } as const;
         const documentNumber = `${prefixes[input.documentType]}-${Date.now()}`;
         const result = await db.insert(accountingDocuments).values({ projectId: input.projectId || null, voucherCategory: input.documentType === "payment_voucher" ? input.voucherCategory || null : null, contractorId: input.documentType === "payment_voucher" ? input.contractorId || null : null, supplierId: input.documentType === "payment_voucher" ? input.supplierId || null : null, purchaseInvoiceId: input.documentType === "payment_voucher" ? input.purchaseInvoiceId || null : null, settlementType: input.documentType === "payment_voucher" ? input.settlementType || "direct" : null, certificateId: input.documentType === "purchase_invoice" ? input.certificateId || null : null, relatedDocumentType: input.relatedDocumentType || null, relatedDocumentId: input.relatedDocumentId || null, originalDocumentId: input.originalDocumentId || null, returnType: input.returnType || null, documentType: input.documentType, documentNumber, partyName: input.partyName || null, partyTaxNumber: input.partyTaxNumber || null, documentDate: input.documentDate ? new Date(input.documentDate) : new Date(), dueDate: input.dueDate ? new Date(input.dueDate) : null, sourceAccountId: input.sourceAccountId || null, amount: input.amount.toFixed(2), taxAmount: input.taxAmount.toFixed(2), totalAmount: input.totalAmount.toFixed(2), paymentMethod: input.paymentMethod || null, status: input.status, notes: input.notes || null, createdBy: ctx.user.id });
         const id = Number(result[0].insertId);
@@ -2060,12 +2100,13 @@ export const erpRouter = router({
       list: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional(), itemId: z.number().int().positive().optional() }).optional()).query(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
         const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
-        const [movementRows, itemRows, vendorRows, projectRows, stageRows] = await Promise.all([db.select().from(inventoryMovements), db.select().from(inventoryItems), db.select().from(vendors), db.select().from(projects), db.select().from(stages)]);
+        const [movementRows, itemRows, vendorRows, projectRows, stageRows, documentRows] = await Promise.all([db.select().from(inventoryMovements), db.select().from(inventoryItems), db.select().from(vendors), db.select().from(projects), db.select().from(stages), db.select().from(accountingDocuments)]);
         const items = new Map(itemRows.map((item) => [item.id, item]));
         const vendorMap = new Map(vendorRows.map((vendor) => [vendor.id, vendor]));
         const projectMap = new Map(projectRows.map((project) => [project.id, project]));
         const stageMap = new Map(stageRows.map((stage) => [stage.id, stage]));
-        return movementRows.filter((row) => row.status !== "cancelled" && (!input?.projectId || row.projectId === input.projectId) && (!input?.itemId || row.itemId === input.itemId) && (!allowed || allowed.has(row.projectId))).map((row) => ({ ...row, item: items.get(row.itemId) ?? null, vendor: row.vendorId ? vendorMap.get(row.vendorId) ?? null : null, project: projectMap.get(row.projectId) ?? null, stage: row.stageId ? stageMap.get(row.stageId) ?? null : null }));
+        const documentMap = new Map(documentRows.map((document) => [document.id, document]));
+        return movementRows.filter((row) => row.status !== "cancelled" && (!input?.projectId || row.projectId === input.projectId) && (!input?.itemId || row.itemId === input.itemId) && (!allowed || allowed.has(row.projectId))).map((row) => ({ ...row, item: items.get(row.itemId) ?? null, vendor: row.vendorId ? vendorMap.get(row.vendorId) ?? null : null, project: projectMap.get(row.projectId) ?? null, stage: row.stageId ? stageMap.get(row.stageId) ?? null : null, receiptDocument: row.sourceDocumentId ? documentMap.get(row.sourceDocumentId) ?? null : null, purchaseInvoice: row.purchaseInvoiceId ? documentMap.get(row.purchaseInvoiceId) ?? null : null }));
       }),
       summary: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional() }).optional()).query(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
@@ -2088,15 +2129,27 @@ export const erpRouter = router({
         if (input.stageId) { const stage = (await db.select({ id: stages.id }).from(stages).where(and(eq(stages.id, input.stageId), eq(stages.projectId, input.projectId))).limit(1))[0]; if (!stage) throw new TRPCError({ code: "BAD_REQUEST", message: "المرحلة لا تتبع المشروع المحدد" }); }
         if (input.vendorId) { const vendor = (await db.select({ id: vendors.id }).from(vendors).where(eq(vendors.id, input.vendorId)).limit(1))[0]; if (!vendor) throw new TRPCError({ code: "NOT_FOUND", message: "المورد غير موجود" }); }
         const incoming = input.movementType === "receipt" || input.movementType === "adjustment_in";
+        if (input.movementType === "receipt" && !input.vendorId) throw new TRPCError({ code: "BAD_REQUEST", message: "اختر المورد لإنشاء سند الاستلام وفاتورة الشراء تلقائيًا" });
         const existing = await db.select().from(inventoryMovements).where(and(eq(inventoryMovements.projectId, input.projectId), eq(inventoryMovements.itemId, input.itemId), eq(inventoryMovements.status, "posted")));
         const balance = existing.reduce((total, row) => total + ((row.movementType === "receipt" || row.movementType === "adjustment_in" ? 1 : -1) * Number(row.quantity || 0)), 0);
         if (!incoming && input.quantity > balance + 0.0005) throw new TRPCError({ code: "BAD_REQUEST", message: `الرصيد المتاح لا يكفي. الرصيد الحالي ${balance.toFixed(3)} ${item.unit}` });
         const totalAmount = input.quantity * input.unitCost;
-        const result = await db.insert(inventoryMovements).values({ projectId: input.projectId, stageId: input.stageId ?? null, itemId: input.itemId, vendorId: input.vendorId ?? null, movementType: input.movementType, quantity: input.quantity.toFixed(3), unitCost: input.unitCost.toFixed(4), totalAmount: totalAmount.toFixed(2), movementDate: input.movementDate ? new Date(input.movementDate) : new Date(), reference: input.reference || null, description: input.description || null, status: "pending_approval", createdBy: ctx.user.id });
+        let linkedPurchaseInvoiceId: number | null = null;
+        let linkedReference = input.reference || null;
+        if (!incoming) {
+          const sourceReceipts = await db.select({ purchaseInvoiceId: inventoryMovements.purchaseInvoiceId, reference: inventoryMovements.reference }).from(inventoryMovements).where(and(eq(inventoryMovements.projectId, input.projectId), eq(inventoryMovements.itemId, input.itemId), eq(inventoryMovements.movementType, "receipt"), eq(inventoryMovements.status, "posted")));
+          linkedPurchaseInvoiceId = selectPurchaseInvoiceForIssue(sourceReceipts);
+          if (linkedPurchaseInvoiceId) linkedReference = `فاتورة شراء #${linkedPurchaseInvoiceId}`;
+        }
+        const result = await db.insert(inventoryMovements).values({ projectId: input.projectId, stageId: input.stageId ?? null, itemId: input.itemId, vendorId: input.vendorId ?? null, movementType: input.movementType, quantity: input.quantity.toFixed(3), unitCost: input.unitCost.toFixed(4), totalAmount: totalAmount.toFixed(2), movementDate: input.movementDate ? new Date(input.movementDate) : new Date(), reference: linkedReference, description: input.description || null, sourceDocumentId: linkedPurchaseInvoiceId, purchaseInvoiceId: linkedPurchaseInvoiceId, status: "pending_approval", createdBy: ctx.user.id });
         const id = Number(result[0].insertId);
+        let autoDocuments: { receiptId: number; receiptNumber: string; purchaseInvoiceId: number; invoiceNumber: string } | null = null;
+        if (incoming && input.movementType === "receipt") {
+          autoDocuments = await createInventoryPurchaseDocuments(db, ctx, { movementId: id, projectId: input.projectId, stageId: input.stageId ?? null, itemId: input.itemId, vendorId: input.vendorId ?? null, quantity: input.quantity, unitCost: input.unitCost, movementDate: input.movementDate, description: input.description || null });
+        }
         await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "inventoryMovement", entityId: id, requestedBy: ctx.user.id, status: "pending", approvalStage: "mostafa", stageOrder: 1 });
-        await db.insert(auditLogs).values({ entityType: "inventoryMovement", entityId: id, action: incoming ? "submitted_for_mostafa_approval" : "submitted_for_mostafa_approval", actorId: ctx.user.id, afterJson: JSON.stringify({ ...input, totalAmount, status: "pending_approval" }) });
-        return { id, status: "pending_approval" as const, approvalStage: "mostafa" as const, balanceAfter: balance + (incoming ? input.quantity : -input.quantity) };
+        await db.insert(auditLogs).values({ entityType: "inventoryMovement", entityId: id, action: "submitted_for_mostafa_approval", actorId: ctx.user.id, afterJson: JSON.stringify({ ...input, totalAmount, status: "pending_approval", autoDocuments, purchaseInvoiceId: linkedPurchaseInvoiceId }) });
+        return { id, status: "pending_approval" as const, approvalStage: "mostafa" as const, balanceAfter: balance + (incoming ? input.quantity : -input.quantity), autoDocuments, purchaseInvoiceId: linkedPurchaseInvoiceId };
       }),
       decide: protectedProcedure.input(z.object({ id: z.number().int().positive(), decision: z.enum(["approved", "rejected"]), note: z.string().max(1000).optional() })).mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
@@ -2119,7 +2172,8 @@ export const erpRouter = router({
           return { success: true, status: "pending_approval" as const, approvalStage: "owner" as const };
         }
         await db.update(inventoryMovements).set({ status: "posted" }).where(eq(inventoryMovements.id, input.id));
-        await db.insert(auditLogs).values({ entityType: "inventoryMovement", entityId: input.id, action: "owner_approved_posted", actorId: ctx.user.id, afterJson: JSON.stringify({ note: input.note || null }) });
+        await postInventoryLinkedDocuments(db, movement);
+        await db.insert(auditLogs).values({ entityType: "inventoryMovement", entityId: input.id, action: "owner_approved_posted", actorId: ctx.user.id, afterJson: JSON.stringify({ note: input.note || null, sourceDocumentId: movement.sourceDocumentId ?? null, purchaseInvoiceId: movement.purchaseInvoiceId ?? null }) });
         return { success: true, status: "posted" as const, approvalStage: "complete" as const };
       }),
     }),
