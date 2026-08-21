@@ -8,7 +8,8 @@ import { trpc } from "@/lib/trpc";
 
 export default function PasswordAuth({ invitation = false }: { invitation?: boolean }) {
   const [, setLocation] = useLocation();
-  const token = new URLSearchParams(window.location.search).get("token") || "";
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get("token") || params.get("invite") || "";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
