@@ -248,6 +248,8 @@ export type InsertInventoryItem = typeof inventoryItems.$inferInsert;
 export type InventoryMovement = typeof inventoryMovements.$inferSelect;
 export type ServiceContractEntry = typeof serviceContractEntries.$inferSelect;
 export type InsertServiceContractEntry = typeof serviceContractEntries.$inferInsert;
+export type LeaveRequest = typeof leaveRequests.$inferSelect;
+export type AdvanceRequest = typeof advanceRequests.$inferSelect;
 export type InsertInventoryMovement = typeof inventoryMovements.$inferInsert;
 export type Employee = typeof employees.$inferSelect;
 export type InsertEmployee = typeof employees.$inferInsert;
@@ -541,6 +543,36 @@ export const dailyTasks = mysqlTable("dailyTasks", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+export const leaveRequests = mysqlTable("leaveRequests", {
+  id: int("id").autoincrement().primaryKey(),
+  requestedBy: int("requestedBy").notNull(),
+  employeeId: int("employeeId"),
+  leaveType: mysqlEnum("leaveType", ["annual", "sick", "emergency", "unpaid", "official", "other"]).default("annual").notNull(),
+  startDate: date("startDate").notNull(),
+  endDate: date("endDate").notNull(),
+  days: decimal("days", { precision: 8, scale: 2 }).default("0").notNull(),
+  reason: text("reason"),
+  status: mysqlEnum("status", ["pending", "approved", "rejected", "cancelled"]).default("pending").notNull(),
+  reviewedBy: int("reviewedBy"),
+  reviewedAt: timestamp("reviewedAt"),
+  rejectionReason: text("rejectionReason"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export const advanceRequests = mysqlTable("advanceRequests", {
+  id: int("id").autoincrement().primaryKey(),
+  requestedBy: int("requestedBy").notNull(),
+  employeeId: int("employeeId"),
+  amount: decimal("amount", { precision: 14, scale: 2 }).notNull(),
+  reason: text("reason").notNull(),
+  repaymentDate: date("repaymentDate"),
+  status: mysqlEnum("status", ["pending", "approved", "rejected", "cancelled"]).default("pending").notNull(),
+  reviewedBy: int("reviewedBy"),
+  reviewedAt: timestamp("reviewedAt"),
+  rejectionReason: text("rejectionReason"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
 export const periodLocks = mysqlTable("periodLocks", {
   id: int("id").autoincrement().primaryKey(),
   projectId: int("projectId").notNull(),

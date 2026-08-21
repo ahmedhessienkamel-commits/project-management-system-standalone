@@ -1,7 +1,7 @@
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, dailyTasks, employees, expenses, notifications, payroll, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, sales, stages, units, users, userInvitations, vendors, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems, inventoryItems, inventoryMovements, accounts, accountingDocuments, accountingDocumentLines, costItems, fixedAssets, fixedAssetDepreciation, companies, companyMembers, companyProfiles, cashAccounts, contractorContracts, serviceContractEntries, userOperationPermissions } from "../../drizzle/schema";
+import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, dailyTasks, leaveRequests, advanceRequests, employees, expenses, notifications, payroll, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, sales, stages, units, users, userInvitations, vendors, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems, inventoryItems, inventoryMovements, accounts, accountingDocuments, accountingDocumentLines, costItems, fixedAssets, fixedAssetDepreciation, companies, companyMembers, companyProfiles, cashAccounts, contractorContracts, serviceContractEntries, userOperationPermissions } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
@@ -13,6 +13,7 @@ import { allocateAdministrativeExpense, normalizeExpenseTaxRate, validateExpense
 import { calculateInventoryBalance, canReceiveContractQuantity, canReviewInventoryStage, nextInventoryApprovalStage, remainingContractQuantity, selectPurchaseInvoiceForIssue, calculateServiceEntryTotal, remainingServiceContractAmount, calculateMaterialReceiptCost, materialReceiptExpenseReference, isMaterialContractType, resolveMaterialCostAccount } from "../../shared/inventory";
 import { calculateWipBalance, buildWipClosingLines } from "../../shared/wip";
 import { canAssignTeamTasks } from "../../shared/taskPermissions";
+import { sendInvitationEmail } from "../email";
 
 const projectStatus = z.enum(["planning", "active", "paused", "completed", "archived"]);
 const operationKey = z.enum(["payment_voucher", "receipt_voucher", "expense", "certificate", "payroll", "custody", "purchase_invoice", "sales_invoice", "purchase_request", "inventory_item", "inventory_receipt", "inventory_issue", "task_assignment", "edit", "delete", "approve"]);
@@ -300,6 +301,51 @@ export const erpRouter = router({
       return { success: true } as const;
     }),
   }),
+  leaveRequests: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      const db = requireDb(await getDb());
+      const rows = await db.select().from(leaveRequests).orderBy(desc(leaveRequests.createdAt));
+      return ctx.user.role === "admin" || ctx.user.role === "general_manager" ? rows : rows.filter((row) => row.requestedBy === ctx.user.id);
+    }),
+    create: protectedProcedure.input(z.object({ employeeId: z.number().int().positive().nullable().optional(), leaveType: z.enum(["annual", "sick", "emergency", "unpaid", "official", "other"]), startDate: z.string().min(10), endDate: z.string().min(10), reason: z.string().max(2000).optional() })).mutation(async ({ ctx, input }) => {
+      const start = new Date(`${input.startDate}T00:00:00Z`); const end = new Date(`${input.endDate}T00:00:00Z`);
+      const days = Math.floor((end.getTime() - start.getTime()) / 86400000) + 1;
+      if (!Number.isFinite(days) || days <= 0) throw new TRPCError({ code: "BAD_REQUEST", message: "تاريخ نهاية الإجازة يجب أن يكون بعد تاريخ البداية" });
+      const db = requireDb(await getDb());
+      const result = await db.insert(leaveRequests).values({ requestedBy: ctx.user.id, employeeId: input.employeeId ?? null, leaveType: input.leaveType, startDate: start, endDate: end, days: days.toFixed(2), reason: input.reason || null });
+      await db.insert(auditLogs).values({ entityType: "leaveRequest", entityId: Number(result[0].insertId), action: "created_pending", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
+      return { id: Number(result[0].insertId) };
+    }),
+    decide: protectedProcedure.input(z.object({ id: z.number().int().positive(), decision: z.enum(["approved", "rejected"]), note: z.string().max(2000).optional() })).mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin" && ctx.user.role !== "general_manager") throw new TRPCError({ code: "FORBIDDEN", message: "اعتماد طلبات الإجازات متاح للمدير العام والمالك فقط" });
+      if (input.decision === "rejected" && !input.note?.trim()) throw new TRPCError({ code: "BAD_REQUEST", message: "يجب كتابة سبب الرفض" });
+      const db = requireDb(await getDb());
+      await db.update(leaveRequests).set({ status: input.decision, reviewedBy: ctx.user.id, reviewedAt: new Date(), rejectionReason: input.decision === "rejected" ? input.note!.trim() : null }).where(eq(leaveRequests.id, input.id));
+      await db.insert(auditLogs).values({ entityType: "leaveRequest", entityId: input.id, action: input.decision, actorId: ctx.user.id, afterJson: JSON.stringify(input) });
+      return { success: true } as const;
+    }),
+  }),
+  advanceRequests: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      const db = requireDb(await getDb());
+      const rows = await db.select().from(advanceRequests).orderBy(desc(advanceRequests.createdAt));
+      return ctx.user.role === "admin" || ctx.user.role === "general_manager" ? rows : rows.filter((row) => row.requestedBy === ctx.user.id);
+    }),
+    create: protectedProcedure.input(z.object({ employeeId: z.number().int().positive().nullable().optional(), amount: z.number().positive(), reason: z.string().trim().min(2).max(2000), repaymentDate: z.string().optional() })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      const result = await db.insert(advanceRequests).values({ requestedBy: ctx.user.id, employeeId: input.employeeId ?? null, amount: input.amount.toFixed(2), reason: input.reason, repaymentDate: input.repaymentDate ? new Date(input.repaymentDate) : null });
+      await db.insert(auditLogs).values({ entityType: "advanceRequest", entityId: Number(result[0].insertId), action: "created_pending", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
+      return { id: Number(result[0].insertId) };
+    }),
+    decide: protectedProcedure.input(z.object({ id: z.number().int().positive(), decision: z.enum(["approved", "rejected"]), note: z.string().max(2000).optional() })).mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin" && ctx.user.role !== "general_manager") throw new TRPCError({ code: "FORBIDDEN", message: "اعتماد طلبات السلف متاح للمدير العام والمالك فقط" });
+      if (input.decision === "rejected" && !input.note?.trim()) throw new TRPCError({ code: "BAD_REQUEST", message: "يجب كتابة سبب الرفض" });
+      const db = requireDb(await getDb());
+      await db.update(advanceRequests).set({ status: input.decision, reviewedBy: ctx.user.id, reviewedAt: new Date(), rejectionReason: input.decision === "rejected" ? input.note!.trim() : null }).where(eq(advanceRequests.id, input.id));
+      await db.insert(auditLogs).values({ entityType: "advanceRequest", entityId: input.id, action: input.decision, actorId: ctx.user.id, afterJson: JSON.stringify(input) });
+      return { success: true } as const;
+    }),
+  }),
   tasks: router({
     list: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional() }).optional()).query(async ({ input }) => {
       const db = requireDb(await getDb());
@@ -339,7 +385,22 @@ export const erpRouter = router({
       const result = await db.insert(userInvitations).values({ email: input.email, name: input.name || null, jobTitle: input.jobTitle, role: input.role, projectId: input.projectId || null, token, invitedBy: ctx.user.id, expiresAt });
       const id = Number(result[0].insertId);
       await db.insert(auditLogs).values({ entityType: "userInvitation", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
-      return { id, token, email: input.email, expiresAt } as const;
+      const forwardedHost = ctx.req.headers["x-forwarded-host"] || ctx.req.headers.host || "metaadscntr-8ymftbnn.manus.space";
+      const forwardedProto = ctx.req.headers["x-forwarded-proto"] || "https";
+      const host = Array.isArray(forwardedHost) ? forwardedHost[0] : forwardedHost;
+      const protocol = Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto;
+      const invitationUrl = `${protocol}://${host}/?invite=${encodeURIComponent(token)}`;
+      let emailSent = false;
+      let emailError: string | null = null;
+      try {
+        await sendInvitationEmail({ to: input.email, recipientName: input.name, jobTitle: input.jobTitle, role: input.role, invitationUrl, expiresAt });
+        emailSent = true;
+        await db.insert(auditLogs).values({ entityType: "userInvitation", entityId: id, action: "email_sent", actorId: ctx.user.id, afterJson: JSON.stringify({ to: input.email }) });
+      } catch (error) {
+        emailError = error instanceof Error ? error.message : "تعذر إرسال البريد";
+        await db.insert(auditLogs).values({ entityType: "userInvitation", entityId: id, action: "email_failed", actorId: ctx.user.id, afterJson: JSON.stringify({ to: input.email, error: emailError.slice(0, 500) }) });
+      }
+      return { id, token, email: input.email, expiresAt, invitationUrl, emailSent, emailError } as const;
     }),
     cancelInvitation: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb());

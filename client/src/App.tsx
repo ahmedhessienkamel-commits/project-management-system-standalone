@@ -22,6 +22,7 @@ import CompanySettings from "./pages/CompanySettings";
 import BanksCash from "./pages/BanksCash";
 import StandaloneFinancialReport from "./pages/StandaloneFinancialReport";
 import Inventory from "./pages/Inventory";
+import MyRequests from "./pages/MyRequests";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -48,6 +49,7 @@ function Router() {
       <Route path={"/attendance"} component={Operations} />
       <Route path={"/custody"} component={Operations} />
       <Route path={"/tasks"} component={Tasks} />
+      <Route path={"/my-requests"} component={MyRequests} />
       <Route path={"/approvals"} component={Approvals} />
       <Route path={"/supplier-statements"} component={StandaloneFinancialReport} />
       <Route path={"/cost-center"} component={StandaloneFinancialReport} />
