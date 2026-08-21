@@ -23,7 +23,7 @@ import {
 import { startLogin } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { useIsMobile } from "@/hooks/useMobile";
-import { BarChart3, Bell, BookOpen, Boxes, ClipboardList, FileText, Landmark, LayoutDashboard, LogOut, PanelLeft, Plus, Search, Settings2, ShieldAlert, Users, UserRound, WalletCards } from "lucide-react";
+import { BarChart3, Bell, BookOpen, Boxes, ClipboardList, FileText, Landmark, LayoutDashboard, LogOut, PanelLeft, Plus, Search, Settings2, ShieldAlert, ShieldCheck, Users, UserRound, WalletCards } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -296,6 +296,10 @@ function DashboardLayoutContent({
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => setLocation("/account-security")} className="cursor-pointer">
+                  <ShieldCheck className="mr-2 h-4 w-4" />
+                  <span>أمان الحساب</span>
+                </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={logout}
                   className="cursor-pointer text-destructive focus:text-destructive"

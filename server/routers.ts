@@ -7,7 +7,7 @@ import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from "node:crypt
 import { SignJWT } from "jose";
 import { PASSWORD_SESSION_COOKIE } from "@shared/const";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { erpRouter } from "./routers/erp";
@@ -32,6 +32,12 @@ export const appRouter = router({
       return {
         success: true,
       } as const;
+    }),
+    setPassword: protectedProcedure.input(z.object({ password: z.string().min(8) })).mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db || !ctx.user) throw new TRPCError({ code: "UNAUTHORIZED" });
+      await db.update(users).set({ passwordHash: hashPassword(input.password), loginMethod: ctx.user.loginMethod || "password" }).where(eq(users.id, ctx.user.id));
+      return { success: true } as const;
     }),
     passwordLogin: publicProcedure.input(z.object({ email: z.string().email(), password: z.string().min(8) })).mutation(async ({ ctx, input }) => {
       const db = await getDb();
