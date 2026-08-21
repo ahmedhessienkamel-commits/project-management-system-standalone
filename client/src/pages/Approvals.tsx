@@ -74,7 +74,7 @@ export default function Approvals() {
     }).filter((item) => item.certificate);
   }, [approvals, certificates, projects, vendors, role]);
 
-  const regularApprovals = approvals.filter((approval) => approval.entityType !== "certificate");
+  const regularApprovals = approvals.filter((approval) => approval.entityType === "payroll" && approval.status === "pending");
   const canDecideEmployeeRequests = role === "admin" || role === "general_manager";
   const pendingLeaves = canDecideEmployeeRequests ? leaveRequests.filter((request) => request.status === "pending") : [];
   const pendingAdvances = canDecideEmployeeRequests ? advanceRequests.filter((request) => request.status === "pending") : [];
