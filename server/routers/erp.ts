@@ -907,6 +907,16 @@ export const erpRouter = router({
         await db.insert(auditLogs).values({ entityType: "collection", entityId: collectionId, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
         return { id: collectionId };
       }),
+    delete: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "حذف التحصيلات متاح للمسؤول فقط" });
+      const before = (await db.select().from(collections).where(eq(collections.id, input.id)).limit(1))[0];
+      if (!before) throw new TRPCError({ code: "NOT_FOUND", message: "التحصيل غير موجود" });
+      await db.delete(approvalRequests).where(and(eq(approvalRequests.entityType, "collection"), eq(approvalRequests.entityId, input.id)));
+      await db.delete(collections).where(eq(collections.id, input.id));
+      await db.insert(auditLogs).values({ entityType: "collection", entityId: input.id, action: "deleted_by_admin", actorId: ctx.user.id, beforeJson: JSON.stringify(before) });
+      return { success: true } as const;
+    }),
   }),
 
   procurement: router({
@@ -1335,6 +1345,7 @@ export const erpRouter = router({
       if (!before) throw new TRPCError({ code: "NOT_FOUND", message: "المستخلص غير موجود" });
       await assertProjectAccess(db, ctx, before.projectId);
       await assertProjectWrite(db, ctx, before.projectId);
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "حذف المستخلصات متاح للمسؤول فقط" });
       if (before.status === "approved" && ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "لا يمكن حذف مستخلص معتمد إلا بواسطة المسؤول" });
       await db.delete(approvalRequests).where(and(eq(approvalRequests.entityType, "certificate"), eq(approvalRequests.entityId, input.id)));
       await db.delete(certificates).where(eq(certificates.id, input.id));
@@ -1702,8 +1713,9 @@ export const erpRouter = router({
         const db = requireDb(await getDb());
         const before = (await db.select().from(accountingDocuments).where(eq(accountingDocuments.id, input.id)).limit(1))[0];
         if (!before) throw new TRPCError({ code: "NOT_FOUND", message: "المستند غير موجود" });
+        if (before.documentType === "sales_invoice") { const linkedPayments = await db.select().from(collections).where(eq(collections.saleId, input.id)); if (linkedPayments.length) throw new TRPCError({ code: "CONFLICT", message: "لا يمكن حذف الفاتورة لوجود تحصيلات مرتبطة بها" }); }
         const lines = await db.select().from(accountingDocumentLines).where(eq(accountingDocumentLines.documentId, input.id));
-        await db.insert(auditLogs).values({ entityType: "accountingDocument", entityId: input.id, action: "deleted", actorId: ctx.user.id, beforeJson: JSON.stringify({ document: before, lines }) });
+        await db.insert(auditLogs).values({ entityType: "accountingDocument", entityId: input.id, action: "deleted_by_admin", actorId: ctx.user.id, beforeJson: JSON.stringify({ document: before, lines }) });
         await db.delete(accountingDocumentLines).where(eq(accountingDocumentLines.documentId, input.id));
         await db.delete(accountingDocuments).where(eq(accountingDocuments.id, input.id));
         return { id: input.id, deleted: true } as const;
