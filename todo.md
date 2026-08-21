@@ -35527,3 +35527,11 @@
 - [x] Keep the adjacent PDF action dedicated to direct PDF/print output.
 - [x] Apply the separation consistently to supported document types and preserve RTL/company branding.
 - [x] Test preview navigation, PDF download, edit return path, TypeScript, Vitest, build, and checkpoint.
+
+## Full invoice, receipt, and certificate document experience — 2026-08-21
+- [x] Replace the invoice quick prompt edit with the complete invoice form and all editable fields/lines.
+- [x] Preserve invoice links to customer, project, related quotation/certificate, tax values, collections, and accounting posting during full edit.
+- [x] Upgrade sales invoice and receipt voucher templates to the same branded RTL professional standard as payment vouchers.
+- [x] Add consistent Preview, PDF, Excel, Edit, and related actions to sale certificates/claims.
+- [x] Ensure certificate edit opens the complete certificate form and preserves approval and invoice-conversion workflows.
+- [x] Add tests and visual validation for invoice edit, receipt preview/PDF, and certificate actions.
