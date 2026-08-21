@@ -1,0 +1,1 @@
+ALTER TABLE `contractorContracts` MODIFY COLUMN `contractItems` json NOT NULL;

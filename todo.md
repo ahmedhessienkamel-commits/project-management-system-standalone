@@ -35415,3 +35415,8 @@
 - [x] Filter inventory receipt contract selectors from the contract registry and only allow eligible supply contracts and their lines.
 - [x] Refresh contract quantities and generated documents after an inventory receipt is approved and posted.
 - [x] Verify the contract-first workflow visually and with tests, then publish a checkpoint.
+
+## Stable reference checkpoint — 2026-08-21
+- [ ] Save the restored 07:00 Egypt-time version as the protected baseline for future work.
+- [ ] Verify the baseline remains on the restored routes and passes checks.
+- [ ] Use the baseline as the only starting point for future feature changes.
