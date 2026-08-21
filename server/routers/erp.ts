@@ -66,9 +66,20 @@ async function createInventoryPurchaseDocuments(db: ErpDb, ctx: { user: { id: nu
   return { receiptId, receiptNumber, purchaseInvoiceId: invoiceId, invoiceNumber };
 }
 
-async function postInventoryLinkedDocuments(db: ErpDb, movement: { sourceDocumentId?: number | null; purchaseInvoiceId?: number | null }) {
+async function postInventoryLinkedDocuments(db: ErpDb, movement: { sourceDocumentId?: number | null; purchaseInvoiceId?: number | null; contractId?: number | null; contractItemIndex?: number | null; quantity?: string | number | null }) {
   if (movement.sourceDocumentId) await db.update(accountingDocuments).set({ status: "posted" }).where(eq(accountingDocuments.id, movement.sourceDocumentId));
   if (movement.purchaseInvoiceId) await db.update(accountingDocuments).set({ status: "posted" }).where(eq(accountingDocuments.id, movement.purchaseInvoiceId));
+  if (movement.contractId !== null && movement.contractId !== undefined && movement.contractItemIndex !== null && movement.contractItemIndex !== undefined) {
+    const contract = (await db.select().from(contractorContracts).where(eq(contractorContracts.id, movement.contractId)).limit(1))[0];
+    if (contract) {
+      const contractItems = [...(contract.contractItems ?? [])];
+      const line = contractItems[movement.contractItemIndex];
+      if (line) {
+        contractItems[movement.contractItemIndex] = { ...line, suppliedQty: Number(line.suppliedQty || 0) + Number(movement.quantity || 0) };
+        await db.update(contractorContracts).set({ contractItems }).where(eq(contractorContracts.id, movement.contractId));
+      }
+    }
+  }
 }
 
 function canManagePartners(user: { role: string; id: number }) {
