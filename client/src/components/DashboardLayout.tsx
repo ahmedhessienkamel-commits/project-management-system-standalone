@@ -36,7 +36,6 @@ const menuItems = [
   { icon: Boxes, label: "مراقبة المخزون والكميات", path: "/inventory" },
   { icon: WalletCards, label: "المبيعات والتحصيلات", path: "/sales" },
   { icon: FileText, label: "التكاليف والمصروفات", path: "/expenses" },
-  { section: true, label: "التكاليف والمصروفات — ملفات الأطراف والعقود" },
   { icon: ClipboardList, label: "الموردون والمقاولون", path: "/operations?tab=vendors" },
   { icon: FileText, label: "العقود والمستخلصات", path: "/operations?tab=certificates" },
   { icon: FileText, label: "كشوف حساب الموردين", path: "/supplier-statements" },

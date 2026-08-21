@@ -35270,3 +35270,17 @@
 - [x] Preserve project-manager access to the renamed suppliers/contractors entry.
 - [x] Verify TypeScript, 58 Vitest tests, production build, and screenshots for all affected pages.
 - [ ] Save and publish the navigation checkpoint.
+
+## Sidebar ordering correction — 2026-08-21
+
+- [ ] Remove the extra cost-and-expense subsection heading from the sidebar.
+- [ ] Place suppliers/contractors, contracts/certificates, and supplier statements as consecutive items directly below Costs & Expenses.
+- [ ] Verify the sidebar order and preserve role-based visibility and existing routes.
+- [ ] Save and publish the corrected sidebar checkpoint.
+
+## Sidebar ordering correction verification — 2026-08-21
+
+- [x] Remove the extra cost-and-expense subsection heading from the sidebar.
+- [x] Place suppliers/contractors, contracts/certificates, and supplier statements as consecutive items directly below Costs & Expenses.
+- [x] Verify the sidebar order, role visibility, and existing routes.
+- [ ] Save and publish the corrected sidebar checkpoint.
