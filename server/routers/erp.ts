@@ -1679,16 +1679,18 @@ export const erpRouter = router({
     list: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
-      const rows = await db.select().from(custody).orderBy(custody.createdAt);
+      const companyId = await resolveActiveCompanyId(db, ctx);
+      const rows = await db.select().from(custody).where(companyId ? eq(custody.companyId, companyId) : eq(custody.id, -1)).orderBy(custody.createdAt);
       return allowed ? rows.filter((row) => allowed.has(row.projectId)) : rows;
     }),
     create: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), stageId: z.number().int().positive().optional(), holderName: z.string().trim().min(2), issueDate: z.string().optional(), issuedAmount: z.number().nonnegative(), settledAmount: z.number().nonnegative().default(0) })).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
+      const companyId = await resolveActiveCompanyId(db, ctx);
       await assertProjectAccess(db, ctx, input.projectId);
       await assertProjectWrite(db, ctx, input.projectId);
       const settled = Math.min(input.settledAmount, input.issuedAmount);
       const status = settled >= input.issuedAmount ? "settled" : settled > 0 ? "partially_settled" : "open";
-      const result = await db.insert(custody).values({ projectId: input.projectId, stageId: input.stageId || null, holderName: input.holderName, issueDate: input.issueDate ? new Date(input.issueDate) : null, issuedAmount: input.issuedAmount.toFixed(2), settledAmount: settled.toFixed(2), status, createdBy: ctx.user.id });
+      const result = await db.insert(custody).values({ companyId: companyId || null, projectId: input.projectId, stageId: input.stageId || null, holderName: input.holderName, issueDate: input.issueDate ? new Date(input.issueDate) : null, issuedAmount: input.issuedAmount.toFixed(2), settledAmount: settled.toFixed(2), status, createdBy: ctx.user.id });
       const id = Number(result[0].insertId);
       await db.insert(auditLogs).values({ entityType: "custody", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
       return { id, outstanding: input.issuedAmount - settled };
@@ -1710,7 +1712,8 @@ export const erpRouter = router({
   custodyMovements: router({
     list: protectedProcedure.input(z.object({ employeeCode: z.string().trim().min(1).optional(), projectId: z.number().int().positive().optional(), allocationType: z.enum(["project", "general_cash", "general_admin", "petty_cash", "operating_expense"]).optional() }).default({})).query(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
-      const rows = await db.select().from(custodyMovements).orderBy(custodyMovements.movementDate, custodyMovements.createdAt);
+      const companyId = await resolveActiveCompanyId(db, ctx);
+      const rows = await db.select().from(custodyMovements).where(companyId ? eq(custodyMovements.companyId, companyId) : eq(custodyMovements.id, -1)).orderBy(custodyMovements.movementDate, custodyMovements.createdAt);
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
       return rows.filter((row) => {
         if (row.projectId && allowed && !allowed.has(row.projectId)) return false;
@@ -1722,7 +1725,8 @@ export const erpRouter = router({
     }),
     statement: protectedProcedure.input(z.object({ employeeCode: z.string().trim().min(1), allocationType: z.enum(["project", "administrative", "general_cash", "general_admin", "petty_cash", "operating_expense"]).optional() })).query(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
-      const rows = await db.select().from(custodyMovements).orderBy(custodyMovements.movementDate, custodyMovements.createdAt);
+      const companyId = await resolveActiveCompanyId(db, ctx);
+      const rows = await db.select().from(custodyMovements).where(companyId ? eq(custodyMovements.companyId, companyId) : eq(custodyMovements.id, -1)).orderBy(custodyMovements.movementDate, custodyMovements.createdAt);
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
       const filtered = rows.filter((row) => row.employeeCode === input.employeeCode && (!row.projectId || !allowed || allowed.has(row.projectId)) && (!input.allocationType || (input.allocationType === "project" ? row.allocationType === "project" : input.allocationType === "administrative" ? row.allocationType !== "project" : row.allocationType === input.allocationType)));
       let balance = 0;
@@ -1730,11 +1734,12 @@ export const erpRouter = router({
     }),
     create: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional(), stageId: z.number().int().positive().optional(), employeeCode: z.string().trim().min(1), employeeName: z.string().trim().min(2), movementType: z.enum(["issue", "spend", "return", "settlement"]), allocationType: z.enum(["project", "general_cash", "general_admin", "petty_cash", "operating_expense"]), description: z.string().trim().min(2), amount: z.number().positive(), movementDate: z.string().optional(), expenseType: z.string().trim().max(64).optional(), vendorId: z.number().int().positive().optional(), payrollBeneficiaryType: z.enum(["company_employee", "worker"]).optional(), payrollEmployeeId: z.number().int().positive().optional(), payrollBeneficiaryName: z.string().trim().max(255).optional(), allocationRatio: z.number().min(0).max(100).default(100) })).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
+      const companyId = await resolveActiveCompanyId(db, ctx);
       await assertOperationPermission(db, ctx, "custody");
       if (input.allocationType === "project" && !input.projectId) throw new TRPCError({ code: "BAD_REQUEST", message: "يجب اختيار المشروع عند تسجيل عهدة مشروع" });
       if (input.projectId) { await assertProjectAccess(db, ctx, input.projectId); await assertProjectWrite(db, ctx, input.projectId); await assertPeriodOpen(db, ctx, input.projectId, input.movementDate ? new Date(input.movementDate) : new Date()); }
       const signedAmount = ["issue", "return"].includes(input.movementType) ? input.amount : -input.amount;
-      const result = await db.insert(custodyMovements).values({ projectId: input.projectId || null, stageId: input.stageId || null, employeeCode: input.employeeCode, employeeName: input.employeeName, movementType: input.movementType, allocationType: input.allocationType, description: input.description, amount: input.amount.toFixed(2), signedAmount: signedAmount.toFixed(2), movementDate: input.movementDate ? new Date(input.movementDate) : null, expenseType: input.expenseType || null, vendorId: input.vendorId || null, payrollBeneficiaryType: input.payrollBeneficiaryType || null, payrollEmployeeId: input.payrollEmployeeId || null, payrollBeneficiaryName: input.payrollBeneficiaryName || null, allocationRatio: input.allocationRatio.toFixed(2), createdBy: ctx.user.id });
+      const result = await db.insert(custodyMovements).values({ companyId: companyId || null, projectId: input.projectId || null, stageId: input.stageId || null, employeeCode: input.employeeCode, employeeName: input.employeeName, movementType: input.movementType, allocationType: input.allocationType, description: input.description, amount: input.amount.toFixed(2), signedAmount: signedAmount.toFixed(2), movementDate: input.movementDate ? new Date(input.movementDate) : null, expenseType: input.expenseType || null, vendorId: input.vendorId || null, payrollBeneficiaryType: input.payrollBeneficiaryType || null, payrollEmployeeId: input.payrollEmployeeId || null, payrollBeneficiaryName: input.payrollBeneficiaryName || null, allocationRatio: input.allocationRatio.toFixed(2), createdBy: ctx.user.id });
       const id = Number(result[0].insertId);
       let linkedExpenseId: number | null = null;
       if (["spend", "settlement"].includes(input.movementType)) {

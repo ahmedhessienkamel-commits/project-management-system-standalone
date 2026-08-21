@@ -451,6 +451,7 @@ export const serviceContractEntries = mysqlTable("serviceContractEntries", {
 
 export const custody = mysqlTable("custody", {
   id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId"),
   projectId: int("projectId").notNull(),
   stageId: int("stageId"),
   holderName: varchar("holderName", { length: 255 }).notNull(),
@@ -464,6 +465,7 @@ export const custody = mysqlTable("custody", {
 
 export const custodyMovements = mysqlTable("custodyMovements", {
   id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId"),
   projectId: int("projectId"),
   stageId: int("stageId"),
   employeeCode: varchar("employeeCode", { length: 64 }).notNull(),
