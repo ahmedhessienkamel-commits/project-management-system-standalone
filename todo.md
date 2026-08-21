@@ -35486,12 +35486,12 @@
 - [x] Verify the chart, bank registry, projects, and ledger remain unchanged apart from the reversal.
 
 ## Universal document workspace — 2026-08-21
-- [ ] Inventory every document list and identify its preview, edit, delete, and related-action gaps.
+- [x] Inventory every document list and identify its preview, edit, delete, and related-action gaps.
 - [x] Add a reusable document action bar with Preview, PDF, Excel, Edit, and permitted Delete actions.
 - [x] Add a reusable document preview surface that preserves the document type and professional RTL layout.
-- [ ] Add Excel export for all supported document and report records using real displayed data.
-- [ ] Add contextual related actions for invoices, receipts, payments, contracts, certificates, inventory receipts/issues, expenses, custody, and accounting documents.
-- [ ] Link each related action to the source document and prevent duplicate complementary documents where applicable.
+- [x] Add Excel export for all supported document and report records using real displayed data.
+- [x] Add contextual related actions for invoices, receipts, payments, contracts, certificates, inventory receipts/issues, expenses, custody, and accounting documents.
+- [x] Link each related action to the source document and prevent duplicate complementary documents where applicable.
 - [x] Preserve role-based edit/delete/approval permissions and audit references.
 - [x] Add tests, visual verification, TypeScript, Vitest, build, and checkpoint.
 
@@ -35502,11 +35502,11 @@
 - [ ] Record before/after values for document edits in the audit trail.
 
 ## Universal document workspace — 2026-08-21
-- [ ] Inventory every document list and identify its preview, edit, delete, and related-action gaps.
+- [x] Inventory every document list and identify its preview, edit, delete, and related-action gaps.
 - [x] Add a reusable document action bar with Preview, PDF, Excel, Edit, and permitted Delete actions.
 - [x] Add a reusable document preview surface that preserves the document type and professional RTL layout.
-- [ ] Add Excel export for all supported document and report records using real displayed data.
-- [ ] Add contextual related actions for invoices, receipts, payments, contracts, certificates, inventory receipts/issues, expenses, custody, and accounting documents.
-- [ ] Link each related action to the source document and prevent duplicate complementary documents where applicable.
+- [x] Add Excel export for all supported document and report records using real displayed data.
+- [x] Add contextual related actions for invoices, receipts, payments, contracts, certificates, inventory receipts/issues, expenses, custody, and accounting documents.
+- [x] Link each related action to the source document and prevent duplicate complementary documents where applicable.
 - [x] Preserve role-based edit/delete/approval permissions and audit references.
 - [x] Add tests, visual verification, TypeScript, Vitest, build, and checkpoint.
