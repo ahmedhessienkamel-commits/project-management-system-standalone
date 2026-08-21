@@ -23,7 +23,8 @@ export default function SalesCollections() {
   const utils = trpc.useUtils();
   const { data: me } = trpc.auth.me.useQuery();
   const { data: memberships = [] } = trpc.erp.members.mine.useQuery();
-  const canRecord = me?.role === "admin" || memberships.some((member) => ["manager", "finance", "input"].includes(member.projectRole));
+  const isExecutiveViewer = me?.role === "general_manager";
+  const canRecord = !isExecutiveViewer && (me?.role === "admin" || memberships.some((member) => ["manager", "finance", "input"].includes(member.projectRole)));
   const { data: projects = [] } = trpc.erp.projects.list.useQuery();
   const { data: units = [] } = trpc.erp.units.list.useQuery();
   const { data: sales = [] } = trpc.erp.sales.list.useQuery();
@@ -98,7 +99,7 @@ export default function SalesCollections() {
   const totalCollected = collections.filter((item) => item.status === "received").reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const totalOutstanding = Math.max(totalSales - totalCollected, 0);
   const salesTabs = [{ key: "overview", label: "نظرة المبيعات", icon: Building2 }, { key: "invoice", label: "إنشاء فاتورة مبيعات", icon: Receipt }, { key: "offPlanCertificate", label: "مستخلص بيع على الخارطة", icon: FileText }, { key: "documents", label: "سجل المستندات", icon: FolderOpen }, { key: "collections", label: "التحصيلات وحساب الضمان", icon: Banknote }, { key: "customers", label: "العملاء والمتابعة", icon: Users }, { key: "units", label: "الوحدات والمخزون البيعي", icon: Landmark }] as const;
-  const visibleSalesTabs = me?.role === "general_manager" ? salesTabs.filter((tab) => ["overview", "documents", "collections"].includes(tab.key)) : salesTabs;
+  const visibleSalesTabs = isExecutiveViewer ? salesTabs.filter((tab) => ["overview", "documents", "collections"].includes(tab.key)) : salesTabs;
 
   const submitSaleInvoice = (event: React.FormEvent) => {
     event.preventDefault();

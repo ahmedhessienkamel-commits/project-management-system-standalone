@@ -36,6 +36,17 @@ function requireDb(db: Awaited<ReturnType<typeof getDb>>) {
 }
 
 type UserRole = "user" | "admin" | "general_manager" | "project_manager" | "procurement_manager" | "site_worker";
+async function notifyTaskAssignee(db: ErpDb, input: { employeeId?: number | null; title: string; message: string; taskId: number }) {
+  if (!input.employeeId) return;
+  const employee = (await db.select({ email: employees.email, fullName: employees.fullName }).from(employees).where(eq(employees.id, input.employeeId)).limit(1))[0];
+  if (!employee?.email) return;
+  try {
+    await sendApprovalEmail({ to: employee.email, recipientName: employee.fullName, title: input.title, message: input.message, approvalUrl: `${process.env.APP_URL || process.env.VITE_APP_URL || "https://metaadscntr-8ymftbnn.manus.space"}/tasks` });
+  } catch (error) {
+    console.warn("[TaskEmail] delivery failed", { taskId: input.taskId, error: error instanceof Error ? error.message : "unknown" });
+  }
+}
+
 async function notifyApprovalUsers(db: ErpDb, input: { type: string; title: string; message: string; approvalUrl?: string; roles?: UserRole[]; userIds?: number[] }) {
   const roles: UserRole[] = input.roles ?? ["admin", "general_manager"];
   const recipients = await db.select({ id: users.id, name: users.name, email: users.email, role: users.role }).from(users);
@@ -389,16 +400,22 @@ export const erpRouter = router({
     }),
     create: protectedProcedure.input(z.object({ projectId: z.number().int().positive().nullable().optional(), assignedEmployeeId: z.number().int().positive().nullable().optional(), title: z.string().min(1), description: z.string().optional(), dueDate: z.string().optional(), priority: z.enum(["low", "normal", "high"]).default("normal") })).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
+      if (!canAssignTeamTasks(ctx.user.role)) throw new TRPCError({ code: "FORBIDDEN", message: "إسناد مهام الفريق متاح للمالك والمدير العام فقط" });
       await assertOperationPermission(db, ctx, "task_assignment");
       if (input.projectId) await assertProjectAccess(db, ctx, input.projectId);
       const result = await db.insert(dailyTasks).values({ ...input, projectId: input.projectId ?? null, assignedEmployeeId: input.assignedEmployeeId ?? null, description: input.description || null, dueDate: input.dueDate ? new Date(input.dueDate) : null, createdBy: ctx.user.id });
-      await db.insert(auditLogs).values({ entityType: "daily_task", entityId: Number(result[0].insertId), action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
-      return { id: Number(result[0].insertId) };
+      const taskId = Number(result[0].insertId);
+      await db.insert(auditLogs).values({ entityType: "daily_task", entityId: taskId, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
+      await notifyTaskAssignee(db, { employeeId: input.assignedEmployeeId, taskId, title: `تم إسناد مهمة جديدة: ${input.title}`, message: `تم إسناد مهمة جديدة إليك: ${input.title}${input.dueDate ? ` — موعد الاستحقاق ${input.dueDate}` : ""}.` });
+      return { id: taskId };
     }),
     updateStatus: protectedProcedure.input(z.object({ id: z.number().int().positive(), status: z.enum(["open", "in_progress", "done", "cancelled"]) })).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
+      const task = (await db.select().from(dailyTasks).where(eq(dailyTasks.id, input.id)).limit(1))[0];
+      if (!task) throw new TRPCError({ code: "NOT_FOUND", message: "المهمة غير موجودة" });
       await db.update(dailyTasks).set({ status: input.status, completedAt: input.status === "done" ? new Date() : null }).where(eq(dailyTasks.id, input.id));
       await db.insert(auditLogs).values({ entityType: "daily_task", entityId: input.id, action: "status_updated", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
+      await notifyTaskAssignee(db, { employeeId: task.assignedEmployeeId, taskId: input.id, title: `تحديث حالة المهمة: ${task.title}`, message: `تم تحديث حالة المهمة «${task.title}» إلى: ${input.status}.` });
       return { success: true } as const;
     }),
   }),

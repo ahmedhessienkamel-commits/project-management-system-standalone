@@ -56,7 +56,7 @@ const menuItems = [
   { icon: Boxes, label: "الأصول الثابتة", path: "/accounting-settings#fixed-assets" },
   { section: true, label: "الإدارة والمتابعة" },
   { icon: ClipboardList, label: "الحضور والانصراف", path: "/attendance" },
-  { icon: ClipboardList, label: "المهام اليومية", path: "/tasks" },
+  { icon: ClipboardList, label: "إسناد ومتابعة مهام الفريق", path: "/tasks" },
   { icon: FileText, label: "طلباتي", path: "/my-requests" },
   { icon: FileText, label: "الموافقات والمستندات", path: "/approvals" },
   { icon: Users, label: "المستخدمون والصلاحيات", path: "/users" },
@@ -168,16 +168,16 @@ function DashboardLayoutContent({
     { label: "إسناد مهمة للفريق", path: "/tasks" },
   ];
   const roleLabelAllowList: Record<string, string[] | undefined> = {
-    general_manager: ["لوحة التنفيذ", "الموافقات والمستندات", "العقود والمستخلصات", "المبيعات والتحصيلات", "مراقبة المخزون والكميات", "قائمة دخل المشاريع"],
+    general_manager: ["لوحة التنفيذ", "الموافقات والمستندات", "العقود والمستخلصات", "المبيعات والتحصيلات", "مراقبة المخزون والكميات", "قائمة دخل المشاريع", "إسناد ومتابعة مهام الفريق"],
     project_manager: ["لوحة التنفيذ", "المشاريع والمراحل", "العقود والمستخلصات", "الموردون والمقاولون", "الموافقات والمستندات"],
     procurement_manager: ["لوحة التنفيذ", "مراقبة المخزون والكميات", "التكاليف والمصروفات", "الموافقات والمستندات"],
     site_worker: ["لوحة التنفيذ", "مراقبة المخزون والكميات", "طلبات المواد", "طلباتي"],
   };
   const allowedLabels = roleLabelAllowList[user?.role || ""];
-  const generalManagerOrder = ["لوحة التنفيذ", "الموافقات والمستندات", "العقود والمستخلصات", "المبيعات والتحصيلات", "مراقبة المخزون والكميات", "قائمة دخل المشاريع"];
+  const generalManagerOrder = ["لوحة التنفيذ", "الموافقات والمستندات", "العقود والمستخلصات", "المبيعات والتحصيلات", "مراقبة المخزون والكميات", "قائمة دخل المشاريع", "إسناد ومتابعة مهام الفريق"];
   const generalManagerMenuItems = generalManagerOrder.flatMap((label) => { const item = menuItems.find((candidate) => "path" in candidate && candidate.label === label); return item ? [item] : []; });
   const visibleMenuItems = user?.role === "general_manager" ? generalManagerMenuItems : allowedLabels ? menuItems.filter((item) => "section" in item || allowedLabels.includes(item.label)) : menuItems;
-  const visibleQuickActions = user?.role === "general_manager" ? quickActions.filter((action) => action.path === "/operations?tab=certificates" || action.path === "/inventory") : user?.role === "site_worker" ? quickActions.filter((action) => action.path === "/inventory" || action.path === "/operations?tab=procurement") : allowedLabels ? quickActions.filter((action) => action.path.includes("/operations") || action.path.includes("/tasks") || action.path.includes("/accounting?type=sales_invoice")) : quickActions;
+  const visibleQuickActions = user?.role === "general_manager" ? quickActions.filter((action) => action.path === "/operations?tab=certificates" || action.path === "/inventory" || action.path === "/tasks") : user?.role === "site_worker" ? quickActions.filter((action) => action.path === "/inventory" || action.path === "/operations?tab=procurement") : allowedLabels ? quickActions.filter((action) => action.path.includes("/operations") || action.path.includes("/tasks") || action.path.includes("/accounting?type=sales_invoice")) : quickActions;
   const searchResults = normalizedSearch ? visibleMenuItems.filter((item): item is Extract<(typeof menuItems)[number], { path: string }> => "path" in item && item.label.toLowerCase().includes(normalizedSearch)).slice(0, 6) : [];
 
   useEffect(() => {
