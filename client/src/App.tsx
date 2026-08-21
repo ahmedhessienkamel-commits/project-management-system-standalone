@@ -23,7 +23,7 @@ import BanksCash from "./pages/BanksCash";
 import StandaloneFinancialReport from "./pages/StandaloneFinancialReport";
 import Inventory from "./pages/Inventory";
 import MyRequests from "./pages/MyRequests";
-import PasswordAuth from "./pages/PasswordAuth";
+import PasswordAuth, { ResetPassword } from "./pages/PasswordAuth";
 import AccountSecurity from "./pages/AccountSecurity";
 
 function Landing() {
@@ -38,6 +38,7 @@ function Router() {
       <Route path={"/login"} component={() => <PasswordAuth />} />
       <Route path={"/accept-invitation"} component={() => <PasswordAuth invitation />} />
       <Route path={"/account-security"} component={AccountSecurity} />
+      <Route path={"/reset-password"} component={ResetPassword} />
       <Route path={"/"} component={Landing} />
       <Route path={"/company-settings"} component={CompanySettings} />
       <Route path={"/banks-cash"} component={BanksCash} />

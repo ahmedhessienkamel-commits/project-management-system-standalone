@@ -36,3 +36,15 @@ export async function sendInvitationEmail(input: { to: string; recipientName?: s
     html: `<div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.9;color:#18324b"><h2>دعوة الدخول إلى نظام إدارة المشاريع</h2><p>مرحبًا ${input.recipientName || ""}</p><p>تمت دعوتك للدخول إلى النظام بصفتك <strong>${roleLabel}</strong> — ${input.jobTitle}.</p><p><a href="${input.invitationUrl}" style="display:inline-block;background:#18324b;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none">فتح رابط الدعوة</a></p><p style="font-size:13px;color:#64748b">الرابط صالح حتى ${input.expiresAt.toLocaleString("ar-SA")}، وإذا لم تطلب هذه الدعوة فتجاهل الرسالة.</p></div>`,
   });
 }
+
+export async function sendPasswordResetEmail(input: { to: string; recipientName?: string | null; resetUrl: string; expiresAt: Date }) {
+  const from = process.env.GMAIL_USERNAME;
+  const transporter = getMailer();
+  return transporter.sendMail({
+    from: `نظام إدارة المشاريع <${from}>`,
+    to: input.to,
+    subject: "استعادة كلمة المرور — نظام إدارة المشاريع",
+    text: `مرحبًا ${input.recipientName || ""}\n\nتم طلب استعادة كلمة المرور لحسابك. افتح الرابط التالي لإنشاء كلمة مرور جديدة:\n${input.resetUrl}\n\nالرابط صالح حتى: ${input.expiresAt.toLocaleString("ar-SA")}، وإذا لم تطلب ذلك فتجاهل الرسالة.`,
+    html: `<div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.9;color:#18324b"><h2>استعادة كلمة المرور</h2><p>مرحبًا ${input.recipientName || ""}</p><p>تم طلب استعادة كلمة المرور لحسابك. استخدم الزر التالي لإنشاء كلمة مرور جديدة:</p><p><a href="${input.resetUrl}" style="display:inline-block;background:#18324b;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none">إنشاء كلمة مرور جديدة</a></p><p style="font-size:13px;color:#64748b">الرابط صالح حتى ${input.expiresAt.toLocaleString("ar-SA")} ولمرة واحدة فقط.</p></div>`,
+  });
+}
