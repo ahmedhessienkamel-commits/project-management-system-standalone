@@ -35603,3 +35603,9 @@
 - [ ] Allow only payroll-run and certificate approval/rejection actions, including rejection reasons and audit logging.
 - [ ] Deny create, edit, delete, posting, payment, and other operational mutations for this user.
 - [ ] Test the effective permissions and publish the change.
+
+## Global general manager scope — m.altamim@advancebuilding.net
+- [x] Mark the pending invitation as a global general-manager invitation rather than company-scoped.
+- [x] Make global general managers eligible for every current and future company without manual membership assignment.
+- [x] Preserve read-only access across all companies while allowing only certificate and payroll approvals/rejections.
+- [x] Verify global-company visibility and deny all create, edit, delete, posting, payment, and non-approval mutations.

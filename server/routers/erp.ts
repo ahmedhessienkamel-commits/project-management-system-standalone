@@ -37,7 +37,7 @@ type ErpDb = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
 async function resolveActiveCompanyId(db: ErpDb, ctx: { user: { id: number; role: string }; req: { cookies?: Record<string, string> } }) {
   const requestedId = Number(ctx.req.cookies?.active_company_id || 0);
-  if (ctx.user.role === "admin") {
+  if (ctx.user.role === "admin" || ctx.user.role === "general_manager") {
     const rows = await db.select({ id: companies.id }).from(companies).where(eq(companies.isActive, 1));
     return rows.find((row) => row.id === requestedId)?.id || rows[0]?.id || null;
   }
@@ -211,7 +211,7 @@ export const erpRouter = router({
   companies: router({
     list: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
-      if (ctx.user.role === "admin") return db.select().from(companies).where(eq(companies.isActive, 1)).orderBy(companies.legalName);
+      if (ctx.user.role === "admin" || ctx.user.role === "general_manager") return db.select().from(companies).where(eq(companies.isActive, 1)).orderBy(companies.legalName);
       const memberships = await db.select({ companyId: companyMembers.companyId }).from(companyMembers).where(and(eq(companyMembers.userId, ctx.user.id), eq(companyMembers.status, "active")));
       const rows = await db.select().from(companies).where(eq(companies.isActive, 1));
       return rows.filter((row) => memberships.some((membership) => membership.companyId === row.id));
@@ -219,8 +219,8 @@ export const erpRouter = router({
     current: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
       const requestedId = Number(ctx.req.cookies?.active_company_id || 0);
-      const memberships = ctx.user.role === "admin" ? [] : await db.select().from(companyMembers).where(and(eq(companyMembers.userId, ctx.user.id), eq(companyMembers.status, "active")));
-      const permittedIds = ctx.user.role === "admin" ? null : memberships.map((membership) => membership.companyId);
+      const memberships = ctx.user.role === "admin" || ctx.user.role === "general_manager" ? [] : await db.select().from(companyMembers).where(and(eq(companyMembers.userId, ctx.user.id), eq(companyMembers.status, "active")));
+      const permittedIds = ctx.user.role === "admin" || ctx.user.role === "general_manager" ? null : memberships.map((membership) => membership.companyId);
       const rows = await db.select().from(companies).where(eq(companies.isActive, 1));
       const company = rows.find((row) => row.id === requestedId && (!permittedIds || permittedIds.includes(row.id))) || rows.find((row) => !permittedIds || permittedIds.includes(row.id)) || null;
       const membership = company && permittedIds ? memberships.find((item) => item.companyId === company.id) || null : null;
@@ -230,7 +230,7 @@ export const erpRouter = router({
       const db = requireDb(await getDb());
       const company = (await db.select().from(companies).where(and(eq(companies.id, input.companyId), eq(companies.isActive, 1))).limit(1))[0];
       if (!company) throw new TRPCError({ code: "NOT_FOUND", message: "الشركة غير موجودة أو غير نشطة" });
-      if (ctx.user.role !== "admin") {
+      if (ctx.user.role !== "admin" && ctx.user.role !== "general_manager") {
         const membership = (await db.select().from(companyMembers).where(and(eq(companyMembers.companyId, input.companyId), eq(companyMembers.userId, ctx.user.id), eq(companyMembers.status, "active"))).limit(1))[0];
         if (!membership) throw new TRPCError({ code: "FORBIDDEN", message: "لا تملك صلاحية الدخول إلى هذه الشركة" });
       }
