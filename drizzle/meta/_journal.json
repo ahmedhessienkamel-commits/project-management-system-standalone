@@ -519,6 +519,13 @@
       "when": 1787346433223,
       "tag": "0073_wakeful_master_chief",
       "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "5",
+      "when": 1787356181199,
+      "tag": "0074_plain_masque",
+      "breakpoints": true
     }
   ]
 }

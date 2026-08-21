@@ -75,3 +75,16 @@ export async function sendExecutiveDigestEmail(input: { to: string; recipientNam
     html: `<div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.9;color:#18324b;max-width:760px"><div style="background:#18324b;color:#fff;padding:22px;border-radius:12px"><div style="color:#f5e9c8;font-size:12px">نظام إدارة المشاريع</div><h2 style="margin:5px 0">الملخص التنفيذي اليومي</h2><p style="margin:0;color:#dbeafe">مرحبًا ${input.recipientName || ""}، هذه أهم مؤشرات المتابعة.</p></div><div style="margin-top:18px;padding:16px;background:#f8fafc;border-radius:10px"><b>${summary}</b></div><h3>عبء العمل حسب الموظف</h3><table style="width:100%;border-collapse:collapse;text-align:right"><thead><tr style="background:#f5f0e5"><th style="padding:8px">الموظف</th><th style="padding:8px">المفتوحة</th><th style="padding:8px">المتأخرة</th><th style="padding:8px">المكتملة</th></tr></thead><tbody>${workloadRows || `<tr><td colspan="4" style="padding:14px;text-align:center;color:#64748b">لا توجد مهام مسندة حاليًا.</td></tr>`}</tbody></table><p style="margin-top:20px;color:#64748b;font-size:13px">افتح النظام لمراجعة التفاصيل واتخاذ الإجراءات المطلوبة.</p></div>`,
   });
 }
+
+export async function sendTaskReminderEmail(input: { to: string; recipientName?: string | null; ownerName?: string | null; taskTitle: string; description?: string | null; startDate?: string | null; endDate?: string | null; progress?: number; priority?: string | null }) {
+  const from = process.env.GMAIL_USERNAME;
+  const transporter = getMailer();
+  const priority = input.priority === "high" ? "عالية" : input.priority === "low" ? "منخفضة" : "عادية";
+  return transporter.sendMail({
+    from: `${input.ownerName || "صاحب العمل"} — نظام إدارة المشاريع <${from}>`,
+    to: input.to,
+    subject: `تذكير من ${input.ownerName || "صاحب العمل"}: ${input.taskTitle}`,
+    text: `مرحبًا ${input.recipientName || ""}\n\nيرجى متابعة المهمة «${input.taskTitle}».\n${input.description || ""}\nالبداية: ${input.startDate || "غير محددة"}\nالنهاية: ${input.endDate || "غير محددة"}\nنسبة الإنجاز الحالية: ${input.progress || 0}%\nالأولوية: ${priority}\n\nهذه رسالة تذكير من ${input.ownerName || "صاحب العمل"}.`,
+    html: `<div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.9;color:#18324b;max-width:680px"><div style="background:#18324b;color:#fff;padding:22px;border-radius:12px"><div style="font-size:12px;color:#f5e9c8">من ${input.ownerName || "صاحب العمل"}</div><h2 style="margin:5px 0">تذكير بمتابعة مهمة</h2></div><div style="padding:20px"><p>مرحبًا ${input.recipientName || ""}،</p><p>يرجى متابعة المهمة <b>«${input.taskTitle}»</b>.</p><p style="color:#64748b">${input.description || "لا يوجد وصف إضافي."}</p><div style="background:#f8fafc;border-radius:10px;padding:14px"><p>البداية: <b>${input.startDate || "غير محددة"}</b></p><p>النهاية: <b>${input.endDate || "غير محددة"}</b></p><p>نسبة الإنجاز الحالية: <b>${input.progress || 0}%</b></p><p>الأولوية: <b>${priority}</b></p></div><p style="color:#64748b;font-size:13px">هذه رسالة تذكير من ${input.ownerName || "صاحب العمل"} عبر نظام إدارة المشاريع.</p></div></div>`,
+  });
+}

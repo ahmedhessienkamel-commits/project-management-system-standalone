@@ -13,7 +13,7 @@ import { allocateAdministrativeExpense, normalizeExpenseTaxRate, validateExpense
 import { calculateInventoryBalance, canReceiveContractQuantity, canReviewInventoryStage, nextInventoryApprovalStage, remainingContractQuantity, selectPurchaseInvoiceForIssue, calculateServiceEntryTotal, remainingServiceContractAmount, calculateMaterialReceiptCost, materialReceiptExpenseReference, materialIssueExpenseReference, isMaterialContractType, resolveMaterialCostAccount, requiresSupplierInvoicePaymentApproval } from "../../shared/inventory";
 import { calculateWipBalance, buildWipClosingLines } from "../../shared/wip";
 import { canAssignTeamTasks } from "../../shared/taskPermissions";
-import { sendApprovalEmail, sendInvitationEmail } from "../email";
+import { sendApprovalEmail, sendInvitationEmail, sendTaskReminderEmail } from "../email";
 import { buildExecutiveSnapshot } from "../executiveDigest";
 
 const projectStatus = z.enum(["planning", "active", "paused", "completed", "archived"]);
@@ -402,29 +402,44 @@ export const erpRouter = router({
         return email ? rows : rows;
       })();
       const assignedIds = ctx.user.role === "admin" || ctx.user.role === "general_manager" ? null : (ctx.user.email ? (await db.select({ id: employees.id }).from(employees).where(eq(employees.email, ctx.user.email))).map((row) => row.id) : []);
-      const scopedRows = assignedIds ? visibleRows.filter((task) => task.createdBy === ctx.user.id || (task.assignedEmployeeId ? assignedIds.includes(task.assignedEmployeeId) : false)) : visibleRows;
+      const scopedRows = assignedIds ? visibleRows.filter((task) => { let teamIds: number[] = []; try { teamIds = task.assignedEmployeeIds ? JSON.parse(task.assignedEmployeeIds) : []; } catch { teamIds = []; } return task.createdBy === ctx.user.id || (task.assignedEmployeeId ? assignedIds.includes(task.assignedEmployeeId) : false) || teamIds.some((id) => assignedIds.includes(id)); }) : visibleRows;
       return input?.projectId ? scopedRows.filter((task) => task.projectId === input.projectId || task.projectId === null) : scopedRows;
     }),
-    create: protectedProcedure.input(z.object({ projectId: z.number().int().positive().nullable().optional(), assignedEmployeeId: z.number().int().positive().nullable().optional(), title: z.string().min(1), description: z.string().optional(), dueDate: z.string().optional(), priority: z.enum(["low", "normal", "high"]).default("normal") })).mutation(async ({ ctx, input }) => {
+    create: protectedProcedure.input(z.object({ projectId: z.number().int().positive().nullable().optional(), assignedEmployeeId: z.number().int().positive().nullable().optional(), assignedEmployeeIds: z.array(z.number().int().positive()).max(20).default([]), title: z.string().min(1), description: z.string().optional(), startDate: z.string().optional(), endDate: z.string().optional(), dueDate: z.string().optional(), progress: z.number().int().min(0).max(100).default(0), priority: z.enum(["low", "normal", "high"]).default("normal") })).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
       if (!canAssignTeamTasks(ctx.user.role)) throw new TRPCError({ code: "FORBIDDEN", message: "إسناد مهام الفريق متاح للمالك والمدير العام فقط" });
       await assertOperationPermission(db, ctx, "task_assignment");
       if (input.projectId) await assertProjectAccess(db, ctx, input.projectId);
-      const result = await db.insert(dailyTasks).values({ ...input, projectId: input.projectId ?? null, assignedEmployeeId: input.assignedEmployeeId ?? null, description: input.description || null, dueDate: input.dueDate ? new Date(input.dueDate) : null, createdBy: ctx.user.id });
+      const teamIds = Array.from(new Set(input.assignedEmployeeIds.length ? input.assignedEmployeeIds : (input.assignedEmployeeId ? [input.assignedEmployeeId] : [])));
+      const result = await db.insert(dailyTasks).values({ projectId: input.projectId ?? null, assignedEmployeeId: teamIds[0] ?? null, assignedEmployeeIds: JSON.stringify(teamIds), title: input.title, description: input.description || null, startDate: input.startDate ? new Date(input.startDate) : null, endDate: input.endDate ? new Date(input.endDate) : null, dueDate: input.dueDate ? new Date(input.dueDate) : null, progress: input.progress, priority: input.priority, createdBy: ctx.user.id });
       const taskId = Number(result[0].insertId);
       await db.insert(auditLogs).values({ entityType: "daily_task", entityId: taskId, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
-      await notifyTaskAssignee(db, { employeeId: input.assignedEmployeeId, taskId, title: `تم إسناد مهمة جديدة: ${input.title}`, message: `تم إسناد مهمة جديدة إليك: ${input.title}${input.dueDate ? ` — موعد الاستحقاق ${input.dueDate}` : ""}.` });
+      await Promise.all(teamIds.map((employeeId) => notifyTaskAssignee(db, { employeeId, taskId, title: `تم إسناد مهمة جديدة: ${input.title}`, message: `تم إسناد مهمة جديدة إليك: ${input.title}${input.endDate ? ` — نهاية المهمة ${input.endDate}` : ""}.` })));
       return { id: taskId };
     }),
-    updateStatus: protectedProcedure.input(z.object({ id: z.number().int().positive(), status: z.enum(["open", "in_progress", "done", "cancelled"]) })).mutation(async ({ ctx, input }) => {
+    sendReminder: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      if (!canAssignTeamTasks(ctx.user.role)) throw new TRPCError({ code: "FORBIDDEN", message: "إرسال تذكير المهمة متاح للمالك والمدير العام فقط" });
+      const task = (await db.select().from(dailyTasks).where(eq(dailyTasks.id, input.id)).limit(1))[0];
+      if (!task) throw new TRPCError({ code: "NOT_FOUND", message: "المهمة غير موجودة" });
+      let teamIds: number[] = []; try { teamIds = task.assignedEmployeeIds ? JSON.parse(task.assignedEmployeeIds) : []; } catch { teamIds = []; }
+      if (!teamIds.length && task.assignedEmployeeId) teamIds = [task.assignedEmployeeId];
+      const team = teamIds.length ? await db.select({ id: employees.id, email: employees.email, fullName: employees.fullName }).from(employees).where(inArray(employees.id, teamIds)) : [];
+      const recipients = team.filter((employee) => employee.email);
+      if (!recipients.length) throw new TRPCError({ code: "BAD_REQUEST", message: "لا يوجد بريد إلكتروني لمسؤولي المهمة" });
+      await Promise.all(recipients.map((employee) => sendTaskReminderEmail({ to: employee.email!, recipientName: employee.fullName, ownerName: ctx.user.name, taskTitle: task.title, description: task.description, startDate: task.startDate?.toISOString().slice(0, 10), endDate: task.endDate?.toISOString().slice(0, 10), progress: task.progress, priority: task.priority })));
+      await db.insert(auditLogs).values({ entityType: "daily_task", entityId: input.id, action: "reminder_sent", actorId: ctx.user.id, afterJson: JSON.stringify({ recipients: recipients.map((employee) => employee.id) }) });
+      return { success: true, recipients: recipients.length } as const;
+    }),
+    updateStatus: protectedProcedure.input(z.object({ id: z.number().int().positive(), status: z.enum(["open", "planned", "in_progress", "blocked", "review", "done", "cancelled"]), progress: z.number().int().min(0).max(100).optional() })).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
       const task = (await db.select().from(dailyTasks).where(eq(dailyTasks.id, input.id)).limit(1))[0];
       if (!task) throw new TRPCError({ code: "NOT_FOUND", message: "المهمة غير موجودة" });
       if (ctx.user.role !== "admin" && ctx.user.role !== "general_manager") {
         const employee = ctx.user.email ? (await db.select({ id: employees.id }).from(employees).where(eq(employees.email, ctx.user.email)).limit(1))[0] : undefined;
-        if (!employee || task.assignedEmployeeId !== employee.id) throw new TRPCError({ code: "FORBIDDEN", message: "لا يمكنك تحديث مهمة غير مسندة إليك" });
+        let teamIds: number[] = []; try { teamIds = task.assignedEmployeeIds ? JSON.parse(task.assignedEmployeeIds) : []; } catch { teamIds = []; } if (!employee || (task.assignedEmployeeId !== employee.id && !teamIds.includes(employee.id))) throw new TRPCError({ code: "FORBIDDEN", message: "لا يمكنك تحديث مهمة غير مسندة إليك" });
       }
-      await db.update(dailyTasks).set({ status: input.status, completedAt: input.status === "done" ? new Date() : null }).where(eq(dailyTasks.id, input.id));
+      await db.update(dailyTasks).set({ status: input.status, progress: input.progress ?? (input.status === "done" ? 100 : undefined), completedAt: input.status === "done" ? new Date() : null }).where(eq(dailyTasks.id, input.id));
       await db.insert(auditLogs).values({ entityType: "daily_task", entityId: input.id, action: "status_updated", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
       await notifyTaskAssignee(db, { employeeId: task.assignedEmployeeId, taskId: input.id, title: `تحديث حالة المهمة: ${task.title}`, message: `تم تحديث حالة المهمة «${task.title}» إلى: ${input.status}.` });
       return { success: true } as const;
