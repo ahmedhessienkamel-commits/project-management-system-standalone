@@ -349,6 +349,16 @@ export const erpRouter = router({
         await db.insert(auditLogs).values({ entityType: "unit", entityId: unitId, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
         return { id: unitId };
       }),
+    update: protectedProcedure.input(z.object({ id: z.number().int().positive(), projectId: z.number().int().positive(), code: z.string().trim().min(1).max(64), name: z.string().trim().min(2).max(255), type: z.string().max(128).optional(), listPrice: z.number().nonnegative(), status: z.enum(["available", "reserved", "sold", "cancelled"]).default("available") })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      await assertOperationPermission(db, ctx, "edit");
+      const before = (await db.select().from(units).where(eq(units.id, input.id)).limit(1))[0];
+      if (!before) throw new TRPCError({ code: "NOT_FOUND", message: "الوحدة غير موجودة" });
+      await assertProjectAccess(db, ctx, input.projectId); await assertProjectWrite(db, ctx, input.projectId);
+      await db.update(units).set({ projectId: input.projectId, code: input.code, name: input.name, type: input.type || null, listPrice: input.listPrice.toFixed(2), status: input.status }).where(eq(units.id, input.id));
+      await db.insert(auditLogs).values({ entityType: "unit", entityId: input.id, action: "updated", actorId: ctx.user.id, beforeJson: JSON.stringify(before), afterJson: JSON.stringify(input) });
+      return { id: input.id } as const;
+    }),
   }),
 
   stages: router({
@@ -811,7 +821,16 @@ export const erpRouter = router({
       const rows = await db.select().from(sales).orderBy(sales.createdAt);
       return allowed ? rows.filter((row) => allowed.has(row.projectId)) : rows;
     }),
-          updateCustomer: protectedProcedure.input(z.object({ id: z.number().int().positive(), customerName: z.string().trim().min(2), customerPhone: z.string().max(64).optional() })).mutation(async ({ ctx, input }) => {
+          update: protectedProcedure.input(z.object({ id: z.number().int().positive(), projectId: z.number().int().positive(), unitId: z.number().int().positive(), customerName: z.string().trim().min(2), customerPhone: z.string().max(64).optional(), saleDate: z.string().optional(), preTaxAmount: z.number().positive(), taxRate: z.number().min(0).max(100).default(15) })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb()); await assertOperationPermission(db, ctx, "edit");
+      const before = (await db.select().from(sales).where(eq(sales.id, input.id)).limit(1))[0]; if (!before) throw new TRPCError({ code: "NOT_FOUND", message: "عملية البيع غير موجودة" });
+      await assertProjectAccess(db, ctx, input.projectId); await assertProjectWrite(db, ctx, input.projectId);
+      const totals = calculateExpenseTotals(input.preTaxAmount, input.taxRate);
+      await db.update(sales).set({ projectId: input.projectId, unitId: input.unitId, customerName: input.customerName, customerPhone: input.customerPhone || null, saleDate: input.saleDate ? new Date(input.saleDate) : null, preTaxAmount: totals.preTaxAmount.toFixed(2), taxAmount: totals.taxAmount.toFixed(2), totalAmount: totals.totalAmount.toFixed(2), recognizedRevenue: before.status === "confirmed" ? totals.preTaxAmount.toFixed(2) : before.recognizedRevenue }).where(eq(sales.id, input.id));
+      await db.insert(auditLogs).values({ entityType: "sale", entityId: input.id, action: "updated", actorId: ctx.user.id, beforeJson: JSON.stringify(before), afterJson: JSON.stringify({ ...input, ...totals }) });
+      return { id: input.id, totalAmount: totals.totalAmount } as const;
+    }),
+    updateCustomer: protectedProcedure.input(z.object({ id: z.number().int().positive(), customerName: z.string().trim().min(2), customerPhone: z.string().max(64).optional() })).mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
         await assertOperationPermission(db, ctx, "edit");
 
@@ -851,6 +870,17 @@ export const erpRouter = router({
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
       const rows = await db.select().from(collections).orderBy(collections.createdAt);
       return allowed ? rows.filter((row) => allowed.has(row.projectId)) : rows;
+    }),
+    update: protectedProcedure.input(z.object({ id: z.number().int().positive(), projectId: z.number().int().positive(), saleId: z.number().int().positive(), amount: z.number().positive(), collectionDestination: z.enum(["cash", "bank", "escrow"]).default("cash"), cashAccountId: z.number().int().positive().optional(), escrowReference: z.string().max(128).optional(), receiptReference: z.string().max(128).optional(), collectionDate: z.string().optional() })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb()); await assertOperationPermission(db, ctx, "edit");
+      const before = (await db.select().from(collections).where(eq(collections.id, input.id)).limit(1))[0]; if (!before) throw new TRPCError({ code: "NOT_FOUND", message: "التحصيل غير موجود" });
+      await assertProjectAccess(db, ctx, input.projectId); await assertProjectWrite(db, ctx, input.projectId);
+      const project = (await db.select({ escrowCashAccountId: projects.escrowCashAccountId, projectType: projects.projectType }).from(projects).where(eq(projects.id, input.projectId)).limit(1))[0];
+      if (!project) throw new TRPCError({ code: "NOT_FOUND", message: "المشروع غير موجود" });
+      if (input.collectionDestination === "escrow" && (project.projectType !== "off_plan_sales" || !project.escrowCashAccountId)) throw new TRPCError({ code: "BAD_REQUEST", message: "حساب الضمان غير متاح لهذا المشروع" });
+      if (input.cashAccountId && input.collectionDestination !== "escrow") { const account = (await db.select({ id: cashAccounts.id, accountType: cashAccounts.accountType }).from(cashAccounts).where(eq(cashAccounts.id, input.cashAccountId)).limit(1))[0]; if (!account || account.accountType !== input.collectionDestination) throw new TRPCError({ code: "BAD_REQUEST", message: "حساب الإيداع لا يطابق وجهة التحصيل" }); }
+      await db.update(collections).set({ projectId: input.projectId, saleId: input.saleId, collectionDestination: input.collectionDestination, cashAccountId: input.collectionDestination === "escrow" ? project.escrowCashAccountId : input.cashAccountId || null, escrowReference: input.collectionDestination === "escrow" ? input.escrowReference || null : null, amount: input.amount.toFixed(2), receiptReference: input.receiptReference || null, collectionDate: input.collectionDate ? new Date(input.collectionDate) : null }).where(eq(collections.id, input.id));
+      await db.insert(auditLogs).values({ entityType: "collection", entityId: input.id, action: "updated", actorId: ctx.user.id, beforeJson: JSON.stringify(before), afterJson: JSON.stringify(input) }); return { id: input.id } as const;
     }),
     create: protectedProcedure
       .input(z.object({ projectId: z.number().int().positive(), saleId: z.number().int().positive(), amount: z.number().positive(), collectionDestination: z.enum(["cash", "bank", "escrow"]).default("cash"), cashAccountId: z.number().int().positive().optional(), escrowReference: z.string().max(128).optional(), receiptReference: z.string().max(128).optional(), collectionDate: z.string().optional() }))
