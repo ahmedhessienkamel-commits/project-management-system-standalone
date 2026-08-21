@@ -10,7 +10,7 @@ import { calculateCertificateProgress, calculateDocumentCompleteness, calculateE
 import { accountingTotals } from "../accountingCalculations";
 import { calculateStageTimeVariance } from "../../shared/stageTiming";
 import { allocateAdministrativeExpense, normalizeExpenseTaxRate, validateExpenseAllocation } from "../../shared/expenseAllocation";
-import { calculateInventoryBalance, canReceiveContractQuantity, canReviewInventoryStage, nextInventoryApprovalStage, remainingContractQuantity, selectPurchaseInvoiceForIssue, calculateServiceEntryTotal, remainingServiceContractAmount, calculateMaterialReceiptCost, materialReceiptExpenseReference, materialIssueExpenseReference, isMaterialContractType, resolveMaterialCostAccount } from "../../shared/inventory";
+import { calculateInventoryBalance, canReceiveContractQuantity, canReviewInventoryStage, nextInventoryApprovalStage, remainingContractQuantity, selectPurchaseInvoiceForIssue, calculateServiceEntryTotal, remainingServiceContractAmount, calculateMaterialReceiptCost, materialReceiptExpenseReference, materialIssueExpenseReference, isMaterialContractType, resolveMaterialCostAccount, requiresSupplierInvoicePaymentApproval } from "../../shared/inventory";
 import { calculateWipBalance, buildWipClosingLines } from "../../shared/wip";
 import { canAssignTeamTasks } from "../../shared/taskPermissions";
 import { sendApprovalEmail, sendInvitationEmail } from "../email";
@@ -161,7 +161,7 @@ function canManagePartners(user: { role: string; id: number }) {
 
 function canReviewApproval(user: { role: string; id: number }, request: { entityType: string; approvalStage?: string | null }) {
   if (user.role === "admin" || Number(user.id) === 13170001) return true;
-  if (user.role === "general_manager") return request.entityType === "certificate" || request.entityType === "payroll" || request.approvalStage === "general_manager";
+  if (user.role === "general_manager") return request.entityType === "certificate" || request.entityType === "payroll" || (request.entityType === "purchase_payment" && request.approvalStage === "general_manager") || request.approvalStage === "general_manager";
   if (user.role === "project_manager") return request.entityType === "certificate" || request.approvalStage === "project_manager";
   return false;
 }
@@ -1424,6 +1424,21 @@ export const erpRouter = router({
         if (!canReviewApproval(ctx.user, request)) throw new TRPCError({ code: "FORBIDDEN", message: "لا يملك هذا الدور صلاحية اعتماد هذا النوع من المستندات" });
         await db.update(approvalRequests).set({ status: input.decision, reviewedBy: ctx.user.id, note: input.note || null, reviewedAt: new Date() }).where(eq(approvalRequests.id, input.id));
         const approved = input.decision === "approved";
+        if (request.entityType === "purchase_payment") {
+          const payment = (await db.select().from(accountingDocuments).where(eq(accountingDocuments.id, request.entityId)).limit(1))[0];
+          if (!payment || payment.documentType !== "payment_voucher" || !payment.purchaseInvoiceId) throw new TRPCError({ code: "NOT_FOUND", message: "سند صرف المورد أو فاتورة الشراء غير موجودة" });
+          if (!approved) {
+            await db.update(accountingDocuments).set({ status: "cancelled" }).where(eq(accountingDocuments.id, payment.id));
+          } else {
+            await db.update(accountingDocuments).set({ status: "posted" }).where(eq(accountingDocuments.id, payment.id));
+            const invoice = (await db.select().from(accountingDocuments).where(eq(accountingDocuments.id, payment.purchaseInvoiceId)).limit(1))[0];
+            if (!invoice || invoice.documentType !== "purchase_invoice") throw new TRPCError({ code: "NOT_FOUND", message: "فاتورة الشراء المرتبطة غير موجودة" });
+            const paidAfter = Number(invoice.paidAmount || 0) + Number(payment.totalAmount || 0);
+            const paymentStatus = paidAfter >= Number(invoice.totalAmount || 0) - 0.005 ? "paid" : "partially_paid" as const;
+            await db.update(accountingDocuments).set({ paidAmount: paidAfter.toFixed(2), paymentStatus }).where(eq(accountingDocuments.id, invoice.id));
+            await db.insert(auditLogs).values({ entityType: "accountingDocument", entityId: payment.id, action: "supplier_payment_approved", actorId: ctx.user.id, afterJson: JSON.stringify({ invoiceId: invoice.id, paidAmount: paidAfter, paymentStatus }) });
+          }
+        }
         if (request.entityType === "expense") await db.update(expenses).set({ status: approved ? "approved" : "rejected" }).where(eq(expenses.id, request.entityId));
         if (request.entityType === "payroll") await db.update(payroll).set({ status: approved ? "approved" : "draft" }).where(eq(payroll.id, request.entityId));
         if (request.entityType === "sale") await db.update(sales).set({ status: approved ? "confirmed" : "cancelled" }).where(eq(sales.id, request.entityId));
@@ -2121,7 +2136,7 @@ export const erpRouter = router({
         if (!totals.balanced && !["sales_invoice", "credit_note"].includes(input.documentType)) throw new TRPCError({ code: "BAD_REQUEST", message: "القيد غير متوازن: إجمالي المدين يجب أن يساوي إجمالي الدائن" });
         const prefixes = { sales_invoice: "SI", purchase_invoice: "PI", purchase_receipt: "GRN", credit_note: "CN", journal_entry: "JE", payment_voucher: "PV", receipt_voucher: "RV", quotation: "QT", purchase_order: "PO" } as const;
         const documentNumber = `${prefixes[input.documentType]}-${Date.now()}`;
-        const result = await db.insert(accountingDocuments).values({ projectId: input.projectId || null, voucherCategory: input.documentType === "payment_voucher" ? input.voucherCategory || null : null, contractorId: input.documentType === "payment_voucher" ? input.contractorId || null : null, supplierId: input.documentType === "payment_voucher" ? input.supplierId || null : null, purchaseInvoiceId: input.documentType === "payment_voucher" ? input.purchaseInvoiceId || null : null, settlementType: input.documentType === "payment_voucher" ? input.settlementType || "direct" : null, certificateId: input.documentType === "purchase_invoice" ? input.certificateId || null : null, relatedDocumentType: input.relatedDocumentType || null, relatedDocumentId: input.relatedDocumentId || null, originalDocumentId: input.originalDocumentId || null, returnType: input.returnType || null, documentType: input.documentType, documentNumber, partyName: input.partyName || null, partyTaxNumber: input.partyTaxNumber || null, documentDate: input.documentDate ? new Date(input.documentDate) : new Date(), dueDate: input.dueDate ? new Date(input.dueDate) : null, sourceAccountId: input.sourceAccountId || null, amount: input.amount.toFixed(2), taxAmount: input.taxAmount.toFixed(2), totalAmount: input.totalAmount.toFixed(2), paymentMethod: input.paymentMethod || null, status: input.status, notes: input.notes || null, createdBy: ctx.user.id });
+        const result = await db.insert(accountingDocuments).values({ projectId: input.projectId || null, voucherCategory: input.documentType === "payment_voucher" ? input.voucherCategory || null : null, contractorId: input.documentType === "payment_voucher" ? input.contractorId || null : null, supplierId: input.documentType === "payment_voucher" ? input.supplierId || null : null, purchaseInvoiceId: input.documentType === "payment_voucher" ? input.purchaseInvoiceId || null : null, settlementType: input.documentType === "payment_voucher" ? input.settlementType || "direct" : null, certificateId: input.documentType === "purchase_invoice" ? input.certificateId || null : null, relatedDocumentType: input.relatedDocumentType || null, relatedDocumentId: input.relatedDocumentId || null, originalDocumentId: input.originalDocumentId || null, returnType: input.returnType || null, documentType: input.documentType, documentNumber, partyName: input.partyName || null, partyTaxNumber: input.partyTaxNumber || null, documentDate: input.documentDate ? new Date(input.documentDate) : new Date(), dueDate: input.dueDate ? new Date(input.dueDate) : null, sourceAccountId: input.sourceAccountId || null, amount: input.amount.toFixed(2), taxAmount: input.taxAmount.toFixed(2), totalAmount: input.totalAmount.toFixed(2), paymentMethod: input.paymentMethod || null, status: requiresSupplierInvoicePaymentApproval(input) ? "draft" : input.status, notes: input.notes || null, createdBy: ctx.user.id });
         const id = Number(result[0].insertId);
         for (const line of input.lines) await db.insert(accountingDocumentLines).values({ documentId: id, accountId: line.accountId, costItemId: line.costItemId || null, projectId: line.projectId || input.projectId || null, stageId: line.stageId || null, description: line.description || null, debit: line.debit.toFixed(2), credit: line.credit.toFixed(2) });
         if (input.documentType === "payment_voucher" && input.voucherCategory === "payroll" && !input.projectId) {
@@ -2143,6 +2158,10 @@ export const erpRouter = router({
           await db.update(fixedAssets).set({ sourceDocumentId: id }).where(eq(fixedAssets.id, input.fixedAssetId));
         }
         await db.insert(auditLogs).values({ entityType: "accountingDocument", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify({ ...input, documentNumber }) });
+        if (requiresSupplierInvoicePaymentApproval(input)) {
+          await db.insert(approvalRequests).values({ projectId: input.projectId || null, entityType: "purchase_payment", entityId: id, requestedBy: ctx.user.id, status: "pending", approvalStage: "general_manager", stageOrder: 1 });
+          await notifyApprovalUsers(db, { type: "purchase_payment_pending", title: `سند صرف مورد يحتاج اعتماد — ${documentNumber}`, message: `سند صرف بقيمة ${input.totalAmount.toFixed(2)} ر.س للمورد ${input.partyName || "غير محدد"} لسداد فاتورة شراء #${input.purchaseInvoiceId} يحتاج اعتماد المدير العام.`, roles: ["general_manager"] });
+        }
         return { id, documentNumber };
       }),
       update: protectedProcedure.input(z.object({ id: z.number().int().positive(), relatedDocumentType: z.enum(["quotation", "certificate"]).optional().nullable(), relatedDocumentId: z.number().int().positive().optional().nullable(), originalDocumentId: z.number().int().positive().optional().nullable(), returnType: z.enum(["full", "partial"]).optional().nullable(), projectId: z.number().int().positive().optional().nullable(), partyName: z.string().max(255).optional(), partyTaxNumber: z.string().max(64).optional(), voucherCategory: z.enum(["contractor", "supplier", "materials", "payroll", "operating", "administrative", "petty_cash"]).optional().nullable(), contractorId: z.number().int().positive().optional().nullable(), supplierId: z.number().int().positive().optional().nullable(), purchaseInvoiceId: z.number().int().positive().optional().nullable(), settlementType: z.enum(["invoice", "direct"]).optional().nullable(), sourceAccountId: z.number().int().positive().optional().nullable(), paymentMethod: z.enum(["cash", "bank"]).optional().nullable(), documentDate: z.string().optional(), dueDate: z.string().optional(), amount: z.number().nonnegative(), taxAmount: z.number().nonnegative(), totalAmount: z.number().nonnegative(), notes: z.string().max(2000).optional(), status: z.enum(["draft", "posted", "cancelled"]).optional(), lines: z.array(z.object({ accountId: z.number().int().positive(), costItemId: z.number().int().positive().optional(), projectId: z.number().int().positive().optional(), stageId: z.number().int().positive().optional(), description: z.string().max(500).optional(), debit: z.number().nonnegative(), credit: z.number().nonnegative() })).min(1) })).mutation(async ({ ctx, input }) => {

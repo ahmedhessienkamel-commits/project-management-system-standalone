@@ -86,3 +86,7 @@ export function resolveMaterialCostAccount(costItem: { accountId?: number | null
   if (!account || account.isActive !== 1 || account.isPostable !== 1 || !["asset", "expense"].includes(account.accountType)) return null;
   return account;
 }
+
+export function requiresSupplierInvoicePaymentApproval(input: { documentType: string; voucherCategory?: string | null; settlementType?: string | null; purchaseInvoiceId?: number | null }) {
+  return input.documentType === "payment_voucher" && input.voucherCategory === "supplier" && input.settlementType === "invoice" && Boolean(input.purchaseInvoiceId);
+}

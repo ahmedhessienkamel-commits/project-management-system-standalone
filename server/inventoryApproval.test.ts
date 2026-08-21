@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canReviewInventoryStage, nextInventoryApprovalStage } from "../shared/inventory";
+import { canReviewInventoryStage, nextInventoryApprovalStage, requiresSupplierInvoicePaymentApproval } from "../shared/inventory";
 
 describe("inventory approval chain", () => {
   it("allows Mostafa or the owner to review the first stage", () => {
@@ -18,5 +18,13 @@ describe("inventory approval chain", () => {
     expect(nextInventoryApprovalStage("mostafa", "approved")).toBe("owner");
     expect(nextInventoryApprovalStage("owner", "approved")).toBe("complete");
     expect(nextInventoryApprovalStage("mostafa", "rejected")).toBe("rejected");
+  });
+});
+
+describe("supplier invoice payment approval", () => {
+  it("requires approval only for supplier payment vouchers linked to a purchase invoice", () => {
+    expect(requiresSupplierInvoicePaymentApproval({ documentType: "payment_voucher", voucherCategory: "supplier", settlementType: "invoice", purchaseInvoiceId: 10 })).toBe(true);
+    expect(requiresSupplierInvoicePaymentApproval({ documentType: "payment_voucher", voucherCategory: "supplier", settlementType: "direct", purchaseInvoiceId: 10 })).toBe(false);
+    expect(requiresSupplierInvoicePaymentApproval({ documentType: "payment_voucher", voucherCategory: "contractor", settlementType: "invoice", purchaseInvoiceId: 10 })).toBe(false);
   });
 });
