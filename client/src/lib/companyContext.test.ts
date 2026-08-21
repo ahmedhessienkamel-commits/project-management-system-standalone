@@ -26,4 +26,10 @@ describe("multi-company context", () => {
     expect(selectActiveCompany(companies, 3, [1, 2])?.id).toBe(1);
     expect(selectActiveCompany(companies, 3, [3])).toBeNull();
   });
+
+  it("preserves the selected company when it remains assigned and active", () => {
+    const persistedCompanyId = 2;
+    expect(selectActiveCompany(companies, persistedCompanyId, [1, 2])?.id).toBe(persistedCompanyId);
+    expect(selectActiveCompany(companies, persistedCompanyId, [1])).not.toEqual(expect.objectContaining({ id: persistedCompanyId }));
+  });
 });
