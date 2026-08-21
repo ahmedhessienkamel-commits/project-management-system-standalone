@@ -2291,8 +2291,9 @@ export const erpRouter = router({
     dataQuality: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
       const [projectRows, stageRows, vendorRows, employeeRows, expenseRows, certificateRows, payrollRows, salesRows, costItemRows] = await Promise.all([db.select().from(projects), db.select().from(stages), db.select().from(vendors), db.select().from(employees), db.select().from(expenses), db.select().from(certificates), db.select().from(payroll), db.select().from(sales), db.select().from(costItems)]);
+      const activeCompanyId = await resolveActiveCompanyId(db, ctx);
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
-      const visibleProjects = allowed ? projectRows.filter((row) => allowed.has(row.id)) : projectRows;
+      const visibleProjects = projectRows.filter((row) => (!activeCompanyId || row.companyId === activeCompanyId) && (!allowed || allowed.has(row.id)));
       const visibleProjectIds = new Set(visibleProjects.map((row) => row.id));
       const issues: Array<{ id: string; entityType: string; entityId: number; title: string; detail: string; severity: "critical" | "warning" | "info"; action: string }> = [];
       const visible = (projectId: number | null) => projectId === null || visibleProjectIds.has(projectId);
