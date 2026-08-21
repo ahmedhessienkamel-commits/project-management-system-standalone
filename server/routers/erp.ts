@@ -1860,7 +1860,7 @@ export const erpRouter = router({
         const stageExpenses = expenseRows.filter((row) => row.stageId === stage.id);
         const stagePayroll = payrollRows.filter((row) => row.stageId === stage.id);
         const stageCustody = custodyRows.filter((row) => row.stageId === stage.id);
-        const stageCertificates = certificateRows.filter((row) => row.stageId === stage.id);
+        const stageCertificates = certificateRows.filter((row) => row.stageId === stage.id && Boolean(row.vendorId || row.contractId));
         return { stage, byType: stageExpenses.reduce<Record<string, { total: number; paid: number; outstanding: number }>>((acc, row) => { const key = row.expenseType || "operating"; const current = acc[key] || { total: 0, paid: 0, outstanding: 0 }; current.total += Number(row.totalAmount); current.paid += Number(row.paidAmount); current.outstanding += Math.max(Number(row.totalAmount) - Number(row.paidAmount), 0); acc[key] = current; return acc; }, {}), expenses: stageExpenses, payroll: stagePayroll, custody: stageCustody, certificates: stageCertificates, collections: collectionRows.filter((row) => row.status === "received") };
       });
     }),
@@ -1879,7 +1879,7 @@ export const erpRouter = router({
       const activeExpenses = expenseRows.filter((row) => row.status !== "rejected" && row.status !== "draft");
       const actualForStage = (stageId: number) => activeExpenses.filter((row) => row.stageId === stageId);
       const payrollForStage = (stageId: number) => payrollRows.filter((row) => row.stageId === stageId);
-      const certificateForStage = (stageId: number) => certificateRows.filter((row) => row.stageId === stageId && row.status !== "rejected");
+      const certificateForStage = (stageId: number) => certificateRows.filter((row) => row.stageId === stageId && row.status !== "rejected" && Boolean(row.vendorId || row.contractId));
       const timeMetrics = (plannedEnd: Date | string | null, status: string) => calculateStageTimeVariance(plannedEnd, status);
       const makeMetrics = (plannedBudget: number, rows: typeof activeExpenses, stageId?: number) => {
         const expenseTotal = rows.reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
