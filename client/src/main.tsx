@@ -17,7 +17,7 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (typeof window === "undefined") return;
 
   const isUnauthorized = error.message === UNAUTHED_ERR_MSG;
-  const publicAuthPath = isPublicAuthPath(window.location.pathname);
+  const publicAuthPath = isPublicAuthPath(window.location.pathname, window.location.search);
 
   if (!isUnauthorized || publicAuthPath) return;
 

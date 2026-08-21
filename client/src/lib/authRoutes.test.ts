@@ -8,6 +8,11 @@ describe("public authentication routes", () => {
     expect(isPublicAuthPath("/reset-password")).toBe(true);
   });
 
+  it("keeps legacy invitation query links public", () => {
+    expect(isPublicAuthPath("/", "?invite=legacy-token")).toBe(true);
+    expect(isPublicAuthPath("/", "?token=direct-token")).toBe(true);
+  });
+
   it("does not classify protected application routes as public", () => {
     expect(isPublicAuthPath("/")).toBe(false);
     expect(isPublicAuthPath("/projects")).toBe(false);
