@@ -1245,7 +1245,8 @@ export const erpRouter = router({
         const companyProjectIds = new Set(projectRows.map((project) => project.id));
         const rows = await db.select().from(materialRequisitions);
         const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
-        return rows.filter((row) => companyProjectIds.has(row.projectId) && (!input?.projectId || row.projectId === input.projectId) && (!allowed || allowed.has(row.projectId)));
+        const filtered = rows.filter((row) => companyProjectIds.has(row.projectId) && (!input?.projectId || row.projectId === input.projectId) && (!allowed || allowed.has(row.projectId)));
+        return Promise.all(filtered.map(async (row) => ({ ...row, items: await db.select().from(materialRequisitionItems).where(eq(materialRequisitionItems.requisitionId, row.id)) })));
       }),
       create: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), stageId: z.number().int().positive().optional(), description: z.string().max(2000).optional(), requiredBy: z.string().optional(), items: z.array(z.object({ description: z.string().min(1).max(255), unit: z.string().max(64).optional(), quantity: z.number().positive(), estimatedUnitCost: z.number().nonnegative(), notes: z.string().max(500).optional() })).min(1) })).mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
@@ -1259,6 +1260,27 @@ export const erpRouter = router({
         await db.insert(auditLogs).values({ entityType: "materialRequisition", entityId: id, action: "submitted", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
         await notifyApprovalUsers(db, { type: "material_requisition_pending", title: `طلب مواد جديد ${requestNumber}`, message: `طلب مواد جديد لمشروع #${input.projectId} أرسله موظف الموقع ويحتاج اعتماد مصطفى أولًا.`, userIds: [13170001], roles: [] });
         return { id, requestNumber };
+      }),
+      update: protectedProcedure.input(z.object({ id: z.number().int().positive(), projectId: z.number().int().positive(), stageId: z.number().int().positive().optional(), description: z.string().max(2000).optional(), requiredBy: z.string().optional(), items: z.array(z.object({ description: z.string().min(1).max(255), unit: z.string().max(64).optional(), quantity: z.number().positive(), estimatedUnitCost: z.number().nonnegative(), notes: z.string().max(500).optional() })).min(1) })).mutation(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        if (ctx.user.role !== "admin" && Number(ctx.user.id) !== 13170001) throw new TRPCError({ code: "FORBIDDEN", message: "تعديل طلب المواد متاح للمالك ومصطفى فقط" });
+        const request = (await db.select().from(materialRequisitions).where(eq(materialRequisitions.id, input.id)).limit(1))[0];
+        if (!request) throw new TRPCError({ code: "NOT_FOUND", message: "طلب المواد غير موجود" });
+        await assertProjectAccess(db, ctx, input.projectId);
+        await db.update(materialRequisitions).set({ projectId: input.projectId, stageId: input.stageId || null, description: input.description || null, requiredBy: input.requiredBy ? new Date(input.requiredBy) : null, status: "pending_approval" }).where(eq(materialRequisitions.id, input.id));
+        await db.delete(materialRequisitionItems).where(eq(materialRequisitionItems.requisitionId, input.id));
+        for (const item of input.items) await db.insert(materialRequisitionItems).values({ requisitionId: input.id, description: item.description, unit: item.unit || null, quantity: item.quantity.toFixed(3), estimatedUnitCost: item.estimatedUnitCost.toFixed(2), notes: item.notes || null });
+        await db.insert(auditLogs).values({ entityType: "materialRequisition", entityId: input.id, action: "updated", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
+        return { success: true, id: input.id } as const;
+      }),
+      delete: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        const request = (await db.select().from(materialRequisitions).where(eq(materialRequisitions.id, input.id)).limit(1))[0];
+        if (!request) throw new TRPCError({ code: "NOT_FOUND", message: "طلب المواد غير موجود" });
+        await db.update(materialRequisitions).set({ status: "cancelled" }).where(eq(materialRequisitions.id, input.id));
+        await db.update(approvalRequests).set({ status: "rejected", reviewedBy: ctx.user.id, reviewedAt: new Date(), note: "حذف بواسطة المالك" }).where(and(eq(approvalRequests.entityType, "materialRequisition"), eq(approvalRequests.entityId, input.id), eq(approvalRequests.status, "pending")));
+        await db.insert(auditLogs).values({ entityType: "materialRequisition", entityId: input.id, action: "deleted", actorId: ctx.user.id, afterJson: JSON.stringify({ status: "cancelled" }) });
+        return { success: true } as const;
       }),
       decide: protectedProcedure.input(z.object({ id: z.number().int().positive(), decision: z.enum(["approved", "rejected"]), note: z.string().max(1000).optional() })).mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
