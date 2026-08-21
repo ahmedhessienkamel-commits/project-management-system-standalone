@@ -142,7 +142,7 @@ function DashboardLayoutContent({
   const utils = trpc.useUtils();
   const { data: availableCompanies = [] } = trpc.erp.companies.list.useQuery();
   const { data: currentCompany } = trpc.erp.companies.current.useQuery();
-  const { data: notifications = [] } = trpc.erp.notifications.list.useQuery();
+  const { data: notifications = [] } = trpc.erp.controls.notifications.useQuery();
   const unreadNotifications = notifications.filter((notification) => !notification.readAt).length;
   const switchCompany = trpc.erp.companies.switch.useMutation({ onSuccess: () => { utils.erp.companies.current.invalidate(); utils.erp.company.get.invalidate(); utils.erp.projects.list.invalidate(); } });
   const { state, toggleSidebar } = useSidebar();
