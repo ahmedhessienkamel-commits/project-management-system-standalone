@@ -505,6 +505,7 @@ export const erpRouter = router({
         plannedEnd: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role === "general_manager") throw new TRPCError({ code: "FORBIDDEN", message: "المدير العام يملك صلاحية الاطلاع والتقارير فقط ولا يمكنه إنشاء مشروع" });
         const db = requireDb(await getDb());
         const result = await db.insert(projects).values({
           ...input,
@@ -531,6 +532,7 @@ export const erpRouter = router({
     update: protectedProcedure
       .input(z.object({ id: z.number().int().positive(), code: z.string().trim().min(2).max(64), name: z.string().trim().min(2).max(255), location: z.string().trim().max(255).optional(), status: projectStatus, classification: projectClassification, projectType: projectType, escrowCashAccountId: z.number().int().positive().nullable().optional(), escrowTrusteeName: z.string().trim().max(255).optional(), escrowStatementReference: z.string().trim().max(128).optional(), contractValue: z.number().nonnegative(), plannedStart: z.string().optional(), plannedEnd: z.string().optional() }))
       .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role === "general_manager") throw new TRPCError({ code: "FORBIDDEN", message: "المدير العام يملك صلاحية الاطلاع والتقارير فقط ولا يمكنه تعديل المشروع" });
         const db = requireDb(await getDb());
         await assertProjectAccess(db, ctx, input.id);
         if (input.plannedStart && input.plannedEnd && new Date(input.plannedEnd) < new Date(input.plannedStart)) throw new TRPCError({ code: "BAD_REQUEST", message: "نهاية المشروع لا يمكن أن تسبق بدايته" });
