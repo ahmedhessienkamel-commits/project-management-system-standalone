@@ -35343,3 +35343,24 @@
 - [x] Preserve cash/bank/escrow and collection-date validation.
 - [x] Run TypeScript, 58 Vitest tests, production build, and visual verification.
 - [ ] Save and publish the collection-selector checkpoint.
+
+## ERP consolidation and payment-voucher edit correction — 2026-08-21
+
+- [ ] Embed the complete Purchase Cycle content below the payment-voucher workspace in Costs & Expenses.
+- [ ] Remove the standalone Purchase Cycle page/menu entry after the embedded workflow is verified.
+- [ ] Keep Suppliers/Contractors, Contracts/Certificates, Supplier Statements, Custody Statements, and Accounting Reports in the requested consecutive sidebar order.
+- [ ] Replace prompt-based payment-voucher editing with a full editable document form using the existing voucher fields.
+- [ ] Ensure editing updates the accounting document and related lines, not only local display data.
+- [ ] Preserve admin-only deletion and owner/Mustafa edit permissions.
+- [ ] Run TypeScript, Vitest, production build, visual verification, and save the final consolidation checkpoint.
+
+## ERP consolidation verification — 2026-08-21
+
+- [x] Embed the existing Purchase Cycle workflow below the payment-voucher workspace in Costs & Expenses.
+- [x] Remove the standalone Purchase Cycle sidebar entry and redirect legacy /operations to /expenses.
+- [x] Preserve supplier/contractor, contract/certificate, supplier-statement, custody-statement, and accounting-report sidebar ordering.
+- [x] Replace prompt-based payment-voucher editing with full-form editing and an explicit cancel action.
+- [x] Extend the document update procedure to persist voucher category, supplier/contractor, purchase invoice, settlement, source account, payment method, and accounting lines.
+- [x] Preserve admin-only deletion and owner/Mustafa edit permissions.
+- [x] Run TypeScript, 58 Vitest tests, production build, and full-page visual verification.
+- [ ] Save and publish the consolidation checkpoint.
