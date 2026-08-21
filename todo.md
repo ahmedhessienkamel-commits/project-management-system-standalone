@@ -35325,3 +35325,21 @@
 - [x] Persist the selected date on the receipt voucher document.
 - [x] Run TypeScript, 58 Vitest tests, production build, and visual verification.
 - [ ] Save and publish the mandatory collection-date checkpoint.
+
+## Sales collection invoice selector — 2026-08-21
+
+- [ ] Verify the invoice selector reads saved sales invoices rather than only operational sales rows.
+- [ ] Ensure project selection filters invoices by project without hiding valid invoices with missing sale links.
+- [ ] Include invoice number, customer, total, paid, and remaining values in the selector.
+- [ ] Preserve the required collection date and cash/bank validation.
+- [ ] Add regression coverage for a saved invoice appearing in the collection selector.
+- [ ] Run TypeScript, Vitest, build, visual verification, and save the checkpoint.
+
+## Sales collection invoice selector verification — 2026-08-21
+
+- [x] Verify the selector uses saved sales invoices to label each eligible sale.
+- [x] Filter eligible invoice-backed sales by the selected project while preserving the internal sale link.
+- [x] Show invoice number and invoice total in the collection selector.
+- [x] Preserve cash/bank/escrow and collection-date validation.
+- [x] Run TypeScript, 58 Vitest tests, production build, and visual verification.
+- [ ] Save and publish the collection-selector checkpoint.
