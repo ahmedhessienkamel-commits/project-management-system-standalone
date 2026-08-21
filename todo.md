@@ -35364,3 +35364,30 @@
 - [x] Preserve admin-only deletion and owner/Mustafa edit permissions.
 - [x] Run TypeScript, 58 Vitest tests, production build, and full-page visual verification.
 - [ ] Save and publish the consolidation checkpoint.
+
+## Consolidation checkpoint completion — 2026-08-21
+
+- [x] Save and publish consolidation checkpoint 3ebb1691.
+- [x] Confirm the deployed build contains the embedded purchase cycle and document-form voucher editing.
+
+## Contract supply and installation quantities — 2026-08-21
+
+- [ ] Add contract type: building stage, supply, or supply-and-installation.
+- [ ] Add contract line items with description, unit, contracted quantity, unit price, and total.
+- [ ] Track supplied quantity, installed quantity, approved quantity, and remaining quantity per contract line.
+- [ ] Prevent certificates and payment amounts from exceeding remaining contractual quantities or values.
+- [ ] Make contractor certificates reference the contract type and selected contract lines.
+- [ ] Show supply/installation progress and remaining commitments in contract and certificate views.
+- [ ] Preserve the existing construction-stage certificate workflow for building-stage contracts.
+- [ ] Run migration, TypeScript, Vitest, build, visual verification, and save the checkpoint.
+
+## Contract-linked inventory receiving — 2026-08-21
+
+- [ ] Add optional contract and contract-line references to inventory receipt movements.
+- [ ] Show eligible supply and supply-installation contracts after selecting the supplier/project.
+- [ ] Show contract-line options with contracted, received, approved, and remaining quantities.
+- [ ] Validate received quantity against the remaining contractual quantity before saving.
+- [ ] Update contract item supplied quantity and inventory movement references atomically.
+- [ ] Carry the contract and line references into the generated supplier receipt and purchase invoice.
+- [ ] Add regression tests for contract-linked receipts and over-receipt rejection.
+- [ ] Run TypeScript, Vitest, build, visual verification, and save the checkpoint.

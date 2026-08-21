@@ -407,6 +407,27 @@
       "when": 1787280092037,
       "tag": "0057_powerful_electro",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "5",
+      "when": 1787282870984,
+      "tag": "0058_soft_silver_surfer",
+      "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "5",
+      "when": 1787282906877,
+      "tag": "0059_sloppy_ultron",
+      "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "5",
+      "when": 1787283483289,
+      "tag": "0060_large_vin_gonzales",
+      "breakpoints": true
     }
   ]
 }

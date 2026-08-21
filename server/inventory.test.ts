@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateInventoryBalance, selectPurchaseInvoiceForIssue } from "../shared/inventory";
+import { calculateInventoryBalance, canReceiveContractQuantity, remainingContractQuantity, selectPurchaseInvoiceForIssue } from "../shared/inventory";
 
 describe("inventory balance calculations", () => {
   it("calculates received, issued, available quantity, and value", () => {
@@ -11,6 +11,13 @@ describe("inventory balance calculations", () => {
     ]);
 
     expect(result).toEqual({ received: 102.5, issued: 31.5, quantity: 71, value: 17750 });
+  });
+
+  it("calculates contract quantity remaining and rejects over-receipt", () => {
+    const line = { contractedQty: 100, receivedQty: 35 };
+    expect(remainingContractQuantity(line)).toBe(65);
+    expect(canReceiveContractQuantity(line, 65)).toBe(true);
+    expect(canReceiveContractQuantity(line, 65.001)).toBe(false);
   });
 
   it("returns a zero balance when there are no movements", () => {

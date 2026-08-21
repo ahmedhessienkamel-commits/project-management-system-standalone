@@ -23,6 +23,16 @@ export function calculateInventoryBalance(movements: InventoryMovementLike[]) {
 
 export type InventoryReceiptLink = { purchaseInvoiceId: number | null; reference?: string | null };
 
+export type ContractQuantityLine = { contractedQty: string | number | null; receivedQty: string | number | null };
+
+export function remainingContractQuantity(line: ContractQuantityLine) {
+  return Math.max(0, Number(line.contractedQty || 0) - Number(line.receivedQty || 0));
+}
+
+export function canReceiveContractQuantity(line: ContractQuantityLine, requestedQty: string | number) {
+  return Number(requestedQty || 0) <= remainingContractQuantity(line) + 0.0005;
+}
+
 export function selectPurchaseInvoiceForIssue(receipts: InventoryReceiptLink[]) {
   return receipts.find((receipt) => Boolean(receipt.purchaseInvoiceId))?.purchaseInvoiceId ?? null;
 }
