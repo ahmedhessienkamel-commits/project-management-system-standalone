@@ -35452,3 +35452,35 @@
 - [x] Transfer the completed project's WIP balance to the correct finished asset/cost-of-sales/revenue treatment according to project type.
 - [x] Update project, financial, dashboard, and account reports with WIP balances and closing status.
 - [x] Add tests, visual verification, TypeScript, Vitest, build, and checkpoint.
+
+## Trial balance import — 2026-08-21
+- [ ] Read the attached trial balance workbook and identify the account code, name, debit, credit, and balance columns.
+- [ ] Reconcile the workbook period as 2026-01-01 through 2026-07-31 and preserve the source file as the import reference.
+- [ ] Match workbook accounts to the existing chart of accounts by code and normalized name without duplicating accounts.
+- [ ] Add missing accounts with inferred account type and parent hierarchy, flagging ambiguous mappings before posting.
+- [ ] Create a traceable opening-balance document for the imported balances without creating operational transactions.
+- [ ] Validate debit/credit equality, account-level balances, duplicate protection, and audit references.
+- [ ] Run TypeScript, Vitest, build, and verify the imported balances in the accounting reports before checkpoint.
+
+## Trial balance reconciliation correction — 2026-08-21
+- [ ] Reconcile using the workbook's displayed total rows rather than summing parent and child rows together.
+- [ ] Identify the exact detail-level balance rows whose totals reconcile to the displayed debit and credit totals.
+- [ ] Recompute the opening-balance control totals and remove the false imbalance caused by subtotal duplication.
+- [ ] Continue account matching and opening-balance preparation only after the corrected reconciliation passes.
+
+## Parent and child account separation — 2026-08-21
+- [ ] Treat parent accounts as chart hierarchy nodes only when child accounts exist.
+- [ ] Import opening balances only to independent detail accounts, never both parent and child for the same branch.
+- [ ] Preserve the source account level and code so the trial balance remains auditable.
+
+## Project bank accounts — 2026-08-21
+- [ ] Preserve the existing project bank account for Namar during trial-balance import.
+- [ ] Create or preserve a separate project bank account for Al-Mahdiyah without merging it with Namar or the main bank.
+- [ ] Link the Al-Mahdiyah bank account to the new Al-Mahdiyah project and keep its opening balance independently traceable.
+- [ ] Match bank accounts from the workbook by name/code and flag ambiguous duplicates.
+
+## Cancel trial balance import — 2026-08-21
+- [x] Stop the trial-balance import workflow and do not create opening-balance documents.
+- [x] Identify only accounts and bank master records added by the trial-balance request.
+- [x] Remove only the newly added trial-balance-related records, preserving pre-existing Namar and other ERP data.
+- [x] Verify the chart, bank registry, projects, and ledger remain unchanged apart from the reversal.
