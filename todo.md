@@ -35589,3 +35589,17 @@
 - [x] Fix the API route, server restart, proxy, or client base URL causing the invalid JSON response.
 - [x] Add a regression test for the affected API path or routing behavior.
 - [x] Verify the home page, browser console, network requests, TypeScript, tests, build, and deployment.
+
+## Invitation email delivery issue — 2026-08-21
+- [ ] Verify whether the invitation for m.altamim@advancebuilding.net was created and its current status.
+- [ ] Inspect the invitation email delivery path, SMTP configuration, and server logs without exposing credentials.
+- [ ] Fix delivery or provide a secure in-app invitation link/copy action with expiry and single-use validation.
+- [ ] Add a delivery-status/error message and test the invitation flow end to end.
+
+## General manager read-only scope — m.altamim@advancebuilding.net
+- [x] Confirm whether the email has an existing user account or pending invitation.
+- [ ] Set the account role to general manager and assign the authorized company explicitly.
+- [ ] Allow read-only access across permitted system sections, reports, projects, and documents.
+- [ ] Allow only payroll-run and certificate approval/rejection actions, including rejection reasons and audit logging.
+- [ ] Deny create, edit, delete, posting, payment, and other operational mutations for this user.
+- [ ] Test the effective permissions and publish the change.

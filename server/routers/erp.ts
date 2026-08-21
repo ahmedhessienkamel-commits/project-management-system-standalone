@@ -135,7 +135,9 @@ function canReviewApproval(user: { role: string; id: number }, request: { entity
 }
 
 async function getAllowedProjectIds(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, userId: number, role: string) {
-  if (role === "admin") return null;
+  // General managers have read access across the active company; write access
+  // remains blocked by assertProjectWrite and operation permissions.
+  if (role === "admin" || role === "general_manager") return null;
   const rows = await db.select({ projectId: projectMembers.projectId }).from(projectMembers).where(eq(projectMembers.userId, userId));
   return new Set(rows.map((row) => row.projectId));
 }
