@@ -20,6 +20,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { startLogin } from "@/const";
+import { trpc } from "@/lib/trpc";
 import { useIsMobile } from "@/hooks/useMobile";
 import { BarChart3, Bell, BookOpen, Boxes, ClipboardList, FileText, Landmark, LayoutDashboard, LogOut, PanelLeft, Plus, Search, Settings2, ShieldAlert, Users, UserRound, WalletCards } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
@@ -136,6 +137,10 @@ function DashboardLayoutContent({
 }: DashboardLayoutContentProps) {
   const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
+  const utils = trpc.useUtils();
+  const { data: availableCompanies = [] } = trpc.erp.companies.list.useQuery();
+  const { data: currentCompany } = trpc.erp.companies.current.useQuery();
+  const switchCompany = trpc.erp.companies.switch.useMutation({ onSuccess: () => { utils.erp.companies.current.invalidate(); utils.erp.company.get.invalidate(); utils.erp.projects.list.invalidate(); } });
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
@@ -312,12 +317,13 @@ function DashboardLayoutContent({
           <div className="flex border-b h-14 items-center justify-between bg-background/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="h-9 w-9 rounded-lg bg-background" />
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <div className="flex flex-col gap-1">
                   <span className="tracking-tight text-foreground">
                     {activeMenuItem?.label ?? "Menu"}
                   </span>
                 </div>
+                {availableCompanies.length > 0 && <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="max-w-[150px] gap-1 border-[#b28a3b]/40 text-[#18324b]"><Landmark className="h-4 w-4 shrink-0 text-[#b28a3b]" /><span className="truncate">{currentCompany?.company?.tradeName || currentCompany?.company?.legalName || "الشركة"}</span></Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-64">{availableCompanies.map((company) => <DropdownMenuItem key={company.id} disabled={switchCompany.isPending || company.id === currentCompany?.company?.id} onClick={() => switchCompany.mutate({ companyId: company.id })} className="cursor-pointer">{company.tradeName || company.legalName}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>}
               </div>
             </div>
           </div>
@@ -329,6 +335,7 @@ function DashboardLayoutContent({
             {searchResults.length > 0 && <div className="absolute right-0 top-12 z-50 w-full rounded-xl border border-slate-200 bg-white p-2 shadow-xl">{searchResults.map((item) => <button key={item.path} type="button" onClick={() => { setLocation(item.path); setGlobalSearch(""); }} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-right text-sm text-slate-700 hover:bg-slate-50"><item.icon className="h-4 w-4 text-[#b28a3b]" />{item.label}</button>)}</div>}
           </div>
           <div className="flex items-center gap-2">
+            {availableCompanies.length > 0 && <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="max-w-[220px] gap-2 border-[#b28a3b]/40 text-[#18324b]"><Landmark className="h-4 w-4 shrink-0 text-[#b28a3b]" /><span className="truncate">{currentCompany?.company?.tradeName || currentCompany?.company?.legalName || "اختيار الشركة"}</span></Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-72"><div className="border-b border-slate-100 px-3 py-2 text-xs text-slate-500">الشركة الحالية · اختر شركة مصرحًا بها</div>{availableCompanies.map((company) => <DropdownMenuItem key={company.id} disabled={switchCompany.isPending || company.id === currentCompany?.company?.id} onClick={() => switchCompany.mutate({ companyId: company.id })} className="cursor-pointer"><div className="flex min-w-0 flex-col"><span className="truncate font-semibold">{company.tradeName || company.legalName}</span><span className="truncate text-xs text-slate-500">{company.commercialRegistration || company.taxNumber || "بيانات الشركة"}</span></div></DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>}
             <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="gap-2 border-[#b28a3b]/40 text-[#18324b]"><Plus className="h-4 w-4" /> إجراء سريع</Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-56">{visibleQuickActions.map((action) => <DropdownMenuItem key={action.path} onClick={() => setLocation(action.path)} className="cursor-pointer">{action.label}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
             <Button variant="outline" size="icon" aria-label="فتح التنبيهات والموافقات" title="التنبيهات والموافقات" onClick={() => setLocation("/approvals")} className="border-slate-200"><Bell className="h-4 w-4 text-[#b28a3b]" /></Button>
           </div>

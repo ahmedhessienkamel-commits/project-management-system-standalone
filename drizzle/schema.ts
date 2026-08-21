@@ -10,6 +10,34 @@ import {
   varchar,
 } from "drizzle-orm/mysql-core";
 
+export const companies = mysqlTable("companies", {
+  id: int("id").autoincrement().primaryKey(),
+  legalName: varchar("legalName", { length: 255 }).notNull(),
+  tradeName: varchar("tradeName", { length: 255 }),
+  commercialRegistration: varchar("commercialRegistration", { length: 128 }),
+  taxNumber: varchar("taxNumber", { length: 128 }),
+  nationalAddress: text("nationalAddress"),
+  phone: varchar("phone", { length: 64 }),
+  email: varchar("email", { length: 255 }),
+  website: varchar("website", { length: 255 }),
+  logoUrl: varchar("logoUrl", { length: 2000 }),
+  notes: text("notes"),
+  isActive: int("isActive").notNull().default(1),
+  createdBy: int("createdBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const companyMembers = mysqlTable("companyMembers", {
+  id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId").notNull(),
+  userId: int("userId").notNull(),
+  role: mysqlEnum("role", ["owner", "admin", "general_manager", "project_manager", "procurement_manager", "user"]).default("user").notNull(),
+  status: mysqlEnum("status", ["active", "invited", "suspended"]).default("active").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
   openId: varchar("openId", { length: 64 }).notNull().unique(),
@@ -40,6 +68,7 @@ export const userInvitations = mysqlTable("userInvitations", {
 
 export const projects = mysqlTable("projects", {
   id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId"),
   code: varchar("code", { length: 64 }).notNull().unique(),
   name: varchar("name", { length: 255 }).notNull(),
   status: mysqlEnum("status", ["planning", "active", "paused", "completed", "archived"]).default("planning").notNull(),
@@ -602,6 +631,7 @@ export const approvalPolicies = mysqlTable("approvalPolicies", {
 
 export const companyProfiles = mysqlTable("companyProfiles", {
   id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId"),
   legalName: varchar("legalName", { length: 255 }).notNull(),
   tradeName: varchar("tradeName", { length: 255 }),
   commercialRegistration: varchar("commercialRegistration", { length: 128 }),
@@ -619,6 +649,7 @@ export const companyProfiles = mysqlTable("companyProfiles", {
 
 export const cashAccounts = mysqlTable("cashAccounts", {
   id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId"),
   code: varchar("code", { length: 32 }).notNull().unique(),
   name: varchar("name", { length: 255 }).notNull(),
   accountType: mysqlEnum("accountType", ["bank", "cash"]).notNull(),
@@ -636,6 +667,7 @@ export const cashAccounts = mysqlTable("cashAccounts", {
 
 export const accounts = mysqlTable("accounts", {
   id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId"),
   code: varchar("code", { length: 32 }).notNull().unique(),
   name: varchar("name", { length: 255 }).notNull(),
   accountType: mysqlEnum("accountType", ["asset", "liability", "equity", "revenue", "expense"]).notNull(),

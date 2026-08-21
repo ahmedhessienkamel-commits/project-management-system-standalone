@@ -1,10 +1,11 @@
 import { and, eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, dailyTasks, employees, expenses, notifications, payroll, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, sales, stages, units, users, userInvitations, vendors, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems, inventoryItems, inventoryMovements, accounts, accountingDocuments, accountingDocumentLines, costItems, fixedAssets, fixedAssetDepreciation, companyProfiles, cashAccounts, contractorContracts, serviceContractEntries, userOperationPermissions } from "../../drizzle/schema";
+import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, dailyTasks, employees, expenses, notifications, payroll, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, sales, stages, units, users, userInvitations, vendors, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems, inventoryItems, inventoryMovements, accounts, accountingDocuments, accountingDocumentLines, costItems, fixedAssets, fixedAssetDepreciation, companies, companyMembers, companyProfiles, cashAccounts, contractorContracts, serviceContractEntries, userOperationPermissions } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
+import { getSessionCookieOptions } from "../_core/cookies";
 import { calculateCertificateProgress, calculateDocumentCompleteness, calculateExpenseTotals, calculateFinancialSummaryTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, calculateStraightLineDepreciation, allocateAdministrativeAmount, canAccessProject, canWriteProject, projectHealthReasons, projectHealthStatus, projectNotificationTriggers } from "../erpCalculations";
 import { accountingTotals } from "../accountingCalculations";
 import { calculateStageTimeVariance } from "../../shared/stageTiming";
@@ -33,6 +34,17 @@ function requireDb(db: Awaited<ReturnType<typeof getDb>>) {
 }
 
 type ErpDb = NonNullable<Awaited<ReturnType<typeof getDb>>>;
+
+async function resolveActiveCompanyId(db: ErpDb, ctx: { user: { id: number; role: string }; req: { cookies?: Record<string, string> } }) {
+  const requestedId = Number(ctx.req.cookies?.active_company_id || 0);
+  if (ctx.user.role === "admin") {
+    const rows = await db.select({ id: companies.id }).from(companies).where(eq(companies.isActive, 1));
+    return rows.find((row) => row.id === requestedId)?.id || rows[0]?.id || null;
+  }
+  const memberships = await db.select({ companyId: companyMembers.companyId }).from(companyMembers).where(and(eq(companyMembers.userId, ctx.user.id), eq(companyMembers.status, "active")));
+  if (!memberships.length) return null;
+  return memberships.find((membership) => membership.companyId === requestedId)?.companyId || memberships[0].companyId;
+}
 
 async function ensureProjectWipAccount(db: ErpDb, project: { id: number; code: string; name: string }, actorId: number) {
   const parent = (await db.select().from(accounts).where(and(eq(accounts.code, "1400"), eq(accounts.accountType, "asset"), eq(accounts.isActive, 1))).limit(1))[0];
@@ -189,9 +201,55 @@ async function loadAccountingLedger(db: NonNullable<Awaited<ReturnType<typeof ge
 }
 
 export const erpRouter = router({
+  companies: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      const db = requireDb(await getDb());
+      if (ctx.user.role === "admin") return db.select().from(companies).where(eq(companies.isActive, 1)).orderBy(companies.legalName);
+      const memberships = await db.select({ companyId: companyMembers.companyId }).from(companyMembers).where(and(eq(companyMembers.userId, ctx.user.id), eq(companyMembers.status, "active")));
+      const rows = await db.select().from(companies).where(eq(companies.isActive, 1));
+      return rows.filter((row) => memberships.some((membership) => membership.companyId === row.id));
+    }),
+    current: protectedProcedure.query(async ({ ctx }) => {
+      const db = requireDb(await getDb());
+      const requestedId = Number(ctx.req.cookies?.active_company_id || 0);
+      const memberships = ctx.user.role === "admin" ? [] : await db.select().from(companyMembers).where(and(eq(companyMembers.userId, ctx.user.id), eq(companyMembers.status, "active")));
+      const permittedIds = ctx.user.role === "admin" ? null : memberships.map((membership) => membership.companyId);
+      const rows = await db.select().from(companies).where(eq(companies.isActive, 1));
+      const company = rows.find((row) => row.id === requestedId && (!permittedIds || permittedIds.includes(row.id))) || rows.find((row) => !permittedIds || permittedIds.includes(row.id)) || null;
+      const membership = company && permittedIds ? memberships.find((item) => item.companyId === company.id) || null : null;
+      return { company, membership };
+    }),
+    switch: protectedProcedure.input(z.object({ companyId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      const company = (await db.select().from(companies).where(and(eq(companies.id, input.companyId), eq(companies.isActive, 1))).limit(1))[0];
+      if (!company) throw new TRPCError({ code: "NOT_FOUND", message: "الشركة غير موجودة أو غير نشطة" });
+      if (ctx.user.role !== "admin") {
+        const membership = (await db.select().from(companyMembers).where(and(eq(companyMembers.companyId, input.companyId), eq(companyMembers.userId, ctx.user.id), eq(companyMembers.status, "active"))).limit(1))[0];
+        if (!membership) throw new TRPCError({ code: "FORBIDDEN", message: "لا تملك صلاحية الدخول إلى هذه الشركة" });
+      }
+      ctx.res.cookie("active_company_id", String(input.companyId), { ...getSessionCookieOptions(ctx.req), maxAge: 60 * 60 * 24 * 30 });
+      return { companyId: input.companyId };
+    }),
+    create: adminProcedure.input(z.object({ legalName: z.string().trim().min(1).max(255), tradeName: z.string().max(255).optional(), commercialRegistration: z.string().max(128).optional(), taxNumber: z.string().max(128).optional(), nationalAddress: z.string().max(4000).optional(), phone: z.string().max(64).optional(), email: z.string().email().optional().or(z.literal("")), logoUrl: z.string().max(2000).optional() })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      const result = await db.insert(companies).values({ ...input, email: input.email || null, tradeName: input.tradeName || null, commercialRegistration: input.commercialRegistration || null, taxNumber: input.taxNumber || null, nationalAddress: input.nationalAddress || null, phone: input.phone || null, logoUrl: input.logoUrl || null, createdBy: ctx.user.id });
+      const companyId = Number(result[0].insertId);
+      await db.insert(companyMembers).values({ companyId, userId: ctx.user.id, role: "owner", status: "active" });
+      return { id: companyId };
+    }),
+    assignUser: adminProcedure.input(z.object({ userId: z.number().int().positive(), companyId: z.number().int().positive(), role: z.enum(["admin", "general_manager", "project_manager", "procurement_manager", "user"]), status: z.enum(["active", "invited", "suspended"]).default("active") })).mutation(async ({ input }) => {
+      const db = requireDb(await getDb());
+      const company = (await db.select({ id: companies.id }).from(companies).where(eq(companies.id, input.companyId)).limit(1))[0];
+      if (!company) throw new TRPCError({ code: "NOT_FOUND", message: "الشركة غير موجودة" });
+      const existing = (await db.select({ id: companyMembers.id }).from(companyMembers).where(and(eq(companyMembers.userId, input.userId), eq(companyMembers.companyId, input.companyId))).limit(1))[0];
+      if (existing) await db.update(companyMembers).set({ role: input.role, status: input.status }).where(eq(companyMembers.id, existing.id));
+      else await db.insert(companyMembers).values({ userId: input.userId, companyId: input.companyId, role: input.role, status: input.status });
+      return { userId: input.userId, companyId: input.companyId };
+    }),
+  }),
   company: router({
-    get: protectedProcedure.query(async () => { const db = requireDb(await getDb()); return (await db.select().from(companyProfiles).limit(1))[0] ?? null; }),
-    save: adminProcedure.input(z.object({ legalName: z.string().trim().min(1).max(255), tradeName: z.string().max(255).optional(), commercialRegistration: z.string().max(128).optional(), taxNumber: z.string().max(128).optional(), nationalAddress: z.string().max(4000).optional(), phone: z.string().max(64).optional(), email: z.string().email().optional().or(z.literal("")), website: z.string().max(255).optional(), logoUrl: z.string().max(2000).optional(), notes: z.string().max(4000).optional() })).mutation(async ({ ctx, input }) => { const db = requireDb(await getDb()); const existing = (await db.select().from(companyProfiles).limit(1))[0]; const values = { legalName: input.legalName, tradeName: input.tradeName || null, commercialRegistration: input.commercialRegistration || null, taxNumber: input.taxNumber || null, nationalAddress: input.nationalAddress || null, phone: input.phone || null, email: input.email || null, website: input.website || null, logoUrl: input.logoUrl || null, notes: input.notes || null, createdBy: ctx.user.id }; if (existing) { await db.update(companyProfiles).set(values).where(eq(companyProfiles.id, existing.id)); await db.insert(auditLogs).values({ entityType: "companyProfile", entityId: existing.id, action: "updated", actorId: ctx.user.id, beforeJson: JSON.stringify(existing), afterJson: JSON.stringify(input) }); return { id: existing.id }; } const result = await db.insert(companyProfiles).values(values); const id = Number(result[0].insertId); await db.insert(auditLogs).values({ entityType: "companyProfile", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) }); return { id }; }),
+    get: protectedProcedure.query(async ({ ctx }) => { const db = requireDb(await getDb()); const companyId = await resolveActiveCompanyId(db, ctx); return (await db.select().from(companyProfiles).where(companyId ? eq(companyProfiles.companyId, companyId) : eq(companyProfiles.id, -1)).limit(1))[0] ?? null; }),
+    save: adminProcedure.input(z.object({ legalName: z.string().trim().min(1).max(255), tradeName: z.string().max(255).optional(), commercialRegistration: z.string().max(128).optional(), taxNumber: z.string().max(128).optional(), nationalAddress: z.string().max(4000).optional(), phone: z.string().max(64).optional(), email: z.string().email().optional().or(z.literal("")), website: z.string().max(255).optional(), logoUrl: z.string().max(2000).optional(), notes: z.string().max(4000).optional() })).mutation(async ({ ctx, input }) => { const db = requireDb(await getDb()); const companyId = await resolveActiveCompanyId(db, ctx); if (!companyId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "اختر شركة نشطة قبل حفظ بيانات الهوية" }); const existing = (await db.select().from(companyProfiles).where(eq(companyProfiles.companyId, companyId)).limit(1))[0]; const values = { companyId, legalName: input.legalName, tradeName: input.tradeName || null, commercialRegistration: input.commercialRegistration || null, taxNumber: input.taxNumber || null, nationalAddress: input.nationalAddress || null, phone: input.phone || null, email: input.email || null, website: input.website || null, logoUrl: input.logoUrl || null, notes: input.notes || null, createdBy: ctx.user.id }; if (existing) { await db.update(companyProfiles).set(values).where(eq(companyProfiles.id, existing.id)); await db.insert(auditLogs).values({ entityType: "companyProfile", entityId: existing.id, action: "updated", actorId: ctx.user.id, beforeJson: JSON.stringify(existing), afterJson: JSON.stringify(input) }); return { id: existing.id }; } const result = await db.insert(companyProfiles).values(values); const id = Number(result[0].insertId); await db.insert(auditLogs).values({ entityType: "companyProfile", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) }); return { id }; }),
   }),
   cashAccounts: router({
     list: protectedProcedure.query(async () => { const db = requireDb(await getDb()); return db.select().from(cashAccounts).where(eq(cashAccounts.isActive, 1)).orderBy(cashAccounts.name); }),
@@ -335,8 +393,10 @@ export const erpRouter = router({
     list: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
+      const companyId = await resolveActiveCompanyId(db, ctx);
       const rows = await db.select().from(projects).orderBy(projects.createdAt);
-      return allowed ? rows.filter((row) => allowed.has(row.id)) : rows;
+      const companyRows = companyId ? rows.filter((row) => row.companyId === companyId) : [];
+      return allowed ? companyRows.filter((row) => allowed.has(row.id)) : companyRows;
     }),
     create: protectedProcedure
       .input(z.object({

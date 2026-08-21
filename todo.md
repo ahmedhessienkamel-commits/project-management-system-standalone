@@ -35557,3 +35557,22 @@
 - [x] Show certificate number, project, contractor, amount, age, current stage, and related contract in the queue.
 - [x] Add preview, approve, and reject-with-reason actions while preserving project access restrictions.
 - [x] Add pending counters and empty/loading/error states, then test and publish the dashboard.
+
+## Multi-company architecture — 2026-08-21
+- [x] Add company entities with legal identity, logo, tax, commercial registration, address, and default settings.
+- [x] Add user-company memberships with company-specific roles, project scope, and active/inactive status.
+- [ ] Add a current-company context that is explicit and validated on every protected read/write.
+- [x] Backfill the current ERP data into a default company without changing existing records or financial balances.
+- [ ] Apply company isolation to projects, stages, customers, vendors, contracts, certificates, sales, collections, expenses, accounting, cash accounts, inventory, approvals, attachments, and reports.
+- [x] Add company switching and company administration UI with safe empty states and access controls.
+- [ ] Add cross-company summary only for authorized administrators and prevent accidental cross-company posting.
+- [x] Add multi-company isolation tests, migration verification, and visual validation before publishing.
+
+## Active company selector and user company scope — 2026-08-21
+- [x] Show the active company selector in the desktop and mobile top navigation.
+- [x] Persist the selected company securely and validate every switch against the current user's membership.
+- [x] Allow the owner/admin to create and activate additional companies from company settings.
+- [x] Allow the owner/admin to assign one or more companies to each user with a company-specific role and status.
+- [ ] Display the assigned companies and effective permissions in the users and permissions page.
+- [ ] Make user company scope drive visible data, navigation, approvals, and document actions.
+- [ ] Add tests for switching, unauthorized access, multi-company membership, and current-company persistence.
