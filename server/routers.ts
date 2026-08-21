@@ -80,6 +80,13 @@ export const appRouter = router({
       ctx.res.cookie(PASSWORD_SESSION_COOKIE, token, { ...getSessionCookieOptions(ctx.req), maxAge: 30 * 24 * 60 * 60 * 1000 });
       return { success: true } as const;
     }),
+    invitationDetails: publicProcedure.input(z.object({ token: z.string().min(20) })).query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة" });
+      const invitation = (await db.select({ email: userInvitations.email, status: userInvitations.status, expiresAt: userInvitations.expiresAt }).from(userInvitations).where(eq(userInvitations.token, input.token)).limit(1))[0];
+      if (!invitation || invitation.status !== "pending" || (invitation.expiresAt && invitation.expiresAt.getTime() < Date.now())) throw new TRPCError({ code: "BAD_REQUEST", message: "رابط الدعوة غير صالح أو منتهي" });
+      return { email: invitation.email } as const;
+    }),
     acceptInvitation: publicProcedure.input(z.object({ token: z.string().min(20), password: z.string().min(8) })).mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة" });
