@@ -36,7 +36,7 @@ export default function Users() {
   const [generatedInviteLink, setGeneratedInviteLink] = useState("");
   const [inviteLinkCopied, setInviteLinkCopied] = useState(false);
   const [inviteEmailStatus, setInviteEmailStatus] = useState<{ sent: boolean; error: string | null } | null>(null);
-  const inviteUser = trpc.erp.users.invite.useMutation({ onSuccess: (result) => { utils.erp.users.invitations.invalidate(); setGeneratedInviteLink(result.invitationUrl || `${window.location.origin}/accept-invitation?token=${encodeURIComponent(result.token)}`); setInviteEmailStatus({ sent: result.emailSent, error: result.emailError }); setInviteLinkCopied(false); setInviteForm({ email: "", name: "", jobTitle: "موظف إداري", role: "user", projectId: "" }); } });
+  const inviteUser = trpc.erp.users.invite.useMutation({ onSuccess: (result) => { utils.erp.users.invitations.invalidate(); setGeneratedInviteLink(`${window.location.origin}/accept-invitation?token=${encodeURIComponent(result.token)}`); setInviteEmailStatus({ sent: result.emailSent, error: result.emailError }); setInviteLinkCopied(false); setInviteForm({ email: "", name: "", jobTitle: "موظف إداري", role: "user", projectId: "" }); } });
   const cancelInvitation = trpc.erp.users.cancelInvitation.useMutation({ onSuccess: () => utils.erp.users.invitations.invalidate() });
   const lockPeriod = trpc.erp.controls.lockPeriod.useMutation({ onSuccess: () => utils.erp.controls.locks.invalidate() });
   const unlockPeriod = trpc.erp.controls.unlockPeriod.useMutation({ onSuccess: () => utils.erp.controls.locks.invalidate() });
