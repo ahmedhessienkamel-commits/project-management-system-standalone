@@ -35509,4 +35509,4 @@
 - [ ] Add contextual related actions for invoices, receipts, payments, contracts, certificates, inventory receipts/issues, expenses, custody, and accounting documents.
 - [ ] Link each related action to the source document and prevent duplicate complementary documents where applicable.
 - [x] Preserve role-based edit/delete/approval permissions and audit references.
-- [ ] Add tests, visual verification, TypeScript, Vitest, build, and checkpoint.
+- [x] Add tests, visual verification, TypeScript, Vitest, build, and checkpoint.
