@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "dd585202-5611-468d-ad6f-bcf08c219bd5",
+  "id": "71a0435d-44f7-4e51-bfd6-2bb9a1741e8e",
   "prevId": "12aeac27-4163-4f5f-90e9-2a21fe5e8d14",
   "tables": {
     "accountingDocumentLines": {
@@ -105,7 +105,7 @@
         },
         "documentType": {
           "name": "documentType",
-          "type": "enum('sales_invoice','purchase_invoice','credit_note','journal_entry','payment_voucher','receipt_voucher','quotation','purchase_order')",
+          "type": "enum('sales_invoice','purchase_invoice','journal_entry','payment_voucher','receipt_voucher','quotation','purchase_order')",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -155,34 +155,6 @@
         "purchaseInvoiceId": {
           "name": "purchaseInvoiceId",
           "type": "int",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "relatedDocumentType": {
-          "name": "relatedDocumentType",
-          "type": "varchar(64)",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "relatedDocumentId": {
-          "name": "relatedDocumentId",
-          "type": "int",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "originalDocumentId": {
-          "name": "originalDocumentId",
-          "type": "int",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "returnType": {
-          "name": "returnType",
-          "type": "enum('full','partial')",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -1465,6 +1437,21 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false,
+          "autoincrement": false
+        },
+        "contractType": {
+          "name": "contractType",
+          "type": "enum('building_stage','supply','supply_installation','equipment_rental','labor_supply')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'building_stage'"
+        },
+        "contractItems": {
+          "name": "contractItems",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": true,
           "autoincrement": false
         },
         "preTaxAmount": {

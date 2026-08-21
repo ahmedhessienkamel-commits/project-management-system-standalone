@@ -1,8 +1,8 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "62c00e32-737f-4f16-939c-c95f657d301a",
-  "prevId": "dd585202-5611-468d-ad6f-bcf08c219bd5",
+  "id": "037240b9-f232-4c81-8266-b79022a72fe7",
+  "prevId": "71a0435d-44f7-4e51-bfd6-2bb9a1741e8e",
   "tables": {
     "accountingDocumentLines": {
       "name": "accountingDocumentLines",
@@ -105,7 +105,7 @@
         },
         "documentType": {
           "name": "documentType",
-          "type": "enum('sales_invoice','purchase_invoice','credit_note','journal_entry','payment_voucher','receipt_voucher','quotation','purchase_order')",
+          "type": "enum('sales_invoice','purchase_invoice','journal_entry','payment_voucher','receipt_voucher','quotation','purchase_order')",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -155,34 +155,6 @@
         "purchaseInvoiceId": {
           "name": "purchaseInvoiceId",
           "type": "int",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "relatedDocumentType": {
-          "name": "relatedDocumentType",
-          "type": "varchar(64)",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "relatedDocumentId": {
-          "name": "relatedDocumentId",
-          "type": "int",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "originalDocumentId": {
-          "name": "originalDocumentId",
-          "type": "int",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "returnType": {
-          "name": "returnType",
-          "type": "enum('full','partial')",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -1466,6 +1438,22 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "contractType": {
+          "name": "contractType",
+          "type": "enum('building_stage','supply','supply_installation','equipment_rental','labor_supply')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'building_stage'"
+        },
+        "contractItems": {
+          "name": "contractItems",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "('[]')"
         },
         "preTaxAmount": {
           "name": "preTaxAmount",
@@ -3571,7 +3559,7 @@
         },
         "projectType": {
           "name": "projectType",
-          "type": "enum('real_estate_developer','real_estate_development','off_plan_sales','main_contractor','subcontractor','general')",
+          "type": "enum('real_estate_development','off_plan_sales','main_contractor','subcontractor','general')",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,

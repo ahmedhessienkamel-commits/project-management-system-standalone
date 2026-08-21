@@ -1,1 +1,0 @@
-ALTER TABLE `certificates` ADD `technicalSpecifications` text;

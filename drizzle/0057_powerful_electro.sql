@@ -1,2 +1,0 @@
-ALTER TABLE `accountingDocuments` MODIFY COLUMN `documentType` enum('sales_invoice','purchase_invoice','purchase_receipt','credit_note','journal_entry','payment_voucher','receipt_voucher','quotation','purchase_order') NOT NULL;--> statement-breakpoint
-ALTER TABLE `inventoryMovements` ADD `purchaseInvoiceId` int;

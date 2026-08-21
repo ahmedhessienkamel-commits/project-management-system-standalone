@@ -1,1 +1,0 @@
-ALTER TABLE `projects` MODIFY COLUMN `projectType` enum('real_estate_developer','real_estate_development','off_plan_sales','main_contractor','subcontractor','general') NOT NULL DEFAULT 'general';

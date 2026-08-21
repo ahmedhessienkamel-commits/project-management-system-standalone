@@ -1,8 +1,8 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "799c39c4-867c-4d95-8bc8-54286dde26e8",
-  "prevId": "62c00e32-737f-4f16-939c-c95f657d301a",
+  "id": "41db454f-c406-42a6-a1cc-80bd6aa0b586",
+  "prevId": "037240b9-f232-4c81-8266-b79022a72fe7",
   "tables": {
     "accountingDocumentLines": {
       "name": "accountingDocumentLines",
@@ -105,7 +105,7 @@
         },
         "documentType": {
           "name": "documentType",
-          "type": "enum('sales_invoice','purchase_invoice','credit_note','journal_entry','payment_voucher','receipt_voucher','quotation','purchase_order')",
+          "type": "enum('sales_invoice','purchase_invoice','journal_entry','payment_voucher','receipt_voucher','quotation','purchase_order')",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -155,34 +155,6 @@
         "purchaseInvoiceId": {
           "name": "purchaseInvoiceId",
           "type": "int",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "relatedDocumentType": {
-          "name": "relatedDocumentType",
-          "type": "varchar(64)",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "relatedDocumentId": {
-          "name": "relatedDocumentId",
-          "type": "int",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "originalDocumentId": {
-          "name": "originalDocumentId",
-          "type": "int",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "returnType": {
-          "name": "returnType",
-          "type": "enum('full','partial')",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -1465,6 +1437,21 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false,
+          "autoincrement": false
+        },
+        "contractType": {
+          "name": "contractType",
+          "type": "enum('building_stage','supply','supply_installation','equipment_rental','labor_supply')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'building_stage'"
+        },
+        "contractItems": {
+          "name": "contractItems",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": true,
           "autoincrement": false
         },
         "preTaxAmount": {
@@ -3571,32 +3558,11 @@
         },
         "projectType": {
           "name": "projectType",
-          "type": "enum('real_estate_developer','real_estate_development','off_plan_sales','main_contractor','subcontractor','general')",
+          "type": "enum('real_estate_development','off_plan_sales','main_contractor','subcontractor','general')",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
           "default": "'general'"
-        },
-        "escrowCashAccountId": {
-          "name": "escrowCashAccountId",
-          "type": "int",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "escrowTrusteeName": {
-          "name": "escrowTrusteeName",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "escrowStatementReference": {
-          "name": "escrowStatementReference",
-          "type": "varchar(128)",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
         },
         "contractValue": {
           "name": "contractValue",
