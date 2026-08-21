@@ -9,7 +9,7 @@ import { calculateCertificateProgress, calculateDocumentCompleteness, calculateE
 import { accountingTotals } from "../accountingCalculations";
 import { calculateStageTimeVariance } from "../../shared/stageTiming";
 import { allocateAdministrativeExpense, normalizeExpenseTaxRate, validateExpenseAllocation } from "../../shared/expenseAllocation";
-import { calculateInventoryBalance, canReceiveContractQuantity, canReviewInventoryStage, nextInventoryApprovalStage, remainingContractQuantity, selectPurchaseInvoiceForIssue, calculateServiceEntryTotal, remainingServiceContractAmount } from "../../shared/inventory";
+import { calculateInventoryBalance, canReceiveContractQuantity, canReviewInventoryStage, nextInventoryApprovalStage, remainingContractQuantity, selectPurchaseInvoiceForIssue, calculateServiceEntryTotal, remainingServiceContractAmount, calculateMaterialReceiptCost, materialReceiptExpenseReference, isMaterialContractType } from "../../shared/inventory";
 
 const projectStatus = z.enum(["planning", "active", "paused", "completed", "archived"]);
 const operationKey = z.enum(["payment_voucher", "receipt_voucher", "expense", "certificate", "payroll", "custody", "purchase_invoice", "sales_invoice", "purchase_request", "inventory_item", "inventory_receipt", "inventory_issue", "edit", "delete", "approve"]);
@@ -53,12 +53,14 @@ async function createInventoryPurchaseDocuments(db: ErpDb, ctx: { user: { id: nu
   const invoiceResult = await db.insert(accountingDocuments).values({ ...common, documentType: "purchase_invoice", documentNumber: invoiceNumber, relatedDocumentType: "purchase_receipt", relatedDocumentId: receiptId, notes: `فاتورة شراء تلقائية من سند الاستلام ${receiptNumber}. ${input.contractId ? `مرتبطة بالعقد #${input.contractId} والبند ${Number(input.contractItemIndex ?? 0) + 1}. ` : ""}${input.description || ""}`.trim() });
   const invoiceId = Number(invoiceResult[0].insertId);
   const accountRows = await db.select().from(accounts);
-  const inventoryAccount = accountRows.find((account) => ["1301", "5101"].includes(account.code) || account.name.includes("مخزون")) ?? null;
+  const linkedContract = input.contractId ? (await db.select().from(contractorContracts).where(eq(contractorContracts.id, input.contractId)).limit(1))[0] : null;
+  const linkedLine = linkedContract && input.contractItemIndex !== null && input.contractItemIndex !== undefined ? (linkedContract.contractItems ?? [])[input.contractItemIndex] : null;
+  const inventoryAccount = linkedLine?.accountId ? accountRows.find((account) => account.id === linkedLine.accountId) ?? null : accountRows.find((account) => ["1301", "5101"].includes(account.code) || account.name.includes("مخزون")) ?? null;
   const payableAccount = accountRows.find((account) => account.code === "2101" || account.name.includes("مورد")) ?? null;
   if (inventoryAccount && payableAccount) {
     await db.insert(accountingDocumentLines).values([
-      { documentId: invoiceId, accountId: inventoryAccount.id, projectId: input.projectId, stageId: input.stageId ?? null, description: `إضافة مخزون — ${itemRow.name}`, debit: totalAmount.toFixed(2), credit: "0.00" },
-      { documentId: invoiceId, accountId: payableAccount.id, projectId: input.projectId, stageId: input.stageId ?? null, description: `مستحق المورد — ${partyName}`, debit: "0.00", credit: totalAmount.toFixed(2) },
+      { documentId: invoiceId, accountId: inventoryAccount.id, costItemId: linkedLine?.costItemId ?? null, projectId: input.projectId, stageId: input.stageId ?? null, description: `تكلفة الخامة — ${itemRow.name}`, debit: totalAmount.toFixed(2), credit: "0.00" },
+      { documentId: invoiceId, accountId: payableAccount.id, projectId: input.projectId, stageId: input.stageId ?? null, description: `مصروف مستحق للمورد — ${partyName}`, debit: "0.00", credit: totalAmount.toFixed(2) },
     ]);
   }
   await db.update(inventoryMovements).set({ sourceDocumentId: receiptId, purchaseInvoiceId: invoiceId, reference: input.description || receiptNumber }).where(eq(inventoryMovements.id, input.movementId));
@@ -66,9 +68,20 @@ async function createInventoryPurchaseDocuments(db: ErpDb, ctx: { user: { id: nu
   return { receiptId, receiptNumber, purchaseInvoiceId: invoiceId, invoiceNumber };
 }
 
-async function postInventoryLinkedDocuments(db: ErpDb, movement: { sourceDocumentId?: number | null; purchaseInvoiceId?: number | null; contractId?: number | null; contractItemIndex?: number | null; quantity?: string | number | null }) {
+async function postInventoryLinkedDocuments(db: ErpDb, movement: { id?: number; projectId?: number; stageId?: number | null; itemId?: number; vendorId?: number | null; movementType?: string; unitCost?: string | number | null; movementDate?: Date | string | null; description?: string | null; sourceDocumentId?: number | null; purchaseInvoiceId?: number | null; contractId?: number | null; contractItemIndex?: number | null; quantity?: string | number | null }) {
   if (movement.sourceDocumentId) await db.update(accountingDocuments).set({ status: "posted" }).where(eq(accountingDocuments.id, movement.sourceDocumentId));
   if (movement.purchaseInvoiceId) await db.update(accountingDocuments).set({ status: "posted" }).where(eq(accountingDocuments.id, movement.purchaseInvoiceId));
+  if (movement.movementType === "receipt" && movement.id && movement.projectId && movement.itemId) {
+    const expenseReference = materialReceiptExpenseReference(movement.id);
+    const existingExpense = (await db.select({ id: expenses.id }).from(expenses).where(eq(expenses.reference, expenseReference)).limit(1))[0];
+    if (!existingExpense) {
+      const [itemRow] = await db.select().from(inventoryItems).where(eq(inventoryItems.id, movement.itemId)).limit(1);
+      const contract = movement.contractId ? (await db.select().from(contractorContracts).where(eq(contractorContracts.id, movement.contractId)).limit(1))[0] : null;
+      const line = contract && movement.contractItemIndex !== null && movement.contractItemIndex !== undefined ? (contract.contractItems ?? [])[movement.contractItemIndex] : null;
+      const totalAmount = calculateMaterialReceiptCost(movement.quantity, movement.unitCost);
+      await db.insert(expenses).values({ projectId: movement.projectId, stageId: movement.stageId ?? null, vendorId: movement.vendorId ?? null, costItemId: line?.costItemId ?? null, reference: expenseReference, description: `تكلفة خامة مستلمة${itemRow ? `: ${itemRow.name}` : ""}${movement.contractId ? ` — عقد #${movement.contractId}` : ""}`, unit: itemRow?.unit || "وحدة", quantity: Number(movement.quantity || 0).toFixed(3), expenseType: "materials_receipt", classification: "project", allocationRatio: "1", preTaxAmount: totalAmount.toFixed(2), taxRate: "0", taxAmount: "0", totalAmount: totalAmount.toFixed(2), paidAmount: "0", status: "posted", expenseDate: movement.movementDate ? new Date(movement.movementDate) : new Date() });
+    }
+  }
   if (movement.contractId !== null && movement.contractId !== undefined && movement.contractItemIndex !== null && movement.contractItemIndex !== undefined) {
     const contract = (await db.select().from(contractorContracts).where(eq(contractorContracts.id, movement.contractId)).limit(1))[0];
     if (contract) {
@@ -1320,12 +1333,22 @@ export const erpRouter = router({
         return { ...contract, contractItems, itemProgress, totalCertificates: used, remaining: Math.max(0, Number(contract.totalAmount) - used), executionPct: Number(contract.totalAmount) > 0 ? (used / Number(contract.totalAmount)) * 100 : 0 };
       });
     }),
-    create: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), stageId: z.number().int().positive().optional(), vendorId: z.number().int().positive(), contractNumber: z.string().trim().min(1), description: z.string().max(2000).optional(), contractType: z.enum(["building_stage", "supply", "supply_installation", "equipment_rental", "labor_supply"]).default("building_stage"), contractItems: z.array(z.object({ description: z.string().trim().min(1), unit: z.string().trim().min(1), contractedQty: z.number().positive(), unitPrice: z.number().nonnegative(), suppliedQty: z.number().nonnegative().default(0), installedQty: z.number().nonnegative().default(0), approvedQty: z.number().nonnegative().default(0) })).default([]), preTaxAmount: z.number().nonnegative(), taxRate: z.number().min(0).max(100).default(15), contractDate: z.string().optional() })).mutation(async ({ ctx, input }) => {
+    create: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), stageId: z.number().int().positive().optional(), vendorId: z.number().int().positive(), contractNumber: z.string().trim().min(1), description: z.string().max(2000).optional(), contractType: z.enum(["building_stage", "supply", "supply_installation", "equipment_rental", "labor_supply"]).default("building_stage"), contractItems: z.array(z.object({ description: z.string().trim().min(1), unit: z.string().trim().min(1), contractedQty: z.number().positive(), unitPrice: z.number().nonnegative(), suppliedQty: z.number().nonnegative().default(0), installedQty: z.number().nonnegative().default(0), approvedQty: z.number().nonnegative().default(0), inventoryItemId: z.number().int().positive().optional(), costItemId: z.number().int().positive().optional(), accountId: z.number().int().positive().optional() })).default([]), preTaxAmount: z.number().nonnegative(), taxRate: z.number().min(0).max(100).default(15), contractDate: z.string().optional() })).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
       await assertProjectAccess(db, ctx, input.projectId);
       await assertProjectWrite(db, ctx, input.projectId);
       await assertPeriodOpen(db, ctx, input.projectId, input.contractDate ? new Date(input.contractDate) : new Date());
       if (input.contractType !== "building_stage" && input.contractItems.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: "عقد التوريد أو التوريد والتركيب يجب أن يحتوي على بند كمي واحد على الأقل" });
+      if (isMaterialContractType(input.contractType)) {
+        const [inventoryRows, costItemRows, accountRows] = await Promise.all([db.select().from(inventoryItems), db.select().from(costItems), db.select().from(accounts)]);
+        for (const line of input.contractItems) {
+          if (!line.inventoryItemId || !line.costItemId || !line.accountId) throw new TRPCError({ code: "BAD_REQUEST", message: "يجب ربط كل بند توريد ببطاقة خامة وبند تكلفة وحساب محاسبي" });
+          const material = inventoryRows.find((row) => row.id === line.inventoryItemId && (!row.projectId || row.projectId === input.projectId));
+          if (!material) throw new TRPCError({ code: "BAD_REQUEST", message: "بطاقة الخامة غير موجودة أو لا تتبع المشروع" });
+          if (!costItemRows.some((row) => row.id === line.costItemId && row.isActive === 1)) throw new TRPCError({ code: "BAD_REQUEST", message: "بند التكلفة غير موجود أو غير نشط" });
+          if (!accountRows.some((row) => row.id === line.accountId && row.isActive === 1)) throw new TRPCError({ code: "BAD_REQUEST", message: "الحساب المحاسبي غير موجود أو غير نشط" });
+        }
+      }
       const itemAmount = input.contractItems.reduce((sum, item) => sum + item.contractedQty * item.unitPrice, 0);
       const totals = calculateExpenseTotals(input.contractItems.length ? itemAmount : input.preTaxAmount, input.taxRate);
       const result = await db.insert(contractorContracts).values({ projectId: input.projectId, stageId: input.stageId || null, vendorId: input.vendorId, contractNumber: input.contractNumber, description: input.description || null, contractType: input.contractType, contractItems: input.contractItems, preTaxAmount: totals.preTaxAmount.toFixed(2), taxRate: input.taxRate.toFixed(2), taxAmount: totals.taxAmount.toFixed(2), totalAmount: totals.totalAmount.toFixed(2), status: "active", contractDate: input.contractDate ? new Date(input.contractDate) : null, createdBy: ctx.user.id });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateInventoryBalance, calculateServiceEntryTotal, canReceiveContractQuantity, remainingContractQuantity, remainingServiceContractAmount, selectPurchaseInvoiceForIssue } from "../shared/inventory";
+import { calculateInventoryBalance, calculateMaterialReceiptCost, calculateServiceEntryTotal, canReceiveContractQuantity, isMaterialContractType, materialReceiptExpenseReference, remainingContractQuantity, remainingServiceContractAmount, selectPurchaseInvoiceForIssue } from "../shared/inventory";
 
 describe("inventory balance calculations", () => {
   it("calculates received, issued, available quantity, and value", () => {
@@ -34,5 +34,19 @@ describe("inventory balance calculations", () => {
   it("links an issue to the first available purchase invoice for the material", () => {
     expect(selectPurchaseInvoiceForIssue([{ purchaseInvoiceId: null }, { purchaseInvoiceId: 42, reference: "GRN-42" }])).toBe(42);
     expect(selectPurchaseInvoiceForIssue([{ purchaseInvoiceId: null }])).toBeNull();
+  });
+});
+
+
+describe("contract-linked material cost posting rules", () => {
+  it("calculates receipt cost and produces a stable idempotency reference", () => {
+    expect(calculateMaterialReceiptCost(12.5, 80)).toBe(1000);
+    expect(materialReceiptExpenseReference(42)).toBe("INV-RECEIPT-42");
+  });
+
+  it("limits material-card linkage to supply contract types", () => {
+    expect(isMaterialContractType("supply")).toBe(true);
+    expect(isMaterialContractType("supply_installation")).toBe(true);
+    expect(isMaterialContractType("building_stage")).toBe(false);
   });
 });

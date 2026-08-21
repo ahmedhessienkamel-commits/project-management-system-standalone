@@ -62,3 +62,15 @@ export function nextInventoryApprovalStage(stage: InventoryApprovalStage, decisi
   if (stage === "owner") return "complete" as const;
   return "complete" as const;
 }
+
+export function calculateMaterialReceiptCost(quantity: string | number | null | undefined, unitCost: string | number | null | undefined) {
+  return Number((Number(quantity || 0) * Number(unitCost || 0)).toFixed(2));
+}
+
+export function materialReceiptExpenseReference(movementId: number) {
+  return `INV-RECEIPT-${movementId}`;
+}
+
+export function isMaterialContractType(contractType: string | null | undefined) {
+  return contractType === "supply" || contractType === "supply_installation";
+}

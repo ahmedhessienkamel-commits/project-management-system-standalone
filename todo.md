@@ -35420,3 +35420,11 @@
 - [ ] Save the restored 07:00 Egypt-time version as the protected baseline for future work.
 - [ ] Verify the baseline remains on the restored routes and passes checks.
 - [ ] Use the baseline as the only starting point for future feature changes.
+
+## Supply contract cost posting verification — 2026-08-21
+- [x] Verify supply and supply-installation contract lines are linked to project, stage, cost item, chart-of-accounts account, and material card.
+- [x] Verify contract creation creates no expense or accrued expense.
+- [x] Post material cost as inventory/material expense or accrued cost when an approved receipt or purchase invoice is created, according to document state.
+- [x] Link issue movements to the received material source and preserve the project/cost-item allocation.
+- [x] Prevent duplicate posting when receipt, supplier invoice, and related documents refer to the same quantity/value.
+- [x] Add tests for contract-only, receipt, invoice, and duplicate-source scenarios, then publish a protected checkpoint.
