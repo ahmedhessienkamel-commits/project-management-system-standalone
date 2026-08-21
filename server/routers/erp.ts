@@ -1433,13 +1433,15 @@ export const erpRouter = router({
     list: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
-      const rows = await db.select().from(vendors).orderBy(vendors.name);
+      const companyId = await resolveActiveCompanyId(db, ctx);
+      const rows = await db.select().from(vendors).where(companyId ? eq(vendors.companyId, companyId) : eq(vendors.id, -1)).orderBy(vendors.name);
       return allowed ? rows.filter((row) => !row.projectId || allowed.has(row.projectId)) : rows;
     }),
     update: protectedProcedure.input(z.object({ id: z.number().int().positive(), projectId: z.number().int().positive().nullable().optional(), name: z.string().trim().min(2), partyType: z.enum(["supplier", "customer"]).optional(), entityType: z.enum(["individual", "company"]).optional(), taxNumber: z.string().max(128).optional(), commercialRegistration: z.string().max(128).optional(), nationalAddress: z.string().max(4000).optional(), address: z.string().max(4000).optional(), phone: z.string().max(64).optional(), email: z.string().email().optional().or(z.literal("")), iban: z.string().max(128).optional(), contact: z.string().max(255).optional() })).mutation(async ({ ctx, input }) => {
       if (!canManagePartners(ctx.user)) throw new TRPCError({ code: "FORBIDDEN", message: "لا تملك صلاحية تعديل المورد" });
       const db = requireDb(await getDb());
-      const before = (await db.select().from(vendors).where(eq(vendors.id, input.id)).limit(1))[0];
+      const companyId = await resolveActiveCompanyId(db, ctx);
+      const before = (await db.select().from(vendors).where(and(eq(vendors.id, input.id), companyId ? eq(vendors.companyId, companyId) : eq(vendors.id, -1))).limit(1))[0];
       if (!before) throw new TRPCError({ code: "NOT_FOUND", message: "المورد غير موجود" });
       if (before.projectId) { await assertProjectAccess(db, ctx, before.projectId); await assertProjectWrite(db, ctx, before.projectId); }
       if (input.projectId) { await assertProjectAccess(db, ctx, input.projectId); await assertProjectWrite(db, ctx, input.projectId); }
@@ -1454,7 +1456,8 @@ export const erpRouter = router({
         await assertProjectAccess(db, ctx, input.projectId);
         await assertProjectWrite(db, ctx, input.projectId);
       }
-      const result = await db.insert(vendors).values({ ...input, projectId: input.projectId || null, partyType: input.partyType || "supplier", entityType: input.entityType || "company", taxNumber: input.taxNumber || null, commercialRegistration: input.commercialRegistration || null, nationalAddress: input.nationalAddress || null, address: input.address || null, phone: input.phone || null, email: input.email || null, iban: input.iban || null, contact: input.contact || null });
+      const companyId = await resolveActiveCompanyId(db, ctx);
+      const result = await db.insert(vendors).values({ ...input, companyId: companyId || null, projectId: input.projectId || null, partyType: input.partyType || "supplier", entityType: input.entityType || "company", taxNumber: input.taxNumber || null, commercialRegistration: input.commercialRegistration || null, nationalAddress: input.nationalAddress || null, address: input.address || null, phone: input.phone || null, email: input.email || null, iban: input.iban || null, contact: input.contact || null });
       const id = Number(result[0].insertId);
       await db.insert(auditLogs).values({ entityType: "vendor", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
       return { id };

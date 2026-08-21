@@ -124,6 +124,7 @@ export const stages = mysqlTable("stages", {
 
 export const vendors = mysqlTable("vendors", {
   id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId"),
   projectId: int("projectId"),
   name: varchar("name", { length: 255 }).notNull(),
   partyType: mysqlEnum("partyType", ["supplier", "customer"]).default("supplier").notNull(),
@@ -141,6 +142,7 @@ export const vendors = mysqlTable("vendors", {
 
 export const inventoryItems = mysqlTable("inventoryItems", {
   id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId"),
   projectId: int("projectId"),
   code: varchar("code", { length: 64 }).notNull().unique(),
   name: varchar("name", { length: 255 }).notNull(),
