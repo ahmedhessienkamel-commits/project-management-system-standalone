@@ -35591,21 +35591,29 @@
 - [x] Verify the home page, browser console, network requests, TypeScript, tests, build, and deployment.
 
 ## Invitation email delivery issue — 2026-08-21
-- [ ] Verify whether the invitation for m.altamim@advancebuilding.net was created and its current status.
-- [ ] Inspect the invitation email delivery path, SMTP configuration, and server logs without exposing credentials.
-- [ ] Fix delivery or provide a secure in-app invitation link/copy action with expiry and single-use validation.
-- [ ] Add a delivery-status/error message and test the invitation flow end to end.
+- [x] Verify whether the invitation for m.altamim@advancebuilding.net was created and its current status.
+- [x] Inspect the invitation email delivery path, SMTP configuration, and server logs without exposing credentials.
+- [x] Fix delivery or provide a secure in-app invitation link/copy action with expiry and single-use validation.
+- [x] Add a delivery-status/error message and test the invitation flow end to end.
 
 ## General manager read-only scope — m.altamim@advancebuilding.net
 - [x] Confirm whether the email has an existing user account or pending invitation.
-- [ ] Set the account role to general manager and assign the authorized company explicitly.
-- [ ] Allow read-only access across permitted system sections, reports, projects, and documents.
-- [ ] Allow only payroll-run and certificate approval/rejection actions, including rejection reasons and audit logging.
-- [ ] Deny create, edit, delete, posting, payment, and other operational mutations for this user.
-- [ ] Test the effective permissions and publish the change.
+- [x] Set the account role to general manager and preserve the global owner-level scope without project assignment.
+- [x] Allow read-only access across permitted system sections, reports, projects, and documents.
+- [x] Allow only payroll-run and certificate approval/rejection actions, including rejection reasons and audit logging.
+- [x] Deny create, edit, delete, posting, payment, and other operational mutations for this user.
+- [x] Test the effective permissions and publish the change.
 
 ## Global general manager scope — m.altamim@advancebuilding.net
 - [x] Mark the pending invitation as a global general-manager invitation rather than company-scoped.
 - [x] Make global general managers eligible for every current and future company without manual membership assignment.
 - [x] Preserve read-only access across all companies while allowing only certificate and payroll approvals/rejections.
 - [x] Verify global-company visibility and deny all create, edit, delete, posting, payment, and non-approval mutations.
+
+## General manager default landing page — m.altamim@advancebuilding.net
+- [x] Make the project dashboard the default landing page for the global general-manager account after login.
+- [x] Preserve the active-company switcher and read-only/approval permissions while redirecting the account.
+- [x] Test initial navigation, refresh behavior, and fallback when no project is available.
+
+- [x] تثبيت نطاق دعوة m.altamim@advancebuilding.net كمدير عام عالمي لصاحب العمل، مع رؤية كل الشركات وليس مشروعًا محددًا.
+- [x] تثبيت أن m.altamim@advancebuilding.net صاحب عمل ومدير عام عالمي يرى كل الشركات الحالية والمستقبلية، مع قصر الكتابة على اعتماد أو رفض المسيرات والمستخلصات فقط.
