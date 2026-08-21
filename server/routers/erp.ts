@@ -14,6 +14,7 @@ import { calculateInventoryBalance, canReceiveContractQuantity, canReviewInvento
 import { calculateWipBalance, buildWipClosingLines } from "../../shared/wip";
 import { canAssignTeamTasks } from "../../shared/taskPermissions";
 import { sendApprovalEmail, sendInvitationEmail } from "../email";
+import { buildExecutiveSnapshot } from "../executiveDigest";
 
 const projectStatus = z.enum(["planning", "active", "paused", "completed", "archived"]);
 const operationKey = z.enum(["payment_voucher", "receipt_voucher", "expense", "certificate", "payroll", "custody", "purchase_invoice", "sales_invoice", "purchase_request", "inventory_item", "inventory_receipt", "inventory_issue", "task_assignment", "edit", "delete", "approve"]);
@@ -2010,9 +2011,15 @@ export const erpRouter = router({
       const policy = input.projectId && supportedEntity ? await findApprovalPolicy(db, input.projectId, supportedEntity) : null;
       return { approval: approvalRows[approvalRows.length - 1] || null, audits: auditRows, approvalPolicy: policy ? { entityType: policy.entityType, thresholdAmount: policy.thresholdAmount } : null };
     }),
-    audit: adminProcedure.query(async () => {
+    audit: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin" && ctx.user.role !== "general_manager") throw new TRPCError({ code: "FORBIDDEN", message: "سجل التدقيق متاح للمدير العام والمالك للعرض فقط" });
       const db = requireDb(await getDb());
-      return db.select().from(auditLogs).orderBy(auditLogs.createdAt);
+      return db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt)).limit(200);
+    }),
+    executiveSnapshot: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin" && ctx.user.role !== "general_manager") throw new TRPCError({ code: "FORBIDDEN", message: "المؤشرات التنفيذية متاحة للمدير العام والمالك فقط" });
+      const db = requireDb(await getDb());
+      return buildExecutiveSnapshot(db);
     }),
     notifications: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());

@@ -48,3 +48,30 @@ export async function sendPasswordResetEmail(input: { to: string; recipientName?
     html: `<div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.9;color:#18324b"><h2>استعادة كلمة المرور</h2><p>مرحبًا ${input.recipientName || ""}</p><p>تم طلب استعادة كلمة المرور لحسابك. استخدم الزر التالي لإنشاء كلمة مرور جديدة:</p><p><a href="${input.resetUrl}" style="display:inline-block;background:#18324b;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none">إنشاء كلمة مرور جديدة</a></p><p style="font-size:13px;color:#64748b">الرابط صالح حتى ${input.expiresAt.toLocaleString("ar-SA")} ولمرة واحدة فقط.</p></div>`,
   });
 }
+
+export async function sendOverdueTaskEmail(input: { to: string; recipientName?: string | null; taskTitle: string; dueDate: string }) {
+  const from = process.env.GMAIL_USERNAME;
+  const transporter = getMailer();
+  return transporter.sendMail({
+    from: `نظام إدارة المشاريع <${from}>`,
+    to: input.to,
+    subject: `تنبيه: مهمة متأخرة — ${input.taskTitle}`,
+    text: `مرحبًا ${input.recipientName || ""}\n\nالمهمة «${input.taskTitle}» متأخرة عن موعدها المحدد في ${input.dueDate}. يرجى تحديث حالتها من النظام.`,
+    html: `<div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.9;color:#18324b"><h2 style="color:#b45309">تنبيه مهمة متأخرة</h2><p>مرحبًا ${input.recipientName || ""}</p><p>المهمة <b>«${input.taskTitle}»</b> تجاوزت موعد الاستحقاق المحدد في <b>${input.dueDate}</b>.</p><p>يرجى فتح لوحة المهام وتحديث الحالة أو إضافة ملاحظة.</p></div>`,
+  });
+}
+
+export async function sendExecutiveDigestEmail(input: { to: string; recipientName?: string | null; subject: string; snapshot: any }) {
+  const from = process.env.GMAIL_USERNAME;
+  const transporter = getMailer();
+  const { workload = [], overdueTasks = [], pendingApprovals = [], overdueApprovals = [], pendingLeaves = [], pendingAdvances = [], averageApprovalHours = 0 } = input.snapshot || {};
+  const workloadRows = workload.map((item: any) => `<tr><td style="padding:8px;border-bottom:1px solid #e2e8f0">${item.fullName}</td><td style="padding:8px;border-bottom:1px solid #e2e8f0">${item.open + item.inProgress}</td><td style="padding:8px;border-bottom:1px solid #e2e8f0;color:#b45309">${item.overdue}</td><td style="padding:8px;border-bottom:1px solid #e2e8f0">${item.done}</td></tr>`).join("");
+  const summary = `مهام متأخرة: ${overdueTasks.length} · موافقات معلقة: ${pendingApprovals.length} · موافقات متأخرة: ${overdueApprovals.length} · إجازات معلقة: ${pendingLeaves.length} · سلف معلقة: ${pendingAdvances.length} · متوسط عمر الموافقة المعلقة: ${Number(averageApprovalHours).toFixed(1)} ساعة`;
+  return transporter.sendMail({
+    from: `نظام إدارة المشاريع <${from}>`,
+    to: input.to,
+    subject: input.subject,
+    text: `مرحبًا ${input.recipientName || ""}\n\n${summary}\n\nهذا ملخص تنفيذي يومي من نظام إدارة المشاريع.`,
+    html: `<div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.9;color:#18324b;max-width:760px"><div style="background:#18324b;color:#fff;padding:22px;border-radius:12px"><div style="color:#f5e9c8;font-size:12px">نظام إدارة المشاريع</div><h2 style="margin:5px 0">الملخص التنفيذي اليومي</h2><p style="margin:0;color:#dbeafe">مرحبًا ${input.recipientName || ""}، هذه أهم مؤشرات المتابعة.</p></div><div style="margin-top:18px;padding:16px;background:#f8fafc;border-radius:10px"><b>${summary}</b></div><h3>عبء العمل حسب الموظف</h3><table style="width:100%;border-collapse:collapse;text-align:right"><thead><tr style="background:#f5f0e5"><th style="padding:8px">الموظف</th><th style="padding:8px">المفتوحة</th><th style="padding:8px">المتأخرة</th><th style="padding:8px">المكتملة</th></tr></thead><tbody>${workloadRows || `<tr><td colspan="4" style="padding:14px;text-align:center;color:#64748b">لا توجد مهام مسندة حاليًا.</td></tr>`}</tbody></table><p style="margin-top:20px;color:#64748b;font-size:13px">افتح النظام لمراجعة التفاصيل واتخاذ الإجراءات المطلوبة.</p></div>`,
+  });
+}
