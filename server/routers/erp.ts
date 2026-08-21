@@ -1136,9 +1136,12 @@ export const erpRouter = router({
     requisitions: router({
       list: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional() }).optional()).query(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
+        const companyId = await resolveActiveCompanyId(db, ctx);
+        const projectRows = companyId ? await db.select({ id: projects.id }).from(projects).where(eq(projects.companyId, companyId)) : [];
+        const companyProjectIds = new Set(projectRows.map((project) => project.id));
         const rows = await db.select().from(materialRequisitions);
         const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
-        return rows.filter((row) => (!input?.projectId || row.projectId === input.projectId) && (!allowed || allowed.has(row.projectId)));
+        return rows.filter((row) => companyProjectIds.has(row.projectId) && (!input?.projectId || row.projectId === input.projectId) && (!allowed || allowed.has(row.projectId)));
       }),
       create: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), stageId: z.number().int().positive().optional(), description: z.string().max(2000).optional(), requiredBy: z.string().optional(), items: z.array(z.object({ description: z.string().min(1).max(255), unit: z.string().max(64).optional(), quantity: z.number().positive(), estimatedUnitCost: z.number().nonnegative(), notes: z.string().max(500).optional() })).min(1) })).mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
@@ -1165,9 +1168,12 @@ export const erpRouter = router({
     purchaseOrders: router({
       list: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional() }).optional()).query(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
+        const companyId = await resolveActiveCompanyId(db, ctx);
+        const projectRows = companyId ? await db.select({ id: projects.id }).from(projects).where(eq(projects.companyId, companyId)) : [];
+        const companyProjectIds = new Set(projectRows.map((project) => project.id));
         const rows = await db.select().from(purchaseOrders);
         const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
-        const filtered = rows.filter((row) => (!input?.projectId || row.projectId === input.projectId) && (!allowed || allowed.has(row.projectId)));
+        const filtered = rows.filter((row) => companyProjectIds.has(row.projectId) && (!input?.projectId || row.projectId === input.projectId) && (!allowed || allowed.has(row.projectId)));
         return Promise.all(filtered.map(async (row) => ({ ...row, items: await db.select().from(purchaseOrderItems).where(eq(purchaseOrderItems.purchaseOrderId, row.id)) })));
       }),
       create: protectedProcedure.input(z.object({ requisitionId: z.number().int().positive(), vendorId: z.number().int().positive(), orderDate: z.string().optional(), expectedDate: z.string().optional(), items: z.array(z.object({ description: z.string().min(1).max(255), unit: z.string().max(64).optional(), quantity: z.number().positive(), unitCost: z.number().nonnegative() })).min(1) })).mutation(async ({ ctx, input }) => {
