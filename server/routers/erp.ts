@@ -1917,7 +1917,10 @@ export const erpRouter = router({
     }),
     notifications: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
-      return db.select().from(notifications).where(eq(notifications.userId, ctx.user.id)).orderBy(notifications.createdAt);
+      const pendingApprovals = await db.select({ id: approvalRequests.id }).from(approvalRequests).where(eq(approvalRequests.status, "pending"));
+      if (pendingApprovals.length === 0) return [];
+      const approvalTypes = ["approval", "certificate_approval", "certificate_approval_stage", "leave_approval", "advance_approval", "payroll_approval"] as const;
+      return db.select().from(notifications).where(and(eq(notifications.userId, ctx.user.id), inArray(notifications.type, approvalTypes))).orderBy(notifications.createdAt);
     }),
     markNotificationRead: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
