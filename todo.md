@@ -35487,13 +35487,13 @@
 
 ## Universal document workspace — 2026-08-21
 - [ ] Inventory every document list and identify its preview, edit, delete, and related-action gaps.
-- [ ] Add a reusable document action bar with Preview, PDF, Excel, Edit, and permitted Delete actions.
+- [x] Add a reusable document action bar with Preview, PDF, Excel, Edit, and permitted Delete actions.
 - [x] Add a reusable document preview surface that preserves the document type and professional RTL layout.
 - [ ] Add Excel export for all supported document and report records using real displayed data.
 - [ ] Add contextual related actions for invoices, receipts, payments, contracts, certificates, inventory receipts/issues, expenses, custody, and accounting documents.
 - [ ] Link each related action to the source document and prevent duplicate complementary documents where applicable.
 - [x] Preserve role-based edit/delete/approval permissions and audit references.
-- [ ] Add tests, visual verification, TypeScript, Vitest, build, and checkpoint.
+- [x] Add tests, visual verification, TypeScript, Vitest, build, and checkpoint.
 
 ## Document editing experience — 2026-08-21
 - [ ] Make Edit available beside Preview and downloads for every editable document.
