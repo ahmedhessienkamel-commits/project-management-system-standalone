@@ -853,16 +853,25 @@ export const erpRouter = router({
       return allowed ? rows.filter((row) => allowed.has(row.projectId)) : rows;
     }),
     create: protectedProcedure
-      .input(z.object({ projectId: z.number().int().positive(), saleId: z.number().int().positive(), amount: z.number().positive(), receiptReference: z.string().max(128).optional(), collectionDate: z.string().optional() }))
+      .input(z.object({ projectId: z.number().int().positive(), saleId: z.number().int().positive(), amount: z.number().positive(), collectionDestination: z.enum(["cash", "bank", "escrow"]).default("cash"), cashAccountId: z.number().int().positive().optional(), escrowReference: z.string().max(128).optional(), receiptReference: z.string().max(128).optional(), collectionDate: z.string().optional() }))
       .mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
         await assertProjectAccess(db, ctx, input.projectId);
         await assertProjectWrite(db, ctx, input.projectId);
         await assertPeriodOpen(db, ctx, input.projectId, input.collectionDate ? new Date(input.collectionDate) : new Date());
+        const project = (await db.select({ escrowCashAccountId: projects.escrowCashAccountId, projectType: projects.projectType }).from(projects).where(eq(projects.id, input.projectId)).limit(1))[0];
+        if (!project) throw new TRPCError({ code: "NOT_FOUND", message: "المشروع غير موجود" });
+        if (input.collectionDestination === "escrow") {
+          if (project.projectType !== "off_plan_sales") throw new TRPCError({ code: "BAD_REQUEST", message: "حساب الضمان متاح فقط لمشاريع البيع على الخارطة" });
+          if (!project.escrowCashAccountId) throw new TRPCError({ code: "BAD_REQUEST", message: "لم يتم تحديد حساب ضمان لهذا المشروع" });
+        } else if (input.cashAccountId) {
+          const account = (await db.select({ id: cashAccounts.id, accountType: cashAccounts.accountType }).from(cashAccounts).where(eq(cashAccounts.id, input.cashAccountId)).limit(1))[0];
+          if (!account || account.accountType !== input.collectionDestination) throw new TRPCError({ code: "BAD_REQUEST", message: "حساب الإيداع لا يطابق وجهة التحصيل" });
+        }
         const approvalPolicy = await findApprovalPolicy(db, input.projectId, "collection");
         const approvalStatus = approvalPolicy && input.amount <= Number(approvalPolicy.thresholdAmount) ? "approved" as const : "pending" as const;
         const finalized = !approvalPolicy || approvalStatus === "approved";
-        const result = await db.insert(collections).values({ projectId: input.projectId, saleId: input.saleId, amount: input.amount.toFixed(2), receiptReference: input.receiptReference || null, collectionDate: input.collectionDate ? new Date(input.collectionDate) : null, status: finalized ? "received" : "draft", createdBy: ctx.user.id });
+        const result = await db.insert(collections).values({ projectId: input.projectId, saleId: input.saleId, collectionDestination: input.collectionDestination, cashAccountId: input.collectionDestination === "escrow" ? project.escrowCashAccountId : input.cashAccountId || null, escrowReference: input.collectionDestination === "escrow" ? input.escrowReference || null : null, amount: input.amount.toFixed(2), receiptReference: input.receiptReference || null, collectionDate: input.collectionDate ? new Date(input.collectionDate) : null, status: finalized ? "received" : "draft", createdBy: ctx.user.id });
         const collectionId = Number(result[0].insertId);
         await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "collection", entityId: collectionId, requestedBy: ctx.user.id, status: approvalStatus });
         await db.insert(auditLogs).values({ entityType: "collection", entityId: collectionId, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
