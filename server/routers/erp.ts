@@ -195,13 +195,13 @@ async function resolveApprovalStatus(db: NonNullable<Awaited<ReturnType<typeof g
   return policy && amount <= Number(policy.thresholdAmount) ? "approved" as const : "pending" as const;
 }
 
-async function loadAccountingLedger(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, input: { projectId?: number; from?: string; to?: string }) {
+async function loadAccountingLedger(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, input: { projectId?: number; from?: string; to?: string }, companyId?: number | null) {
   const [documentRows, lineRows, accountRows, costItemRows] = await Promise.all([db.select().from(accountingDocuments), db.select().from(accountingDocumentLines), db.select().from(accounts), db.select().from(costItems)]);
   const from = input.from ? new Date(input.from).getTime() : Number.NEGATIVE_INFINITY;
   const to = input.to ? new Date(input.to).getTime() + 86400000 : Number.POSITIVE_INFINITY;
   const accountMap = new Map(accountRows.map((account) => [account.id, account]));
   const costItemMap = new Map(costItemRows.map((item) => [item.id, item]));
-  const documentMap = new Map(documentRows.filter((document) => (!input.projectId || document.projectId === input.projectId) && (!document.documentDate || (new Date(document.documentDate).getTime() >= from && new Date(document.documentDate).getTime() <= to))).map((document) => [document.id, document]));
+      const documentMap = new Map(documentRows.filter((document) => (!companyId || document.companyId === companyId) && (!input.projectId || document.projectId === input.projectId) && (!document.documentDate || (new Date(document.documentDate).getTime() >= from && new Date(document.documentDate).getTime() <= to))).map((document) => [document.id, document]));
   return lineRows.filter((line) => documentMap.has(line.documentId)).map((line) => ({ ...line, document: documentMap.get(line.documentId)!, account: accountMap.get(line.accountId) || null, costItem: line.costItemId ? costItemMap.get(line.costItemId) || null : null }));
 }
 
@@ -2077,16 +2077,16 @@ export const erpRouter = router({
       }),
     }),
     reports: router({
-      customerStatement: protectedProcedure.input(z.object({ partyName: z.string().min(1), projectId: z.number().int().positive().optional(), from: z.string().optional(), to: z.string().optional() })).query(async ({ input }) => {
+      customerStatement: protectedProcedure.input(z.object({ partyName: z.string().min(1), projectId: z.number().int().positive().optional(), from: z.string().optional(), to: z.string().optional() })).query(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
-        const rows = (await loadAccountingLedger(db, input)).filter((row) => row.document.partyName === input.partyName);
+        const rows = (await loadAccountingLedger(db, input, await resolveActiveCompanyId(db, ctx))).filter((row) => row.document.partyName === input.partyName);
         const debit = rows.reduce((sum, row) => sum + Number(row.debit), 0);
         const credit = rows.reduce((sum, row) => sum + Number(row.credit), 0);
         return { partyName: input.partyName, debit, credit, balance: debit - credit, rows };
       }),
-      supplierStatement: protectedProcedure.input(z.object({ partyName: z.string().min(1), projectId: z.number().int().positive().optional(), from: z.string().optional(), to: z.string().optional() })).query(async ({ input }) => {
+      supplierStatement: protectedProcedure.input(z.object({ partyName: z.string().min(1), projectId: z.number().int().positive().optional(), from: z.string().optional(), to: z.string().optional() })).query(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
-        const rows = (await loadAccountingLedger(db, input)).filter((row) => row.document.partyName === input.partyName);
+        const rows = (await loadAccountingLedger(db, input, await resolveActiveCompanyId(db, ctx))).filter((row) => row.document.partyName === input.partyName);
         const debit = rows.reduce((sum, row) => sum + Number(row.debit), 0);
         const credit = rows.reduce((sum, row) => sum + Number(row.credit), 0);
         return { partyName: input.partyName, debit, credit, balance: credit - debit, rows };
