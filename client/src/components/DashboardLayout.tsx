@@ -1,5 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -141,6 +142,8 @@ function DashboardLayoutContent({
   const utils = trpc.useUtils();
   const { data: availableCompanies = [] } = trpc.erp.companies.list.useQuery();
   const { data: currentCompany } = trpc.erp.companies.current.useQuery();
+  const { data: notifications = [] } = trpc.erp.notifications.list.useQuery();
+  const unreadNotifications = notifications.filter((notification) => !notification.readAt).length;
   const switchCompany = trpc.erp.companies.switch.useMutation({ onSuccess: () => { utils.erp.companies.current.invalidate(); utils.erp.company.get.invalidate(); utils.erp.projects.list.invalidate(); } });
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
@@ -339,7 +342,7 @@ function DashboardLayoutContent({
           <div className="flex items-center gap-2">
             {availableCompanies.length > 0 && <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="max-w-[220px] gap-2 border-[#b28a3b]/40 text-[#18324b]"><Landmark className="h-4 w-4 shrink-0 text-[#b28a3b]" /><span className="truncate">{currentCompany?.company?.tradeName || currentCompany?.company?.legalName || "اختيار الشركة"}</span></Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-72"><div className="border-b border-slate-100 px-3 py-2 text-xs text-slate-500">الشركة الحالية · اختر شركة مصرحًا بها</div>{availableCompanies.map((company) => <DropdownMenuItem key={company.id} disabled={switchCompany.isPending || company.id === currentCompany?.company?.id} onClick={() => switchCompany.mutate({ companyId: company.id })} className="cursor-pointer"><div className="flex min-w-0 flex-col"><span className="truncate font-semibold">{company.tradeName || company.legalName}</span><span className="truncate text-xs text-slate-500">{company.commercialRegistration || company.taxNumber || "بيانات الشركة"}</span></div></DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>}
             <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="gap-2 border-[#b28a3b]/40 text-[#18324b]"><Plus className="h-4 w-4" /> إجراء سريع</Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-56">{visibleQuickActions.map((action) => <DropdownMenuItem key={action.path} onClick={() => setLocation(action.path)} className="cursor-pointer">{action.label}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
-            <Button variant="outline" size="icon" aria-label="فتح التنبيهات والموافقات" title="التنبيهات والموافقات" onClick={() => setLocation("/approvals")} className="border-slate-200"><Bell className="h-4 w-4 text-[#b28a3b]" /></Button>
+            <Button variant="outline" size="icon" aria-label="فتح التنبيهات والموافقات" title={unreadNotifications ? `${unreadNotifications} إشعار غير مقروء` : "التنبيهات والموافقات"} onClick={() => setLocation("/approvals")} className="relative border-slate-200"><Bell className="h-4 w-4 text-[#b28a3b]" />{unreadNotifications > 0 && <Badge className="absolute -right-2 -top-2 min-w-5 justify-center rounded-full bg-rose-600 px-1 text-[10px] text-white">{unreadNotifications > 99 ? "99+" : unreadNotifications}</Badge>}</Button>
           </div>
         </div>
         <main className="flex-1 p-4">{children}</main>

@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray, or } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, dailyTasks, leaveRequests, advanceRequests, employees, expenses, notifications, payroll, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, sales, stages, units, users, userInvitations, vendors, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems, inventoryItems, inventoryMovements, accounts, accountingDocuments, accountingDocumentLines, costItems, fixedAssets, fixedAssetDepreciation, companies, companyMembers, companyProfiles, cashAccounts, contractorContracts, serviceContractEntries, userOperationPermissions } from "../../drizzle/schema";
@@ -13,7 +13,7 @@ import { allocateAdministrativeExpense, normalizeExpenseTaxRate, validateExpense
 import { calculateInventoryBalance, canReceiveContractQuantity, canReviewInventoryStage, nextInventoryApprovalStage, remainingContractQuantity, selectPurchaseInvoiceForIssue, calculateServiceEntryTotal, remainingServiceContractAmount, calculateMaterialReceiptCost, materialReceiptExpenseReference, isMaterialContractType, resolveMaterialCostAccount } from "../../shared/inventory";
 import { calculateWipBalance, buildWipClosingLines } from "../../shared/wip";
 import { canAssignTeamTasks } from "../../shared/taskPermissions";
-import { sendInvitationEmail } from "../email";
+import { sendApprovalEmail, sendInvitationEmail } from "../email";
 
 const projectStatus = z.enum(["planning", "active", "paused", "completed", "archived"]);
 const operationKey = z.enum(["payment_voucher", "receipt_voucher", "expense", "certificate", "payroll", "custody", "purchase_invoice", "sales_invoice", "purchase_request", "inventory_item", "inventory_receipt", "inventory_issue", "task_assignment", "edit", "delete", "approve"]);
@@ -33,6 +33,21 @@ const employeeProfileSchema = z.object({
 function requireDb(db: Awaited<ReturnType<typeof getDb>>) {
   if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة حاليًا" });
   return db;
+}
+
+async function notifyApprovalUsers(db: ErpDb, input: { type: string; title: string; message: string; approvalUrl?: string; roles?: string[] }) {
+  const roles = input.roles?.length ? input.roles : ["admin", "general_manager"];
+  const recipients = await db.select({ id: users.id, name: users.name, email: users.email }).from(users).where(inArray(users.role, roles));
+  const approvalUrl = input.approvalUrl || `${process.env.APP_URL || process.env.VITE_APP_URL || "https://metaadscntr-8ymftbnn.manus.space"}/approvals`;
+  await Promise.all(recipients.map(async (recipient) => {
+    await db.insert(notifications).values({ userId: recipient.id, type: input.type, title: input.title, message: input.message });
+    if (!recipient.email) return;
+    try {
+      await sendApprovalEmail({ to: recipient.email, recipientName: recipient.name, title: input.title, message: input.message, approvalUrl });
+    } catch (error) {
+      console.warn("[ApprovalEmail] delivery failed", { recipientId: recipient.id, type: input.type, error: error instanceof Error ? error.message : "unknown" });
+    }
+  }));
 }
 
 type ErpDb = NonNullable<Awaited<ReturnType<typeof getDb>>>;
@@ -313,8 +328,10 @@ export const erpRouter = router({
       if (!Number.isFinite(days) || days <= 0) throw new TRPCError({ code: "BAD_REQUEST", message: "تاريخ نهاية الإجازة يجب أن يكون بعد تاريخ البداية" });
       const db = requireDb(await getDb());
       const result = await db.insert(leaveRequests).values({ requestedBy: ctx.user.id, employeeId: input.employeeId ?? null, leaveType: input.leaveType, startDate: start, endDate: end, days: days.toFixed(2), reason: input.reason || null });
-      await db.insert(auditLogs).values({ entityType: "leaveRequest", entityId: Number(result[0].insertId), action: "created_pending", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
-      return { id: Number(result[0].insertId) };
+      const requestId = Number(result[0].insertId);
+      await db.insert(auditLogs).values({ entityType: "leaveRequest", entityId: requestId, action: "created_pending", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
+      await notifyApprovalUsers(db, { type: "leave_approval", title: "طلب إجازة جديد يحتاج موافقة", message: `يوجد طلب إجازة جديد لمدة ${days} يومًا من المستخدم #${ctx.user.id}.`, approvalUrl: `${process.env.APP_URL || process.env.VITE_APP_URL || "https://metaadscntr-8ymftbnn.manus.space"}/approvals` });
+      return { id: requestId };
     }),
     decide: protectedProcedure.input(z.object({ id: z.number().int().positive(), decision: z.enum(["approved", "rejected"]), note: z.string().max(2000).optional() })).mutation(async ({ ctx, input }) => {
       if (ctx.user.role !== "admin" && ctx.user.role !== "general_manager") throw new TRPCError({ code: "FORBIDDEN", message: "اعتماد طلبات الإجازات متاح للمدير العام والمالك فقط" });
@@ -334,8 +351,10 @@ export const erpRouter = router({
     create: protectedProcedure.input(z.object({ employeeId: z.number().int().positive().nullable().optional(), amount: z.number().positive(), reason: z.string().trim().min(2).max(2000), repaymentDate: z.string().optional() })).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
       const result = await db.insert(advanceRequests).values({ requestedBy: ctx.user.id, employeeId: input.employeeId ?? null, amount: input.amount.toFixed(2), reason: input.reason, repaymentDate: input.repaymentDate ? new Date(input.repaymentDate) : null });
-      await db.insert(auditLogs).values({ entityType: "advanceRequest", entityId: Number(result[0].insertId), action: "created_pending", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
-      return { id: Number(result[0].insertId) };
+      const requestId = Number(result[0].insertId);
+      await db.insert(auditLogs).values({ entityType: "advanceRequest", entityId: requestId, action: "created_pending", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
+      await notifyApprovalUsers(db, { type: "advance_approval", title: "طلب سلفة جديد يحتاج موافقة", message: `يوجد طلب سلفة بقيمة ${input.amount.toFixed(2)} ر.س من المستخدم #${ctx.user.id}.`, approvalUrl: `${process.env.APP_URL || process.env.VITE_APP_URL || "https://metaadscntr-8ymftbnn.manus.space"}/approvals` });
+      return { id: requestId };
     }),
     decide: protectedProcedure.input(z.object({ id: z.number().int().positive(), decision: z.enum(["approved", "rejected"]), note: z.string().max(2000).optional() })).mutation(async ({ ctx, input }) => {
       if (ctx.user.role !== "admin" && ctx.user.role !== "general_manager") throw new TRPCError({ code: "FORBIDDEN", message: "اعتماد طلبات السلف متاح للمدير العام والمالك فقط" });
@@ -1677,7 +1696,7 @@ export const erpRouter = router({
       const id = Number(result[0].insertId);
       await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "certificate", entityId: id, requestedBy: ctx.user.id, status: "pending", approvalStage: "project_manager", stageOrder: 1 });
       await db.insert(auditLogs).values({ entityType: "certificate", entityId: id, action: "created_pending_project_manager", actorId: ctx.user.id, afterJson: JSON.stringify({ ...input, ...totals }) });
-      await db.insert(notifications).values({ userId: ctx.user.id, type: "certificate_approval", title: "تم إنشاء مستخلص جديد", message: `المستخلص ${input.certificateNumber} مرتبط بالمشروع ويحتاج إلى اعتماد مدير المشاريع.` });
+      await notifyApprovalUsers(db, { type: "certificate_approval", title: "مستخلص جديد يحتاج اعتمادًا", message: `المستخلص ${input.certificateNumber} يحتاج إلى مراجعة واعتماد ضمن دورة المستخلصات.`, roles: ["admin", "general_manager", "project_manager"] });
       return { id, totalAmount: totals.totalAmount, status: "pending" as const };
     }),
     update: protectedProcedure.input(z.object({ id: z.number().int().positive(), projectId: z.number().int().positive(), contractId: z.number().int().positive().optional(), stageId: z.number().int().positive().optional(), vendorId: z.number().int().positive().optional(), certificateNumber: z.string().trim().min(1), description: z.string().max(2000).optional(), technicalSpecifications: z.string().max(10000).optional(), certificateItems: z.array(z.object({ contractItemIndex: z.number().int().nonnegative(), suppliedQty: z.number().nonnegative().default(0), installedQty: z.number().nonnegative().default(0), approvedQty: z.number().nonnegative().default(0), unitPrice: z.number().nonnegative().optional() })).default([]), preTaxAmount: z.number().nonnegative(), taxRate: z.number().min(0).max(100).default(15), paidAmount: z.number().nonnegative().default(0), certificateDate: z.string().optional() })).mutation(async ({ ctx, input }) => {

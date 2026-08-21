@@ -12,6 +12,18 @@ function getMailer() {
   });
 }
 
+export async function sendApprovalEmail(input: { to: string; recipientName?: string | null; title: string; message: string; approvalUrl: string }) {
+  const from = process.env.GMAIL_USERNAME;
+  const transporter = getMailer();
+  return transporter.sendMail({
+    from: `نظام إدارة المشاريع <${from}>`,
+    to: input.to,
+    subject: `طلب موافقة جديد — ${input.title}`,
+    text: `مرحبًا ${input.recipientName || ""}\n\n${input.message}\n\nفتح شاشة الموافقات:\n${input.approvalUrl}`,
+    html: `<div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.9;color:#18324b"><h2>${input.title}</h2><p>مرحبًا ${input.recipientName || ""}</p><p>${input.message}</p><p><a href="${input.approvalUrl}" style="display:inline-block;background:#18324b;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none">فتح شاشة الموافقات</a></p></div>`,
+  });
+}
+
 export async function sendInvitationEmail(input: { to: string; recipientName?: string | null; jobTitle: string; role: string; invitationUrl: string; expiresAt: Date }) {
   const from = process.env.GMAIL_USERNAME;
   const roleLabel = input.role === "general_manager" ? "مدير عام" : input.role === "project_manager" ? "مدير مشاريع" : input.role === "procurement_manager" ? "مدير مشتريات" : "مستخدم";
