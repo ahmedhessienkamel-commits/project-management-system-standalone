@@ -1466,7 +1466,8 @@ export const erpRouter = router({
     remove: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
       if (!canManagePartners(ctx.user) || ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "حذف العملاء والموردين متاح للمالك فقط" });
       const db = requireDb(await getDb());
-      const party = (await db.select().from(vendors).where(eq(vendors.id, input.id)).limit(1))[0];
+      const companyId = await resolveActiveCompanyId(db, ctx);
+      const party = (await db.select().from(vendors).where(and(eq(vendors.id, input.id), companyId ? eq(vendors.companyId, companyId) : eq(vendors.id, -1))).limit(1))[0];
       if (!party) throw new TRPCError({ code: "NOT_FOUND", message: "الطرف غير موجود" });
       const [expenseUse, certificateUse, contractUse, documentRows] = await Promise.all([
         db.select({ id: expenses.id }).from(expenses).where(eq(expenses.vendorId, input.id)).limit(1),
