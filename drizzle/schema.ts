@@ -155,6 +155,7 @@ export const inventoryItems = mysqlTable("inventoryItems", {
 
 export const inventoryMovements = mysqlTable("inventoryMovements", {
   id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId"),
   projectId: int("projectId").notNull(),
   stageId: int("stageId"),
   itemId: int("itemId").notNull(),
@@ -177,6 +178,7 @@ export const inventoryMovements = mysqlTable("inventoryMovements", {
 
 export const expenses = mysqlTable("expenses", {
   id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId"),
   projectId: int("projectId"),
   stageId: int("stageId"),
   vendorId: int("vendorId"),
@@ -267,6 +269,7 @@ export const units = mysqlTable("units", {
 
 export const sales = mysqlTable("sales", {
   id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId"),
   projectId: int("projectId").notNull(),
   unitId: int("unitId").notNull(),
   stageId: int("stageId"),
@@ -284,6 +287,7 @@ export const sales = mysqlTable("sales", {
 
 export const collections = mysqlTable("collections", {
   id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId"),
   projectId: int("projectId").notNull(),
   saleId: int("saleId"),
   collectionType: mysqlEnum("collectionType", ["unit_sale", "owner_payment", "contract_payment", "other"]).default("other").notNull(),
@@ -378,6 +382,7 @@ export const payrollAllocations = mysqlTable("payrollAllocations", {
 
 export const contractorContracts = mysqlTable("contractorContracts", {
   id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId"),
   projectId: int("projectId").notNull(),
   stageId: int("stageId"),
   vendorId: int("vendorId").notNull(),
@@ -397,6 +402,7 @@ export const contractorContracts = mysqlTable("contractorContracts", {
 
 export const certificates = mysqlTable("certificates", {
   id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId"),
   projectId: int("projectId").notNull(),
   stageId: int("stageId"),
   vendorId: int("vendorId"),
@@ -680,6 +686,7 @@ export const accounts = mysqlTable("accounts", {
 
 export const accountingDocuments = mysqlTable("accountingDocuments", {
   id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId"),
   projectId: int("projectId"),
   documentType: mysqlEnum("documentType", ["sales_invoice", "purchase_invoice", "purchase_receipt", "credit_note", "journal_entry", "payment_voucher", "receipt_voucher", "quotation", "purchase_order"]).notNull(),
   documentNumber: varchar("documentNumber", { length: 128 }).notNull().unique(),

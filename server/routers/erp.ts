@@ -869,7 +869,8 @@ export const erpRouter = router({
     list: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
-      const rows = await db.select().from(expenses).orderBy(expenses.createdAt);
+      const companyId = await resolveActiveCompanyId(db, ctx);
+      const rows = companyId ? await db.select().from(expenses).where(eq(expenses.companyId, companyId)).orderBy(expenses.createdAt) : [];
       return allowed ? rows.filter((row) => row.projectId === null || allowed.has(row.projectId)) : rows;
     }),
     statement: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), category: z.enum(["materials", "project_operating", "administrative_petty_cash"]), costItemId: z.number().int().positive().optional(), from: z.string().optional(), to: z.string().optional() })).query(async ({ ctx, input }) => {
@@ -1019,7 +1020,8 @@ export const erpRouter = router({
     list: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
-      const rows = await db.select().from(sales).orderBy(sales.createdAt);
+      const companyId = await resolveActiveCompanyId(db, ctx);
+      const rows = companyId ? await db.select().from(sales).where(eq(sales.companyId, companyId)).orderBy(sales.createdAt) : [];
       return allowed ? rows.filter((row) => allowed.has(row.projectId)) : rows;
     }),
           update: protectedProcedure.input(z.object({ id: z.number().int().positive(), projectId: z.number().int().positive(), unitId: z.number().int().positive(), customerName: z.string().trim().min(2), customerPhone: z.string().max(64).optional(), saleDate: z.string().optional(), preTaxAmount: z.number().positive(), taxRate: z.number().min(0).max(100).default(15) })).mutation(async ({ ctx, input }) => {
@@ -1045,8 +1047,10 @@ export const erpRouter = router({
       .input(z.object({ projectId: z.number().int().positive(), unitId: z.number().int().positive(), stageId: z.number().int().positive().optional(), customerName: z.string().trim().min(2), customerPhone: z.string().max(64).optional(), saleDate: z.string().optional(), preTaxAmount: z.number().positive(), taxRate: z.number().min(0).max(100).default(15) }))
       .mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
+        let companyId = await resolveActiveCompanyId(db, ctx);
         await assertProjectAccess(db, ctx, input.projectId);
         await assertProjectWrite(db, ctx, input.projectId);
+        if (!companyId) { const projectCompany = (await db.select({ companyId: projects.companyId }).from(projects).where(eq(projects.id, input.projectId)).limit(1))[0]; companyId = projectCompany?.companyId ?? null; }
         await assertPeriodOpen(db, ctx, input.projectId, input.saleDate ? new Date(input.saleDate) : new Date());
         if (input.stageId) {
           const stage = (await db.select().from(stages).where(eq(stages.id, input.stageId)).limit(1))[0];
@@ -1056,7 +1060,7 @@ export const erpRouter = router({
         const approvalPolicy = await findApprovalPolicy(db, input.projectId, "sale");
         const approvalStatus = approvalPolicy && totals.preTaxAmount <= Number(approvalPolicy.thresholdAmount) ? "approved" as const : "pending" as const;
         const finalized = !approvalPolicy || approvalStatus === "approved";
-        const result = await db.insert(sales).values({ projectId: input.projectId, unitId: input.unitId, stageId: input.stageId || null, customerName: input.customerName, customerPhone: input.customerPhone || null, saleDate: input.saleDate ? new Date(input.saleDate) : null, preTaxAmount: totals.preTaxAmount.toFixed(2), taxAmount: totals.taxAmount.toFixed(2), totalAmount: totals.totalAmount.toFixed(2), recognizedRevenue: finalized ? totals.preTaxAmount.toFixed(2) : "0.00", status: finalized ? "confirmed" : "reserved", createdBy: ctx.user.id });
+        const result = await db.insert(sales).values({ companyId, projectId: input.projectId, unitId: input.unitId, stageId: input.stageId || null, customerName: input.customerName, customerPhone: input.customerPhone || null, saleDate: input.saleDate ? new Date(input.saleDate) : null, preTaxAmount: totals.preTaxAmount.toFixed(2), taxAmount: totals.taxAmount.toFixed(2), totalAmount: totals.totalAmount.toFixed(2), recognizedRevenue: finalized ? totals.preTaxAmount.toFixed(2) : "0.00", status: finalized ? "confirmed" : "reserved", createdBy: ctx.user.id });
         const saleId = Number(result[0].insertId);
         await db.update(units).set({ status: finalized ? "sold" : "reserved" }).where(eq(units.id, input.unitId));
         await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "sale", entityId: saleId, requestedBy: ctx.user.id, status: approvalStatus });
@@ -1069,7 +1073,8 @@ export const erpRouter = router({
     list: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
-      const rows = await db.select().from(collections).orderBy(collections.createdAt);
+      const companyId = await resolveActiveCompanyId(db, ctx);
+      const rows = companyId ? await db.select().from(collections).where(eq(collections.companyId, companyId)).orderBy(collections.createdAt) : [];
       return allowed ? rows.filter((row) => allowed.has(row.projectId)) : rows;
     }),
     update: protectedProcedure.input(z.object({ id: z.number().int().positive(), projectId: z.number().int().positive(), saleId: z.number().int().positive(), amount: z.number().positive(), collectionDestination: z.enum(["cash", "bank", "escrow"]).default("cash"), cashAccountId: z.number().int().positive().optional(), escrowReference: z.string().max(128).optional(), receiptReference: z.string().max(128).optional(), collectionDate: z.string().optional() })).mutation(async ({ ctx, input }) => {
@@ -1087,8 +1092,10 @@ export const erpRouter = router({
       .input(z.object({ projectId: z.number().int().positive(), saleId: z.number().int().positive(), amount: z.number().positive(), collectionDestination: z.enum(["cash", "bank", "escrow"]).default("cash"), cashAccountId: z.number().int().positive().optional(), escrowReference: z.string().max(128).optional(), receiptReference: z.string().max(128).optional(), collectionDate: z.string().optional() }))
       .mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
+        let companyId = await resolveActiveCompanyId(db, ctx);
         await assertProjectAccess(db, ctx, input.projectId);
         await assertProjectWrite(db, ctx, input.projectId);
+        if (!companyId) { const projectCompany = (await db.select({ companyId: projects.companyId }).from(projects).where(eq(projects.id, input.projectId)).limit(1))[0]; companyId = projectCompany?.companyId ?? null; }
         await assertPeriodOpen(db, ctx, input.projectId, input.collectionDate ? new Date(input.collectionDate) : new Date());
         const project = (await db.select({ escrowCashAccountId: projects.escrowCashAccountId, projectType: projects.projectType }).from(projects).where(eq(projects.id, input.projectId)).limit(1))[0];
         if (!project) throw new TRPCError({ code: "NOT_FOUND", message: "المشروع غير موجود" });
@@ -1102,7 +1109,7 @@ export const erpRouter = router({
         const approvalPolicy = await findApprovalPolicy(db, input.projectId, "collection");
         const approvalStatus = approvalPolicy && input.amount <= Number(approvalPolicy.thresholdAmount) ? "approved" as const : "pending" as const;
         const finalized = !approvalPolicy || approvalStatus === "approved";
-        const result = await db.insert(collections).values({ projectId: input.projectId, saleId: input.saleId, collectionDestination: input.collectionDestination, cashAccountId: input.collectionDestination === "escrow" ? project.escrowCashAccountId : input.cashAccountId || null, escrowReference: input.collectionDestination === "escrow" ? input.escrowReference || null : null, amount: input.amount.toFixed(2), receiptReference: input.receiptReference || null, collectionDate: input.collectionDate ? new Date(input.collectionDate) : null, status: finalized ? "received" : "draft", createdBy: ctx.user.id });
+        const result = await db.insert(collections).values({ companyId, projectId: input.projectId, saleId: input.saleId, collectionDestination: input.collectionDestination, cashAccountId: input.collectionDestination === "escrow" ? project.escrowCashAccountId : input.cashAccountId || null, escrowReference: input.collectionDestination === "escrow" ? input.escrowReference || null : null, amount: input.amount.toFixed(2), receiptReference: input.receiptReference || null, collectionDate: input.collectionDate ? new Date(input.collectionDate) : null, status: finalized ? "received" : "draft", createdBy: ctx.user.id });
         const collectionId = Number(result[0].insertId);
         await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "collection", entityId: collectionId, requestedBy: ctx.user.id, status: approvalStatus });
         await db.insert(auditLogs).values({ entityType: "collection", entityId: collectionId, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
@@ -1541,7 +1548,8 @@ export const erpRouter = router({
     list: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
-      const rows = await db.select().from(certificates).orderBy(certificates.createdAt);
+      const companyId = await resolveActiveCompanyId(db, ctx);
+      const rows = companyId ? await db.select().from(certificates).where(eq(certificates.companyId, companyId)).orderBy(certificates.createdAt) : [];
       const visibleRows = allowed ? rows.filter((row) => allowed.has(row.projectId)) : rows;
       if (!visibleRows.length) return [];
       const certificateIds = visibleRows.map((row) => row.id);
@@ -1870,9 +1878,10 @@ export const erpRouter = router({
       }),
     }),
     documents: router({
-      list: protectedProcedure.input(z.object({ documentType: z.enum(["sales_invoice", "purchase_invoice", "purchase_receipt", "credit_note", "journal_entry", "payment_voucher", "receipt_voucher", "quotation", "purchase_order"]).optional() }).optional()).query(async ({ input }) => {
+      list: protectedProcedure.input(z.object({ documentType: z.enum(["sales_invoice", "purchase_invoice", "purchase_receipt", "credit_note", "journal_entry", "payment_voucher", "receipt_voucher", "quotation", "purchase_order"]).optional() }).optional()).query(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
-        const rows = await db.select().from(accountingDocuments);
+        const companyId = await resolveActiveCompanyId(db, ctx);
+        const rows = companyId ? await db.select().from(accountingDocuments).where(eq(accountingDocuments.companyId, companyId)) : [];
         const filtered = rows.filter((row) => !input?.documentType || row.documentType === input.documentType);
         return Promise.all(filtered.map(async (row) => { const creditedAmount = row.documentType === "sales_invoice" ? rows.filter((candidate) => candidate.documentType === "credit_note" && candidate.originalDocumentId === row.id).reduce((sum, candidate) => sum + Number(candidate.totalAmount || 0), 0) : 0; const netTotalAmount = Math.max(Number(row.totalAmount || 0) - creditedAmount, 0); return { ...row, creditedAmount, netTotalAmount, netRemainingAmount: Math.max(netTotalAmount - Number(row.paidAmount || 0), 0), lines: await db.select().from(accountingDocumentLines).where(eq(accountingDocumentLines.documentId, row.id)) }; }));
       }),
