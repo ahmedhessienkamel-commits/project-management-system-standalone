@@ -1259,8 +1259,12 @@ export const erpRouter = router({
     list: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
+      const companyId = await resolveActiveCompanyId(db, ctx);
+      const projectRows = companyId ? await db.select({ id: projects.id }).from(projects).where(eq(projects.companyId, companyId)) : [];
+      const companyProjectIds = new Set(projectRows.map((project) => project.id));
       const rows = await db.select().from(approvalRequests).orderBy(approvalRequests.createdAt);
-      return allowed ? rows.filter((row) => row.projectId === null || allowed.has(row.projectId)) : rows;
+      const companyRows = rows.filter((row) => row.projectId === null || companyProjectIds.has(row.projectId));
+      return allowed ? companyRows.filter((row) => row.projectId === null || allowed.has(row.projectId)) : companyRows;
     }),
     decide: protectedProcedure
       .input(z.object({ id: z.number().int().positive(), decision: z.enum(["approved", "rejected"]), note: z.string().max(1000).optional() }))

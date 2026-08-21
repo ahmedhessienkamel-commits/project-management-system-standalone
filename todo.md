@@ -35575,4 +35575,4 @@
 - [x] Allow the owner/admin to assign one or more companies to each user with a company-specific role and status.
 - [x] Display the assigned companies and effective permissions in the users and permissions page.
 - [ ] Make user company scope drive visible data, navigation, approvals, and document actions.
-- [ ] Add tests for switching, unauthorized access, multi-company membership, and current-company persistence.
+- [x] Add tests for switching, unauthorized access, multi-company membership, and current-company persistence.
