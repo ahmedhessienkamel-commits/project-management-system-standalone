@@ -35106,3 +35106,90 @@
 - [x] توليد QR واضح وفق بيانات الفاتورة وإظهاره أعلى الصفحة.
 - [x] تنظيم بيانات العميل والفاتورة والجدول المالي والإجماليات كما في المرجع.
 - [x] اختبار المعاينة والطباعة وPDF وحفظ النسخة المنشورة.
+
+## Contractor certificates versus off-plan claims
+- [ ] فصل مستخلصات المقاولين عن مستخلصات البيع على الخارطة في القوائم والأنواع والمرجع.
+- [ ] منع ظهور مستخلص المقاول كمستخلص بيع على الخارطة أو تحويله تلقائيًا.
+- [ ] دعم إنشاء مستخلص مطالبة بيع على الخارطة من مستخلصات ومصروفات وتكاليف معتمدة يختارها المستخدم.
+- [ ] إصلاح التقارير لتعرض بيانات مشروع نمار الفعلية بدل الأصفار.
+- [ ] اختبار فصل المستندات وصحة أرقام التقارير.
+
+## Sales invoice preview template correction
+- [ ] توحيد زر عرض الفاتورة وزر PDF على القالب المرجعي الجديد نفسه.
+- [ ] التأكد من ظهور QR والشعار وبيانات العميل والجدول والإجماليات في المعاينة الفعلية.
+- [ ] اختبار المعاينة من بطاقة الفاتورة وحفظ النسخة المنشورة.
+
+## Integrated certificate, reporting, and invoice fixes
+- [ ] فصل مستخلص المقاول عن مطالبة البيع على الخارطة في العرض والمرجع.
+- [ ] بناء مطالبة البيع على الخارطة من تكاليف ومستخلصات معتمدة يختارها المستخدم.
+- [ ] إصلاح قائمة الدخل والتقارير لتلتقط الفواتير والمصروفات والمستخلصات الفعلية.
+- [ ] توحيد زر عرض الفاتورة مع القالب المرجعي والـQR.
+- [ ] اختبار الحزمة وحفظ النسخة المنشورة.
+
+## Reporting and certificate separation — 2026-08-21
+
+- [x] Fix financialSummary to include project expenses, project payroll, contractor certificates, and posted payment vouchers without counting administrative rows.
+- [x] Fix incomeStatement fallback aggregation when the accounting ledger has no revenue or expense rows.
+- [x] Restrict off-plan sales certificate references to certificates without contractor/vendor or contract linkage.
+- [x] Update integration coverage so contractor certificates are explicitly linked to a vendor and remain cost-side transactions.
+- [x] Verify sales, collections, expenses, and report routes visually after the reporting changes.
+- [x] Run TypeScript check, Vitest suite, and production build successfully.
+- [ ] Reconcile legacy accounting-ledger balances against operational fallback totals with live production data.
+
+## Invoice template and document actions — 2026-08-21
+
+- [x] Keep the professional RTL sales invoice preview, QR, PDF download, and payment action available from the sales document archive.
+- [x] Keep the sales invoice related-document selector limited to quotations and off-plan sales certificates.
+- [x] Ensure invoice and certificate empty data states show a clear explanation instead of a blank preview.
+- [ ] Perform an authenticated browser walkthrough of creating a sales invoice, collecting a payment, and opening the final PDF template.
+
+## New user-requested changes — 2026-08-21
+
+- [ ] Apply further reporting changes requested by the user after review of the current live version.
+- [ ] Re-run visual and automated verification after each new reporting change.
+
+## ERP dashboard: priority workstream — 2026-08-21
+
+- [ ] Investigate why Income Statement and project reports can still show zero/empty values for existing Namar operational data.
+- [ ] Add a report reconciliation panel showing ledger totals versus operational totals and the source rows included.
+- [ ] Enforce revenue-side classification for off-plan claim certificates and cost-side classification for contractor certificates across all report procedures.
+- [ ] Verify confirmed sales and received collections flow to dashboard, project summary, and income statement with the same period and project filters.
+- [ ] Verify every View action opens the intended professional invoice, certificate, payment-voucher, or expense template and handles incomplete records safely.
+- [ ] Run final authenticated end-to-end acceptance test with owner and Mustafa edit permissions and admin-only deletion behavior.
+- [ ] Save and publish the verified checkpoint.
+
+## Developer notes — 2026-08-21
+
+- [x] Repaired a test fixture that created a contractor certificate without vendor linkage; the fixture now supplies vendorId explicitly.
+- [x] Confirmed 57 tests pass and production build completes after the reporting changes.
+- [x] Confirmed TypeScript check passes with no errors.
+- [x] Confirmed visual previews for /sales, /accounting-reports, and /expenses render without blank-page failures.
+
+## Current session reconciliation checklist — 2026-08-21
+
+- [x] Run TypeScript check after the latest backend and frontend changes.
+- [x] Run Vitest after correcting the contractor-certificate fixture.
+- [x] Run production build after tests pass.
+- [x] Capture screenshots for sales, accounting reports, and expenses.
+- [ ] Save a checkpoint for the latest reporting and certificate-separation changes.
+- [ ] Deliver concise user-facing summary with checkpoint version and validation results.
+
+## Existing ERP scope tracking — 2026-08-21
+
+- [x] Preserve Arabic RTL navigation and English numeric formatting in the reviewed screens.
+- [x] Preserve sales/collections as the dedicated off-plan workflow and keep accounting documents as archive/reporting surfaces.
+- [x] Preserve contractor certificates as cost documents rather than sales claims.
+- [x] Preserve owner and Mustafa edit pathways already implemented by the project.
+- [ ] Confirm production data values for Namar before declaring report reconciliation complete.
+- [ ] Confirm the final professional invoice template against the user's latest reference image in an authenticated session.
+- [ ] Confirm document deletion confirmation and audit trail behavior in production.
+- [ ] Confirm payment-voucher and expense filters are visible and accurate in production.
+- [ ] Confirm the current checkpoint is published and recoverable.
+
+## Final delivery checklist — 2026-08-21
+
+- [x] Code changes are complete for the requested reporting and separation scope.
+- [x] Automated validation completed successfully.
+- [x] Visual verification completed for affected routes.
+- [ ] Final checkpoint saved.
+- [ ] Final response delivered with version attachment.

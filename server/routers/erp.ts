@@ -369,7 +369,7 @@ export const erpRouter = router({
       const certificateRows = await db.select().from(certificates);
       const visibleRows = allowed ? rows.filter((row) => allowed.has(row.projectId)) : rows;
       return visibleRows.map((row) => {
-        const approvedCertificates = certificateRows.filter((certificate) => certificate.stageId === row.id && ["approved", "paid"].includes(certificate.status));
+        const approvedCertificates = certificateRows.filter((certificate) => certificate.stageId === row.id && Boolean(certificate.vendorId || certificate.contractId) && ["approved", "paid"].includes(certificate.status));
         const progress = calculateCertificateProgress({ plannedBudget: Number(row.plannedBudget || 0), certifiedAmounts: approvedCertificates.map((certificate) => certificate.totalAmount) });
         return {
           ...row,
@@ -448,7 +448,7 @@ export const erpRouter = router({
         const projectVendors = vendorRows.filter((vendor) => vendor.projectId === null || vendor.projectId === project.id);
         const projectAttachments = attachmentRows.filter((attachment) => attachment.projectId === project.id);
         const documentCompleteness = calculateDocumentCompleteness({ vendors: projectVendors, attachments: projectAttachments });
-        const projectCertificates = certificateRows.filter((certificate) => certificate.projectId === project.id && certificate.status !== "rejected");
+        const projectCertificates = certificateRows.filter((certificate) => certificate.projectId === project.id && Boolean(certificate.vendorId || certificate.contractId) && certificate.status !== "rejected");
         const projectInventoryIssues = inventoryMovementRows.filter((movement) => movement.projectId === project.id && movement.status === "posted" && (movement.movementType === "issue" || movement.movementType === "adjustment_out"));
         const inventoryIssuedTotal = projectInventoryIssues.reduce((sum, movement) => sum + Number(movement.totalAmount || 0), 0);
         const subcontractorCostsTotal = projectCertificates.reduce((sum, certificate) => sum + Number(certificate.totalAmount || 0), 0);
@@ -560,7 +560,7 @@ export const erpRouter = router({
       const projectVoucherCosts = postedVouchers.filter((row) => row.projectId !== null && visibleProjectIds.has(row.projectId) && ["materials", "contractor", "operating", "payroll"].includes(row.voucherCategory || "")).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
       const projectExpenses = expenseRows.filter((row) => row.projectId !== null && visibleProjectIds.has(row.projectId) && row.classification !== "administrative" && approved(row.status)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
       const projectPayroll = payrollRows.filter((row) => row.projectId !== null && visibleProjectIds.has(row.projectId) && row.classification !== "administrative" && approved(row.status)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
-      const subcontractorCosts = certificateRows.filter((row) => visibleProjectIds.has(row.projectId) && row.status !== "rejected").reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+      const subcontractorCosts = certificateRows.filter((row) => visibleProjectIds.has(row.projectId) && Boolean(row.vendorId || row.contractId) && row.status !== "rejected").reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
       const inventoryCosts = inventoryRows.filter((row) => row.projectId !== null && visibleProjectIds.has(row.projectId) && row.status === "posted" && ["issue", "adjustment_out"].includes(row.movementType)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
       const projectRevenue = salesRows.filter((row) => visibleProjectIds.has(row.projectId) && row.status === "confirmed").reduce((sum, row) => sum + Number(row.recognizedRevenue || 0), 0);
       const companyExpenses = expenseRows.filter((row) => row.projectId === null && ["administrative", "general_cash", "petty_cash"].includes(row.classification) && approved(row.status));
@@ -1795,8 +1795,17 @@ export const erpRouter = router({
       incomeStatement: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional(), from: z.string().optional(), to: z.string().optional() }).optional()).query(async ({ input }) => {
         const db = requireDb(await getDb());
         const rows = await loadAccountingLedger(db, input || {});
-        const income = rows.filter((row) => row.account?.accountType === "revenue").reduce((sum, row) => sum + Number(row.credit) - Number(row.debit), 0);
-        const expensesTotal = rows.filter((row) => row.account?.accountType === "expense").reduce((sum, row) => sum + Number(row.debit) - Number(row.credit), 0);
+        const ledgerRevenue = rows.filter((row) => row.account?.accountType === "revenue").reduce((sum, row) => sum + Number(row.credit) - Number(row.debit), 0);
+        const ledgerExpenses = rows.filter((row) => row.account?.accountType === "expense").reduce((sum, row) => sum + Number(row.debit) - Number(row.credit), 0);
+        const [salesRows, expenseRows, payrollRows, certificateRows, voucherRows] = await Promise.all([db.select().from(sales), db.select().from(expenses), db.select().from(payroll), db.select().from(certificates), db.select().from(accountingDocuments).where(eq(accountingDocuments.documentType, "payment_voucher"))]);
+        const from = input?.from ? new Date(input.from).getTime() : Number.NEGATIVE_INFINITY;
+        const to = input?.to ? new Date(input.to).getTime() + 86400000 : Number.POSITIVE_INFINITY;
+        const inRange = (date: Date | null) => !date || (new Date(date).getTime() >= from && new Date(date).getTime() <= to);
+        const scoped = <T extends { projectId?: number | null; status?: string; saleDate?: Date | null; expenseDate?: Date | null; createdAt?: Date | null; certificateDate?: Date | null; documentDate?: Date | null }>(rowsToScope: T[], dateKey: keyof T) => rowsToScope.filter((row) => (!input?.projectId || row.projectId === input.projectId) && inRange((row[dateKey] as Date | null | undefined) || null));
+        const operationalRevenue = scoped(salesRows, "saleDate").filter((row) => row.status === "confirmed").reduce((sum, row) => sum + Number(row.recognizedRevenue || 0), 0);
+        const operationalExpenses = scoped(expenseRows, "expenseDate").filter((row) => row.classification !== "administrative" && ["approved", "posted"].includes(row.status)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) + scoped(payrollRows, "createdAt").filter((row) => row.classification !== "administrative" && ["approved", "posted", "paid"].includes(row.status)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) + scoped(certificateRows, "certificateDate").filter((row) => Boolean(row.vendorId || row.contractId) && ["approved", "paid"].includes(row.status)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) + scoped(voucherRows, "documentDate").filter((row) => row.status === "posted").reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+        const income = Math.abs(ledgerRevenue) > 0.001 ? ledgerRevenue : operationalRevenue;
+        const expensesTotal = Math.abs(ledgerExpenses) > 0.001 ? ledgerExpenses : operationalExpenses;
         return { revenue: income, expenses: expensesTotal, netIncome: income - expensesTotal, revenueRows: rows.filter((row) => row.account?.accountType === "revenue"), expenseRows: rows.filter((row) => row.account?.accountType === "expense") };
       }),
       balanceSheet: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional(), from: z.string().optional(), to: z.string().optional() }).optional()).query(async ({ input }) => {
@@ -1944,11 +1953,13 @@ export const erpRouter = router({
     financialSummary: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), from: z.string().optional(), to: z.string().optional() })).query(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
       await assertProjectAccess(db, ctx, input.projectId);
-      const [salesRows, collectionRows, expenseRows, payrollRows] = await Promise.all([
+      const [salesRows, collectionRows, expenseRows, payrollRows, certificateRows, voucherRows] = await Promise.all([
         db.select().from(sales).where(eq(sales.projectId, input.projectId)),
         db.select().from(collections).where(eq(collections.projectId, input.projectId)),
         db.select().from(expenses).where(eq(expenses.projectId, input.projectId)),
         db.select().from(payroll).where(eq(payroll.projectId, input.projectId)),
+        db.select().from(certificates).where(eq(certificates.projectId, input.projectId)),
+        db.select().from(accountingDocuments).where(and(eq(accountingDocuments.projectId, input.projectId), eq(accountingDocuments.documentType, "payment_voucher"))),
       ]);
       const from = input.from ? new Date(input.from).getTime() : Number.NEGATIVE_INFINITY;
       const to = input.to ? new Date(input.to).getTime() + 86400000 : Number.POSITIVE_INFINITY;
@@ -1958,7 +1969,10 @@ export const erpRouter = router({
       const scopedSales = salesRows.filter((row) => inRange(row.saleDate));
       const scopedCollections = collectionRows.filter((row) => inRange(row.collectionDate));
       const totals = calculateFinancialSummaryTotals({ sales: scopedSales, collections: scopedCollections, expenses: scopedExpenses, payroll: scopedPayroll });
-      return { ...totals, expenseRows: scopedExpenses, payrollRows: scopedPayroll, salesRows: scopedSales, collectionRows: scopedCollections };
+      const contractorCertificatesTotal = certificateRows.filter((row) => Boolean(row.vendorId || row.contractId) && ["approved", "paid"].includes(row.status) && inRange(row.certificateDate)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+      const postedVoucherTotal = voucherRows.filter((row) => row.status === "posted" && inRange(row.documentDate)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+      const expensesTotal = totals.expensesTotal + contractorCertificatesTotal + postedVoucherTotal;
+      return { ...totals, expensesTotal, contractorCertificatesTotal, postedVoucherTotal, expenseRows: scopedExpenses, payrollRows: scopedPayroll, salesRows: scopedSales, collectionRows: scopedCollections };
     }),
     dataQuality: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
@@ -1991,7 +2005,7 @@ export const erpRouter = router({
         if (["approved", "posted"].includes(expense.status) && expense.classification === "project" && !expense.costItemId) issues.push({ id: `expense-cost-item-${expense.id}`, entityType: "expense", entityId: expense.id, title: "مصروف مشروع بلا بند تكلفة", detail: `${expense.description} معتمد دون بطاقة تكلفة؛ لن يظهر تفصيله بشكل صحيح في تقارير البنود.`, severity: "warning", action: "تحديد بند التكلفة" });
         if (expense.stageId && (!expense.projectId || !stageRows.some((stage) => stage.id === expense.stageId && stage.projectId === expense.projectId))) issues.push({ id: `expense-stage-${expense.id}`, entityType: "expense", entityId: expense.id, title: "مرحلة المصروف غير متطابقة", detail: `${expense.description} مرتبط بمرحلة لا تتبع المشروع المحدد.`, severity: "critical", action: "تصحيح المرحلة" });
       });
-      certificateRows.filter((certificate) => visible(certificate.projectId) && certificate.status !== "rejected").forEach((certificate) => {
+      certificateRows.filter((certificate) => visible(certificate.projectId) && Boolean(certificate.vendorId || certificate.contractId) && certificate.status !== "rejected").forEach((certificate) => {
         const total = Number(certificate.totalAmount || 0);
         const paid = Number(certificate.paidAmount || 0);
         if (total <= 0) issues.push({ id: `certificate-total-${certificate.id}`, entityType: "certificate", entityId: certificate.id, title: "مستخلص بإجمالي غير صالح", detail: `المستخلص ${certificate.certificateNumber} لا يحتوي إجماليًا موجبًا.`, severity: "critical", action: "مراجعة المستخلص" });
