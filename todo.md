@@ -35400,3 +35400,18 @@
 - [x] Add Arabic RTL UI sections in Inventory for equipment rentals and supplied labor with Excel export where applicable.
 - [x] Add permissions, audit trail, and approval handling consistent with inventory and contract workflows.
 - [x] Add regression tests and perform TypeScript, Vitest, build, visual verification, and checkpoint publication.
+
+## Supply contract visibility verification — 2026-08-21
+- [ ] Verify that the contract form visibly offers supply and supply-and-installation types.
+- [ ] Verify that contract cards visibly show type, line items, contracted quantity, supplied quantity, and remaining quantity.
+- [ ] Verify that inventory receipt visibly filters and selects supply contracts and contract lines.
+- [ ] Verify that posting a receipt updates the visible supplied quantity and remaining quantity.
+- [ ] Fix any missing UI or data refresh, then run tests, build, visual verification, and checkpoint publication.
+
+## Contract-first supply workflow — 2026-08-21
+- [x] Make the Contracts and Certificates page the primary place to create and manage supply and supply-installation contracts.
+- [x] Add a dedicated contract type and line-item editor with contracted, received, installed, approved, and remaining quantities.
+- [x] Show clear contract type and item progress in the contract registry before any inventory receipt is created.
+- [x] Filter inventory receipt contract selectors from the contract registry and only allow eligible supply contracts and their lines.
+- [x] Refresh contract quantities and generated documents after an inventory receipt is approved and posted.
+- [x] Verify the contract-first workflow visually and with tests, then publish a checkpoint.
