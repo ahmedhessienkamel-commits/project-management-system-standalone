@@ -35535,3 +35535,11 @@
 - [x] Add consistent Preview, PDF, Excel, Edit, and related actions to sale certificates/claims.
 - [x] Ensure certificate edit opens the complete certificate form and preserves approval and invoice-conversion workflows.
 - [x] Add tests and visual validation for invoice edit, receipt preview/PDF, and certificate actions.
+
+## Contracts and certificates workspace refinement — 2026-08-21
+- [x] Place contract creation and certificate creation cards side by side at the top of the page.
+- [x] Place contract records and certificate records in clearly separated sections below the creation cards.
+- [x] Add complete contract edit action in the contract register while preserving contract type, project, supplier, stages, cost mappings, and approval data.
+- [x] Add consistent Preview, PDF, Excel, Edit, related actions, and restricted delete to certificate records.
+- [x] Ensure certificate preview and PDF use the professional branded RTL template with company identity and signatures.
+- [x] Run TypeScript, Vitest, production build, and visual verification for the contracts page.

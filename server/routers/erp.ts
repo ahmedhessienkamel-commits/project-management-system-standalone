@@ -1436,6 +1436,34 @@ export const erpRouter = router({
       await db.insert(auditLogs).values({ entityType: "contractor_contract", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify({ ...input, contractItems: normalizedContractItems, ...totals }) });
       return { id, totalAmount: totals.totalAmount };
     }),
+    update: protectedProcedure.input(z.object({ id: z.number().int().positive(), projectId: z.number().int().positive(), stageId: z.number().int().positive().optional(), vendorId: z.number().int().positive(), contractNumber: z.string().trim().min(1), description: z.string().max(2000).optional(), contractType: z.enum(["building_stage", "supply", "supply_installation", "equipment_rental", "labor_supply"]), contractItems: z.array(z.object({ description: z.string().trim().min(1), unit: z.string().trim().min(1), contractedQty: z.number().positive(), unitPrice: z.number().nonnegative(), suppliedQty: z.number().nonnegative().default(0), installedQty: z.number().nonnegative().default(0), approvedQty: z.number().nonnegative().default(0), inventoryItemId: z.number().int().positive().optional(), costItemId: z.number().int().positive().optional(), accountId: z.number().int().positive().optional() })).default([]), preTaxAmount: z.number().nonnegative(), taxRate: z.number().min(0).max(100).default(15), contractDate: z.string().optional() })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      const before = (await db.select().from(contractorContracts).where(eq(contractorContracts.id, input.id)).limit(1))[0];
+      if (!before) throw new TRPCError({ code: "NOT_FOUND", message: "العقد غير موجود" });
+      await assertProjectAccess(db, ctx, before.projectId);
+      await assertProjectWrite(db, ctx, before.projectId);
+      await assertPeriodOpen(db, ctx, input.projectId, input.contractDate ? new Date(input.contractDate) : new Date());
+      if (before.projectId !== input.projectId) throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن نقل العقد إلى مشروع آخر أثناء التعديل" });
+      if (input.contractType !== "building_stage" && input.contractItems.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: "عقد التوريد أو التوريد والتركيب يجب أن يحتوي على بند كمي" });
+      let normalizedContractItems = input.contractItems;
+      if (isMaterialContractType(input.contractType)) {
+        const [inventoryRows, costItemRows, accountRows] = await Promise.all([db.select().from(inventoryItems), db.select().from(costItems), db.select().from(accounts)]);
+        normalizedContractItems = input.contractItems.map((line) => {
+          if (!line.inventoryItemId || !line.costItemId) throw new TRPCError({ code: "BAD_REQUEST", message: "يجب ربط كل بند توريد ببطاقة خامة وبند تكلفة" });
+          const material = inventoryRows.find((row) => row.id === line.inventoryItemId && (!row.projectId || row.projectId === input.projectId));
+          const costItem = costItemRows.find((row) => row.id === line.costItemId && row.isActive === 1);
+          if (!material || !costItem) throw new TRPCError({ code: "BAD_REQUEST", message: "بطاقة الخامة أو بند التكلفة غير صالح" });
+          const account = resolveMaterialCostAccount(costItem, accountRows);
+          if (!account) throw new TRPCError({ code: "BAD_REQUEST", message: "لم يتم إعداد حساب صالح لبند التكلفة" });
+          return { ...line, accountId: account.id };
+        });
+      }
+      const itemAmount = normalizedContractItems.reduce((sum, item) => sum + item.contractedQty * item.unitPrice, 0);
+      const totals = calculateExpenseTotals(normalizedContractItems.length ? itemAmount : input.preTaxAmount, input.taxRate);
+      await db.update(contractorContracts).set({ stageId: input.stageId || null, vendorId: input.vendorId, contractNumber: input.contractNumber, description: input.description || null, contractType: input.contractType, contractItems: normalizedContractItems, preTaxAmount: totals.preTaxAmount.toFixed(2), taxRate: input.taxRate.toFixed(2), taxAmount: totals.taxAmount.toFixed(2), totalAmount: totals.totalAmount.toFixed(2), contractDate: input.contractDate ? new Date(input.contractDate) : null }).where(eq(contractorContracts.id, input.id));
+      await db.insert(auditLogs).values({ entityType: "contractor_contract", entityId: input.id, action: "updated", actorId: ctx.user.id, beforeJson: JSON.stringify(before), afterJson: JSON.stringify({ ...input, contractItems: normalizedContractItems, ...totals }) });
+      return { id: input.id, totalAmount: totals.totalAmount };
+    }),
     summary: protectedProcedure.input(z.object({ contractId: z.number().int().positive() })).query(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
       const contract = (await db.select().from(contractorContracts).where(eq(contractorContracts.id, input.contractId)).limit(1))[0];
