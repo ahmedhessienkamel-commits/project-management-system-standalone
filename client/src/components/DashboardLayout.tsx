@@ -20,7 +20,6 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { startLogin } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { useIsMobile } from "@/hooks/useMobile";
 import { BarChart3, Bell, BookOpen, Boxes, ClipboardList, FileText, Landmark, LayoutDashboard, LogOut, PanelLeft, Plus, Search, Settings2, ShieldAlert, ShieldCheck, Users, UserRound, WalletCards } from "lucide-react";
@@ -81,6 +80,7 @@ export default function DashboardLayout({
     return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
   });
   const { loading, user } = useAuth();
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
     localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
@@ -103,7 +103,7 @@ export default function DashboardLayout({
             </p>
           </div>
           <Button
-            onClick={() => startLogin()}
+            onClick={() => setLocation("/login")}
             size="lg"
             className="w-full shadow-lg hover:shadow-xl transition-all"
           >
