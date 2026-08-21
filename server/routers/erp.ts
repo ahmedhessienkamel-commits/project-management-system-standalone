@@ -1803,10 +1803,11 @@ export const erpRouter = router({
         const inRange = (date: Date | null) => !date || (new Date(date).getTime() >= from && new Date(date).getTime() <= to);
         const scoped = <T extends { projectId?: number | null; status?: string; saleDate?: Date | null; expenseDate?: Date | null; createdAt?: Date | null; certificateDate?: Date | null; documentDate?: Date | null }>(rowsToScope: T[], dateKey: keyof T) => rowsToScope.filter((row) => (!input?.projectId || row.projectId === input.projectId) && inRange((row[dateKey] as Date | null | undefined) || null));
         const operationalRevenue = scoped(salesRows, "saleDate").filter((row) => row.status === "confirmed").reduce((sum, row) => sum + Number(row.recognizedRevenue || 0), 0);
+        const offPlanClaimCertificatesTotal = scoped(certificateRows, "certificateDate").filter((row) => !row.vendorId && !row.contractId && ["submitted", "approved", "paid"].includes(row.status)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
         const operationalExpenses = scoped(expenseRows, "expenseDate").filter((row) => row.classification !== "administrative" && ["approved", "posted"].includes(row.status)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) + scoped(payrollRows, "createdAt").filter((row) => row.classification !== "administrative" && ["approved", "posted", "paid"].includes(row.status)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) + scoped(certificateRows, "certificateDate").filter((row) => Boolean(row.vendorId || row.contractId) && ["approved", "paid"].includes(row.status)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) + scoped(voucherRows, "documentDate").filter((row) => row.status === "posted").reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
         const income = Math.abs(ledgerRevenue) > 0.001 ? ledgerRevenue : operationalRevenue;
         const expensesTotal = Math.abs(ledgerExpenses) > 0.001 ? ledgerExpenses : operationalExpenses;
-        return { revenue: income, expenses: expensesTotal, netIncome: income - expensesTotal, revenueRows: rows.filter((row) => row.account?.accountType === "revenue"), expenseRows: rows.filter((row) => row.account?.accountType === "expense") };
+        return { revenue: income, expenses: expensesTotal, netIncome: income - expensesTotal, offPlanClaimCertificatesTotal, revenueRows: rows.filter((row) => row.account?.accountType === "revenue"), expenseRows: rows.filter((row) => row.account?.accountType === "expense") };
       }),
       balanceSheet: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional(), from: z.string().optional(), to: z.string().optional() }).optional()).query(async ({ input }) => {
         const db = requireDb(await getDb());
@@ -1970,9 +1971,10 @@ export const erpRouter = router({
       const scopedCollections = collectionRows.filter((row) => inRange(row.collectionDate));
       const totals = calculateFinancialSummaryTotals({ sales: scopedSales, collections: scopedCollections, expenses: scopedExpenses, payroll: scopedPayroll });
       const contractorCertificatesTotal = certificateRows.filter((row) => Boolean(row.vendorId || row.contractId) && ["approved", "paid"].includes(row.status) && inRange(row.certificateDate)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+      const offPlanClaimCertificatesTotal = certificateRows.filter((row) => !row.vendorId && !row.contractId && ["submitted", "approved", "paid"].includes(row.status) && inRange(row.certificateDate)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
       const postedVoucherTotal = voucherRows.filter((row) => row.status === "posted" && inRange(row.documentDate)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
       const expensesTotal = totals.expensesTotal + contractorCertificatesTotal + postedVoucherTotal;
-      return { ...totals, expensesTotal, contractorCertificatesTotal, postedVoucherTotal, expenseRows: scopedExpenses, payrollRows: scopedPayroll, salesRows: scopedSales, collectionRows: scopedCollections };
+      return { ...totals, expensesTotal, contractorCertificatesTotal, offPlanClaimCertificatesTotal, postedVoucherTotal, expenseRows: scopedExpenses, payrollRows: scopedPayroll, salesRows: scopedSales, collectionRows: scopedCollections };
     }),
     dataQuality: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
