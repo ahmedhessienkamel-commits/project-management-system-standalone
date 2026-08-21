@@ -17,7 +17,9 @@ export async function createContext(
   opts: CreateExpressContextOptions
 ): Promise<TrpcContext> {
   let user: User | null = null;
-  const passwordToken = opts.req.cookies?.[PASSWORD_SESSION_COOKIE];
+  const authorization = opts.req.headers.authorization;
+  const bearerToken = authorization?.startsWith("Bearer ") ? authorization.slice(7).trim() : undefined;
+  const passwordToken = opts.req.cookies?.[PASSWORD_SESSION_COOKIE] || bearerToken;
   if (passwordToken) {
     try {
       const secret = new TextEncoder().encode(process.env.JWT_SECRET || "development-password-secret");

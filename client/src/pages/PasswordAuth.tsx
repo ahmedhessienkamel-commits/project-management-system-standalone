@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
+import { PASSWORD_SESSION_STORAGE_KEY } from "@shared/const";
 import { CheckCircle2, Copy, Eye, EyeOff } from "lucide-react";
 
 function Shell({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
@@ -25,8 +26,9 @@ export default function PasswordAuth({ invitation = false }: { invitation?: bool
   const [linkCopied, setLinkCopied] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const login = trpc.auth.passwordLogin.useMutation({ onSuccess: () => setLocation("/") });
-  const accept = trpc.auth.acceptInvitation.useMutation({ onSuccess: () => setActivationComplete(true) });
+  const rememberSession = (sessionToken?: string) => { if (!sessionToken) return; try { sessionStorage.setItem(PASSWORD_SESSION_STORAGE_KEY, sessionToken); } catch {} };
+  const login = trpc.auth.passwordLogin.useMutation({ onSuccess: (result) => { rememberSession(result.sessionToken); setLocation("/"); } });
+  const accept = trpc.auth.acceptInvitation.useMutation({ onSuccess: (result) => { rememberSession(result.sessionToken); setActivationComplete(true); } });
   const requestReset = trpc.auth.requestPasswordReset.useMutation({ onSuccess: () => setNotice("إذا كان البريد مسجلًا وله كلمة مرور، فستصل رسالة الاستعادة خلال دقائق. راجع البريد الوارد والرسائل غير المرغوب فيها.") });
   useEffect(() => { if (invitationDetails.data?.email) setEmail(invitationDetails.data.email); }, [invitationDetails.data?.email]);
   const pending = login.isPending || accept.isPending || requestReset.isPending;
