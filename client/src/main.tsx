@@ -8,6 +8,7 @@ import App from "./App";
 import { startLogin } from "./const";
 import "./index.css";
 import { fetchApiWithRetry } from "./lib/apiFetch";
+import { isPublicAuthPath } from "./lib/authRoutes";
 
 const queryClient = new QueryClient();
 
@@ -16,8 +17,9 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (typeof window === "undefined") return;
 
   const isUnauthorized = error.message === UNAUTHED_ERR_MSG;
+  const publicAuthPath = isPublicAuthPath(window.location.pathname);
 
-  if (!isUnauthorized) return;
+  if (!isUnauthorized || publicAuthPath) return;
 
   startLogin();
 };
