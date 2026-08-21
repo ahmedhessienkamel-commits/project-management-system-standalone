@@ -616,6 +616,7 @@ export const erpRouter = router({
   dashboard: router({
     summary: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
+      const activeCompanyId = await resolveActiveCompanyId(db, ctx);
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
       const [allProjectRows, stageRows, expenseRows, collectionRows, approvalRows, attachmentRows, salesRows, payrollRows, vendorRows, certificateRows, administrativePayrollRows, payrollAllocationRows, inventoryMovementRows, accountingDocumentRows, accountingLineRows] = await Promise.all([
         db.select().from(projects),
@@ -635,7 +636,7 @@ export const erpRouter = router({
         db.select().from(accountingDocumentLines),
       ]);
       const postedAccountingDocumentIds = new Set(accountingDocumentRows.filter((document) => document.status === "posted").map((document) => document.id));
-      const projectRows = allowed ? allProjectRows.filter((row) => allowed.has(row.id)) : allProjectRows;
+      const projectRows = allProjectRows.filter((row) => (!activeCompanyId || row.companyId === activeCompanyId) && (!allowed || allowed.has(row.id)));
       const summary = projectRows.map((project) => {
         const projectStages = stageRows.filter((stage) => stage.projectId === project.id);
         const wipLines = accountingLineRows.filter((line) => line.projectId === project.id && project.wipAccountId && line.accountId === project.wipAccountId && postedAccountingDocumentIds.has(line.documentId));
