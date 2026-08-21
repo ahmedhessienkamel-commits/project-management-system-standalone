@@ -140,12 +140,17 @@ async function getAllowedProjectIds(db: NonNullable<Awaited<ReturnType<typeof ge
   return new Set(rows.map((row) => row.projectId));
 }
 
-async function assertProjectAccess(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, ctx: { user: { id: number; role: string } }, projectId: number) {
+async function assertProjectAccess(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, ctx: { user: { id: number; role: string }; req?: any }, projectId: number) {
+  const activeCompanyId = await resolveActiveCompanyId(db, ctx as any);
+  const project = (await db.select({ companyId: projects.companyId }).from(projects).where(eq(projects.id, projectId)).limit(1))[0];
+  if (!project) throw new TRPCError({ code: "NOT_FOUND", message: "المشروع غير موجود" });
+  if (activeCompanyId && project.companyId !== activeCompanyId) throw new TRPCError({ code: "FORBIDDEN", message: "المشروع لا يتبع الشركة النشطة" });
   const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
   if (!canAccessProject(ctx.user.role, allowed, projectId)) throw new TRPCError({ code: "FORBIDDEN", message: "ليس لديك صلاحية على هذا المشروع" });
 }
 
-async function assertProjectWrite(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, ctx: { user: { id: number; role: string } }, projectId: number) {
+async function assertProjectWrite(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, ctx: { user: { id: number; role: string }; req?: any }, projectId: number) {
+  await assertProjectAccess(db, ctx, projectId);
   if (ctx.user.role === "admin") return;
   const member = (await db.select({ projectRole: projectMembers.projectRole }).from(projectMembers).where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, ctx.user.id))).limit(1))[0];
   if (!member || !canWriteProject(ctx.user.role, member.projectRole)) throw new TRPCError({ code: "FORBIDDEN", message: "دور المستخدم لا يسمح بتسجيل حركة جديدة في هذا المشروع" });
