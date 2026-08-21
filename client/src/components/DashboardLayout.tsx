@@ -47,7 +47,7 @@ const menuItems = [
   { icon: FileText, label: "كشوف حساب العهد", path: "/custody?tab=custodyStatement" },
   { section: true, label: "التقارير المحاسبية" },
   { icon: BarChart3, label: "مركز التكلفة", path: "/cost-center" },
-  { icon: BarChart3, label: "قائمة الدخل", path: "/income-statement" },
+  { icon: BarChart3, label: "قائمة دخل المشاريع", path: "/income-statement" },
   { icon: BarChart3, label: "التقارير", path: "/reports" },
   { section: true, label: "المحاسبة" },
   { icon: Landmark, label: "المستندات المحاسبية", path: "/accounting" },
@@ -168,13 +168,15 @@ function DashboardLayoutContent({
     { label: "إسناد مهمة للفريق", path: "/tasks" },
   ];
   const roleLabelAllowList: Record<string, string[] | undefined> = {
-    general_manager: ["لوحة التنفيذ", "الموافقات والمستندات", "مركز التكلفة", "قائمة الدخل", "المبيعات والتحصيلات", "العقود والمستخلصات", "مراقبة المخزون والكميات"],
+    general_manager: ["لوحة التنفيذ", "الموافقات والمستندات", "العقود والمستخلصات", "المبيعات والتحصيلات", "مراقبة المخزون والكميات", "قائمة دخل المشاريع"],
     project_manager: ["لوحة التنفيذ", "المشاريع والمراحل", "العقود والمستخلصات", "الموردون والمقاولون", "الموافقات والمستندات"],
     procurement_manager: ["لوحة التنفيذ", "مراقبة المخزون والكميات", "التكاليف والمصروفات", "الموافقات والمستندات"],
     site_worker: ["لوحة التنفيذ", "مراقبة المخزون والكميات", "طلبات المواد", "طلباتي"],
   };
   const allowedLabels = roleLabelAllowList[user?.role || ""];
-  const visibleMenuItems = allowedLabels ? menuItems.filter((item) => "section" in item || allowedLabels.includes(item.label)) : menuItems;
+  const generalManagerOrder = ["لوحة التنفيذ", "الموافقات والمستندات", "العقود والمستخلصات", "المبيعات والتحصيلات", "مراقبة المخزون والكميات", "قائمة دخل المشاريع"];
+  const generalManagerMenuItems = generalManagerOrder.flatMap((label) => { const item = menuItems.find((candidate) => "path" in candidate && candidate.label === label); return item ? [item] : []; });
+  const visibleMenuItems = user?.role === "general_manager" ? generalManagerMenuItems : allowedLabels ? menuItems.filter((item) => "section" in item || allowedLabels.includes(item.label)) : menuItems;
   const visibleQuickActions = user?.role === "general_manager" ? quickActions.filter((action) => action.path === "/operations?tab=certificates" || action.path === "/inventory") : user?.role === "site_worker" ? quickActions.filter((action) => action.path === "/inventory" || action.path === "/operations?tab=procurement") : allowedLabels ? quickActions.filter((action) => action.path.includes("/operations") || action.path.includes("/tasks") || action.path.includes("/accounting?type=sales_invoice")) : quickActions;
   const searchResults = normalizedSearch ? visibleMenuItems.filter((item): item is Extract<(typeof menuItems)[number], { path: string }> => "path" in item && item.label.toLowerCase().includes(normalizedSearch)).slice(0, 6) : [];
 
@@ -269,7 +271,7 @@ function DashboardLayoutContent({
                         <item.icon
                           className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
                         />
-                        <span>{item.label}</span>
+                        <span className="flex min-w-0 flex-1 items-center justify-between gap-2"><span className="truncate">{item.label}</span>{item.label === "الموافقات والمستندات" && unreadNotifications > 0 && <Badge className="min-w-5 justify-center rounded-full bg-rose-600 px-1 text-[10px] text-white">{unreadNotifications > 99 ? "99+" : unreadNotifications}</Badge>}</span>
                       </a>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

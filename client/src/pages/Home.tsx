@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { isProjectActive } from "../../../shared/projectStatus";
 import { ArrowLeft, CalendarClock, CheckCircle2, CircleDollarSign, Clock3, FileCheck2, FolderKanban, HandCoins, HardHat, Landmark, Plus, ReceiptText, ShieldAlert, WalletCards } from "lucide-react";
 import { useLocation } from "wouter";
@@ -20,6 +21,7 @@ const classificationLabels: Record<string, string> = { operational: "تشغيل�
 
 export default function Home() {
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
   const { data: summaries = [], isLoading } = trpc.erp.dashboard.summary.useQuery();
   const { data: companySummary } = trpc.erp.dashboard.companySummary.useQuery();
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
@@ -65,10 +67,10 @@ export default function Home() {
               <h1 className="text-3xl font-bold tracking-tight text-[#18324b] sm:text-4xl">صورة المشروع في لحظة</h1>
               <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-500">اعرف من أول نظرة هل التنفيذ يسير وفق المخطط، وما سبب أي انحراف في الميزانية أو المراحل أو السيولة.</p>
             </div>
-            <Button onClick={() => setLocation("/projects")} className="gap-2 bg-[#18324b] hover:bg-[#244767]">
+            {user?.role !== "general_manager" && <Button onClick={() => setLocation("/projects")} className="gap-2 bg-[#18324b] hover:bg-[#244767]">
               <Plus className="h-4 w-4" />
               إضافة مشروع
-            </Button>
+            </Button>}
           </header>
 
           {selectedSummary && <ExecutionBoard summary={selectedSummary} rows={selectedDetailReport?.rows.filter((row) => row.rowType === "stage") ?? []} />}
