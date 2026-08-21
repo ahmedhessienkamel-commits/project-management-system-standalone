@@ -35550,3 +35550,10 @@
 - [x] Show the general manager approver name, approval date, and signature status in the final approval slot.
 - [x] Derive signature display from authorization and approval records without bypassing the existing approval workflow.
 - [x] Preserve pending/rejected states in preview and PDF and test the signature rendering.
+
+## Manager certificate approval dashboard — 2026-08-21
+- [x] Add a manager-specific dashboard for certificates awaiting the current user's signature.
+- [x] Separate project-manager review from general-manager approval using the existing approval stage and role rules.
+- [x] Show certificate number, project, contractor, amount, age, current stage, and related contract in the queue.
+- [x] Add preview, approve, and reject-with-reason actions while preserving project access restrictions.
+- [x] Add pending counters and empty/loading/error states, then test and publish the dashboard.
