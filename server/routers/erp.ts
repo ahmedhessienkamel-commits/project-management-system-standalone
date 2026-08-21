@@ -1481,7 +1481,25 @@ export const erpRouter = router({
       const db = requireDb(await getDb());
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
       const rows = await db.select().from(certificates).orderBy(certificates.createdAt);
-      return allowed ? rows.filter((row) => allowed.has(row.projectId)) : rows;
+      const visibleRows = allowed ? rows.filter((row) => allowed.has(row.projectId)) : rows;
+      if (!visibleRows.length) return [];
+      const certificateIds = visibleRows.map((row) => row.id);
+      const approvalRows = await db.select().from(approvalRequests).where(eq(approvalRequests.entityType, "certificate"));
+      const userRows = await db.select({ id: users.id, name: users.name, email: users.email }).from(users);
+      const userMap = new Map(userRows.map((user) => [Number(user.id), user]));
+      return visibleRows.map((row) => {
+        const approvals = approvalRows.filter((approval) => certificateIds.includes(approval.entityId));
+        const preparedBy = userMap.get(Number(row.createdBy));
+        const stage = (name: string) => approvals.filter((approval) => approval.entityId === row.id && approval.approvalStage === name && (approval.status !== "rejected" || approval.reviewedBy)).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+        const projectManager = stage("project_manager");
+        const generalManager = stage("general_manager");
+        const signer = (approval: typeof projectManager) => approval ? { status: approval.status, name: approval.reviewedBy ? userMap.get(Number(approval.reviewedBy))?.name || `مستخدم #${approval.reviewedBy}` : null, userId: approval.reviewedBy ?? null, reviewedAt: approval.reviewedAt, approvalId: approval.id } : null;
+        return { ...row, signatureWorkflow: {
+          preparedBy: { userId: row.createdBy, name: preparedBy?.name || `مستخدم #${row.createdBy}`, preparedAt: row.createdAt },
+          projectManager: signer(projectManager),
+          generalManager: signer(generalManager),
+        } };
+      });
     }),
     create: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), contractId: z.number().int().positive().optional(), stageId: z.number().int().positive().optional(), vendorId: z.number().int().positive().optional(), certificateNumber: z.string().trim().min(1), description: z.string().max(2000).optional(), technicalSpecifications: z.string().max(10000).optional(), certificateItems: z.array(z.object({ contractItemIndex: z.number().int().nonnegative(), suppliedQty: z.number().nonnegative().default(0), installedQty: z.number().nonnegative().default(0), approvedQty: z.number().nonnegative().default(0), unitPrice: z.number().nonnegative().optional() })).default([]), preTaxAmount: z.number().nonnegative(), taxRate: z.number().min(0).max(100).default(15), paidAmount: z.number().nonnegative().default(0), certificateDate: z.string().optional() })).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb());

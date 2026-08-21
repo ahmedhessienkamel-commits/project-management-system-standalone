@@ -23,4 +23,24 @@ describe("professional document preview mode", () => {
     expect(html).not.toContain("معاينة المستند");
     expect(html).toContain("window.onload=()=>setTimeout(()=>window.print(),250)");
   });
+
+  it("renders approval signature roles, names, statuses, and dates", () => {
+    const html = buildProfessionalDocumentHtml(undefined, {
+      ...input,
+      title: "مستخلص مقاول",
+      kind: "certificate",
+      signatureWorkflow: {
+        preparedBy: { name: "المحاسب أحمد", preparedAt: "2026-08-21T10:00:00.000Z" },
+        projectManager: { name: "مدير المشاريع", status: "approved", reviewedAt: "2026-08-21T11:00:00.000Z" },
+        generalManager: { name: null, status: "pending", reviewedAt: null },
+      },
+    });
+    expect(html).toContain("إعداد المستند");
+    expect(html).toContain("المحاسب أحمد");
+    expect(html).toContain("مراجعة مدير المشاريع");
+    expect(html).toContain("مدير المشاريع");
+    expect(html).toContain("معتمد إلكترونيًا");
+    expect(html).toContain("اعتماد المدير العام والختم");
+    expect(html).toContain("بانتظار المستخدم المخول");
+  });
 });

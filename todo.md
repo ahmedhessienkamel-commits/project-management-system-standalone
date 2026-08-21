@@ -35543,3 +35543,10 @@
 - [x] Add consistent Preview, PDF, Excel, Edit, related actions, and restricted delete to certificate records.
 - [x] Ensure certificate preview and PDF use the professional branded RTL template with company identity and signatures.
 - [x] Run TypeScript, Vitest, production build, and visual verification for the contracts page.
+
+## Approval signatures on certificates — 2026-08-21
+- [x] Show the document preparer name in the preparation signature slot.
+- [x] Show the project manager reviewer name, approval date, and signature status in the middle slot.
+- [x] Show the general manager approver name, approval date, and signature status in the final approval slot.
+- [x] Derive signature display from authorization and approval records without bypassing the existing approval workflow.
+- [x] Preserve pending/rejected states in preview and PDF and test the signature rendering.
