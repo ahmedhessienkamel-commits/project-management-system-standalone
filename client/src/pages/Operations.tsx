@@ -74,7 +74,7 @@ export default function Operations(props: any = {}) {
   const receivePurchaseOrder = trpc.erp.procurement.purchaseOrders.receive.useMutation({ onSuccess: () => { utils.erp.procurement.purchaseOrders.list.invalidate(); utils.erp.reports.costCenter.invalidate(); utils.erp.dashboard.invalidate(); } });
   const updatePurchaseInvoice = trpc.erp.procurement.purchaseOrders.updateInvoice.useMutation({ onSuccess: () => utils.erp.procurement.purchaseOrders.list.invalidate() });
   const createCertificate = trpc.erp.certificates.create.useMutation({ onSuccess: () => { utils.erp.certificates.list.invalidate(); utils.erp.approvals.list.invalidate(); utils.erp.reports.costCenter.invalidate(); } });
-  const createContract = trpc.erp.contractorContracts.create.useMutation({ onSuccess: () => utils.erp.contractorContracts.list.invalidate() });
+  const createContract = trpc.erp.contractorContracts.create.useMutation({ onSuccess: () => { utils.erp.contractorContracts.list.invalidate(); setContractForm(emptyContractForm); } });
   const updateContract = trpc.erp.contractorContracts.update.useMutation({ onSuccess: () => { utils.erp.contractorContracts.list.invalidate(); setEditingContractId(null); setContractForm(emptyContractForm); } });
   const createStage = trpc.erp.stages.create.useMutation({ onSuccess: (result) => { utils.erp.stages.list.invalidate(); setContractForm((current) => ({ ...current, stageId: String(result.id) })); setStageCreatorOpen(false); setStageDraft({ code: "", name: "", plannedBudget: "0" }); } });
   const [certificateFormMessage, setCertificateFormMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
