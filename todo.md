@@ -35308,3 +35308,20 @@
 - [x] Keep accounting documents and accounting settings after the reports section as separate groups.
 - [x] Verify the full sidebar order and preserve role-based visibility and routes.
 - [ ] Save and publish the updated checkpoint.
+
+## Mandatory collection date — 2026-08-21
+
+- [ ] Add a required collection date to the invoice payment dialog.
+- [ ] Require and validate the collection date in the server payment procedure.
+- [ ] Persist the selected date on the payment receipt and show it in payment history/documents.
+- [ ] Add automated coverage for missing and valid collection dates.
+- [ ] Run TypeScript, Vitest, build, visual verification, and save the checkpoint.
+
+## Mandatory collection date verification — 2026-08-21
+
+- [x] Add a required collection date to the invoice payment dialog in Sales & Collections.
+- [x] Require and validate the collection date in the server settleSales procedure.
+- [x] Add the same date field to the accounting sales-collection path.
+- [x] Persist the selected date on the receipt voucher document.
+- [x] Run TypeScript, 58 Vitest tests, production build, and visual verification.
+- [ ] Save and publish the mandatory collection-date checkpoint.

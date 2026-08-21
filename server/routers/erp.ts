@@ -1760,7 +1760,7 @@ export const erpRouter = router({
         await db.delete(accountingDocuments).where(eq(accountingDocuments.id, input.id));
         return { id: input.id, deleted: true } as const;
       }),
-      settleSales: protectedProcedure.input(z.object({ salesInvoiceId: z.number().int().positive(), cashAccountId: z.number().int().positive(), amount: z.number().positive(), paymentDate: z.string().optional(), notes: z.string().max(2000).optional() })).mutation(async ({ ctx, input }) => {
+      settleSales: protectedProcedure.input(z.object({ salesInvoiceId: z.number().int().positive(), cashAccountId: z.number().int().positive(), amount: z.number().positive(), paymentDate: z.string().trim().min(1, "تاريخ التحصيل مطلوب"), notes: z.string().max(2000).optional() })).mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
         await assertOperationPermission(db, ctx, "receipt_voucher");
         const invoice = (await db.select().from(accountingDocuments).where(eq(accountingDocuments.id, input.salesInvoiceId)).limit(1))[0];
@@ -1777,7 +1777,7 @@ export const erpRouter = router({
         const receivable = (await db.select({ id: accounts.id }).from(accounts).where(eq(accounts.code, "1201")).limit(1))[0];
         if (!receivable) throw new TRPCError({ code: "BAD_REQUEST", message: "حساب العملاء 1201 غير موجود" });
         const documentNumber = `RV-${Date.now()}`;
-        const result = await db.insert(accountingDocuments).values({ documentType: "receipt_voucher", documentNumber, partyName: invoice.partyName, projectId: invoice.projectId, sourceAccountId: cashAccount.accountId, amount: input.amount.toFixed(2), taxAmount: "0.00", totalAmount: input.amount.toFixed(2), paidAmount: input.amount.toFixed(2), paymentStatus: "paid", paymentMethod: cashAccount.accountType === "bank" ? "bank" : "cash", documentDate: input.paymentDate ? new Date(input.paymentDate) : new Date(), status: "posted", notes: input.notes || `مقبوضات فاتورة ${invoice.documentNumber}`, createdBy: ctx.user.id });
+        const result = await db.insert(accountingDocuments).values({ documentType: "receipt_voucher", documentNumber, partyName: invoice.partyName, projectId: invoice.projectId, sourceAccountId: cashAccount.accountId, amount: input.amount.toFixed(2), taxAmount: "0.00", totalAmount: input.amount.toFixed(2), paidAmount: input.amount.toFixed(2), paymentStatus: "paid", paymentMethod: cashAccount.accountType === "bank" ? "bank" : "cash", documentDate: new Date(input.paymentDate), status: "posted", notes: input.notes || `مقبوضات فاتورة ${invoice.documentNumber}`, createdBy: ctx.user.id });
         const paymentId = Number(result[0].insertId);
         await db.insert(accountingDocumentLines).values([{ documentId: paymentId, accountId: cashAccount.accountId, projectId: invoice.projectId || null, description: `${cashAccount.name} — ${invoice.documentNumber}`, debit: input.amount.toFixed(2), credit: "0.00" }, { documentId: paymentId, accountId: receivable.id, projectId: invoice.projectId || null, description: `تحصيل من ${invoice.partyName || "العميل"}`, debit: "0.00", credit: input.amount.toFixed(2) }]);
         await db.update(accountingDocuments).set({ paidAmount: paidAfter.toFixed(2), paymentStatus }).where(eq(accountingDocuments.id, invoice.id));
