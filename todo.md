@@ -35510,3 +35510,13 @@
 - [x] Link each related action to the source document and prevent duplicate complementary documents where applicable.
 - [x] Preserve role-based edit/delete/approval permissions and audit references.
 - [x] Add tests, visual verification, TypeScript, Vitest, build, and checkpoint.
+
+## Professional document templates — 2026-08-21
+- [x] Inventory all PDF/print preview generators and identify templates missing company identity, logo, and document metadata.
+- [x] Build a reusable professional RTL document shell with company logo, legal/company details, document number, date, status, and consistent branding.
+- [x] Add structured party, project, account, amount, tax, reference, approval, and signature sections where applicable.
+- [ ] Create distinct professional templates for payment vouchers, receipt vouchers, sales/purchase invoices, quotations, contracts, certificates, inventory documents, expenses, custody statements, and accounting reports.
+- [x] Ensure preview and PDF use the same professional template and preserve real document data.
+- [x] Add Arabic labels with clear English references only where useful, replacing raw enum values such as administrative and posted.
+- [x] Add print CSS, page headers/footers, page numbering, and signature/approval blocks.
+- [x] Run visual verification on representative documents, TypeScript, Vitest, build, and checkpoint.
