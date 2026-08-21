@@ -77,7 +77,7 @@ export const appRouter = router({
       if (!user || !verifyPassword(input.password, user.passwordHash)) throw new TRPCError({ code: "UNAUTHORIZED", message: "البريد الإلكتروني أو كلمة المرور غير صحيحة" });
       await db.update(users).set({ lastSignedIn: new Date() }).where(eq(users.id, user.id));
       const token = await createPasswordSession(user.id);
-      ctx.res.cookie(PASSWORD_SESSION_COOKIE, token, { ...getSessionCookieOptions(ctx.req), maxAge: 30 * 24 * 60 * 60 * 1000 });
+      ctx.res.cookie(PASSWORD_SESSION_COOKIE, token, { ...getSessionCookieOptions(ctx.req), sameSite: "lax", maxAge: 30 * 24 * 60 * 60 * 1000 });
       return { success: true } as const;
     }),
     invitationDetails: publicProcedure.input(z.object({ token: z.string().min(20) })).query(async ({ input }) => {
@@ -100,7 +100,7 @@ export const appRouter = router({
       else { const result = await db.insert(users).values({ openId: `password-${randomUUID()}`, name: invitation.name, email, loginMethod: "password", role: invitation.role, jobTitle: invitation.jobTitle, passwordHash, lastSignedIn: new Date() }); userId = Number(result[0].insertId); }
       await db.update(userInvitations).set({ status: "accepted" }).where(eq(userInvitations.id, invitation.id));
       const token = await createPasswordSession(userId);
-      ctx.res.cookie(PASSWORD_SESSION_COOKIE, token, { ...getSessionCookieOptions(ctx.req), maxAge: 30 * 24 * 60 * 60 * 1000 });
+      ctx.res.cookie(PASSWORD_SESSION_COOKIE, token, { ...getSessionCookieOptions(ctx.req), sameSite: "lax", maxAge: 30 * 24 * 60 * 60 * 1000 });
       return { success: true } as const;
     }),
   }),
