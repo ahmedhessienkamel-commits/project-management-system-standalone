@@ -35284,3 +35284,27 @@
 - [x] Place suppliers/contractors, contracts/certificates, and supplier statements as consecutive items directly below Costs & Expenses.
 - [x] Verify the sidebar order, role visibility, and existing routes.
 - [ ] Save and publish the corrected sidebar checkpoint.
+
+## Purchase cycle consolidation — 2026-08-21
+
+- [ ] Move the full purchase-cycle content below the payment-voucher section in Costs & Expenses.
+- [ ] Preserve material requests, purchase orders, approvals, receiving, invoices, and payment tracking exactly as existing workflows.
+- [ ] Keep the same role permissions and approval behavior after relocation.
+- [ ] Remove the standalone Purchase Cycle sidebar item.
+- [ ] Redirect legacy /operations entry without a tab to the consolidated Costs & Expenses purchase section.
+- [ ] Avoid duplicated purchase-cycle content or duplicate mutations after embedding.
+- [ ] Run TypeScript, Vitest, build, screenshots, and save the consolidation checkpoint.
+
+## Accounting reports sidebar placement — 2026-08-21
+
+- [ ] Move the accounting reports section directly below Custody Account Statements in the sidebar.
+- [ ] Keep accounting documents and accounting settings after the reports section as separate groups.
+- [ ] Verify the full sidebar order and preserve role-based visibility and routes.
+- [ ] Run TypeScript/tests/screenshots and save the updated checkpoint.
+
+## Accounting reports sidebar placement verification — 2026-08-21
+
+- [x] Move the accounting reports section directly below Custody Account Statements in the sidebar.
+- [x] Keep accounting documents and accounting settings after the reports section as separate groups.
+- [x] Verify the full sidebar order and preserve role-based visibility and routes.
+- [ ] Save and publish the updated checkpoint.
