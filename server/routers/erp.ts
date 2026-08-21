@@ -1585,6 +1585,22 @@ export const erpRouter = router({
           if (input.documentType === "sales_invoice" && (debitLines.length > 0 || creditLines.length !== 1 || !creditCodes.includes("4101") || input.lines.some((line) => line.costItemId))) throw new TRPCError({ code: "BAD_REQUEST", message: "فاتورة المبيعات يجب أن تحتوي على حساب إيراد المشروع في الجانب الدائن فقط دون جانب مدين أو بند تكلفة" });
           if (input.documentType === "purchase_invoice" && (!creditCodes.includes("2101") || debitCodes.includes("2101"))) throw new TRPCError({ code: "BAD_REQUEST", message: "فاتورة المشتريات يجب أن تكون مدينة على بند التكلفة ودائنة على المورد" });
         }
+        if (input.relatedDocumentType || input.relatedDocumentId) {
+          if (!input.relatedDocumentType || !input.relatedDocumentId) throw new TRPCError({ code: "BAD_REQUEST", message: "حدد نوع ورقم المستند المرتبط معًا" });
+          if (input.relatedDocumentType === "quotation") {
+            const linked = (await db.select({ id: accountingDocuments.id, projectId: accountingDocuments.projectId, documentType: accountingDocuments.documentType }).from(accountingDocuments).where(eq(accountingDocuments.id, input.relatedDocumentId)).limit(1))[0];
+            if (!linked || linked.documentType !== "quotation") throw new TRPCError({ code: "BAD_REQUEST", message: "عرض السعر المرتبط غير موجود" });
+            if (input.projectId && linked.projectId && linked.projectId !== input.projectId) throw new TRPCError({ code: "BAD_REQUEST", message: "عرض السعر لا يخص المشروع المحدد" });
+          } else if (input.relatedDocumentType === "contract") {
+            const linked = (await db.select({ id: contractorContracts.id, projectId: contractorContracts.projectId }).from(contractorContracts).where(eq(contractorContracts.id, input.relatedDocumentId)).limit(1))[0];
+            if (!linked) throw new TRPCError({ code: "BAD_REQUEST", message: "العقد المرتبط غير موجود" });
+            if (input.projectId && linked.projectId && linked.projectId !== input.projectId) throw new TRPCError({ code: "BAD_REQUEST", message: "العقد لا يخص المشروع المحدد" });
+          } else {
+            const linked = (await db.select({ id: certificates.id, projectId: certificates.projectId }).from(certificates).where(eq(certificates.id, input.relatedDocumentId)).limit(1))[0];
+            if (!linked) throw new TRPCError({ code: "BAD_REQUEST", message: "المستخلص المرتبط غير موجود" });
+            if (input.projectId && linked.projectId && linked.projectId !== input.projectId) throw new TRPCError({ code: "BAD_REQUEST", message: "المستخلص لا يخص المشروع المحدد" });
+          }
+        }
         if (input.documentType === "credit_note") {
           if (!input.originalDocumentId || !input.returnType) throw new TRPCError({ code: "BAD_REQUEST", message: "الإشعار الدائن يجب أن يرتبط بفاتورة مبيعات ويحدد نوع المرتجع" });
           const original = (await db.select().from(accountingDocuments).where(eq(accountingDocuments.id, input.originalDocumentId)).limit(1))[0];
