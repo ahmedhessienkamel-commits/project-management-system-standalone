@@ -35520,3 +35520,10 @@
 - [x] Add Arabic labels with clear English references only where useful, replacing raw enum values such as administrative and posted.
 - [x] Add print CSS, page headers/footers, page numbering, and signature/approval blocks.
 - [x] Run visual verification on representative documents, TypeScript, Vitest, build, and checkpoint.
+
+## Separate preview from PDF — 2026-08-21
+- [x] Make Preview open an in-app document page without triggering print or download.
+- [x] Add a clear Download PDF button inside the preview page.
+- [x] Keep the adjacent PDF action dedicated to direct PDF/print output.
+- [x] Apply the separation consistently to supported document types and preserve RTL/company branding.
+- [x] Test preview navigation, PDF download, edit return path, TypeScript, Vitest, build, and checkpoint.
