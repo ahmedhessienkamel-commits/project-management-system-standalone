@@ -36,13 +36,14 @@ const menuItems = [
   { icon: Boxes, label: "مراقبة المخزون والكميات", path: "/inventory" },
   { icon: WalletCards, label: "المبيعات والتحصيلات", path: "/sales" },
   { icon: FileText, label: "التكاليف والمصروفات", path: "/expenses" },
+  { section: true, label: "التكاليف والمصروفات — ملفات الأطراف والعقود" },
+  { icon: ClipboardList, label: "الموردون والمقاولون", path: "/operations?tab=vendors" },
+  { icon: FileText, label: "العقود والمستخلصات", path: "/operations?tab=certificates" },
+  { icon: FileText, label: "كشوف حساب الموردين", path: "/supplier-statements" },
   { icon: UserRound, label: "دليل الموظفين", path: "/employees" },
   { icon: WalletCards, label: "مسير الرواتب", path: "/payroll" },
   { icon: WalletCards, label: "تسجيل / صرف عهدة", path: "/custody" },
   { icon: FileText, label: "كشوف حساب العهد", path: "/custody?tab=custodyStatement" },
-  { icon: ClipboardList, label: "المقاولون والموردون", path: "/operations?tab=vendors" },
-  { icon: FileText, label: "العقود والمستخلصات", path: "/operations?tab=certificates" },
-  { icon: FileText, label: "كشوف حسابات الموردين", path: "/supplier-statements" },
   { section: true, label: "المحاسبة" },
   { icon: Landmark, label: "المستندات المحاسبية", path: "/accounting" },
   { section: true, label: "إعدادات المحاسبة" },
@@ -159,7 +160,7 @@ function DashboardLayoutContent({
   ];
   const roleLabelAllowList: Record<string, string[] | undefined> = {
     general_manager: ["لوحة التنفيذ", "التقارير", "الموافقات والمستندات"],
-    project_manager: ["لوحة التنفيذ", "المشاريع والمراحل", "العقود والمستخلصات", "الموافقات والمستندات"],
+    project_manager: ["لوحة التنفيذ", "المشاريع والمراحل", "العقود والمستخلصات", "الموردون والمقاولون", "الموافقات والمستندات"],
     procurement_manager: ["لوحة التنفيذ", "مراقبة المخزون والكميات", "دورة المشتريات", "الموافقات والمستندات"],
   };
   const allowedLabels = roleLabelAllowList[user?.role || ""];

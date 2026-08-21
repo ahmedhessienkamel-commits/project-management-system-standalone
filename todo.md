@@ -35250,3 +35250,23 @@
 - [x] Add automated linkage logic tests; inventory suite now passes 3 tests.
 - [x] Run TypeScript, 58 Vitest tests, production build, and visual verification.
 - [ ] Save and publish the inventory linkage checkpoint.
+
+## Cost and expense navigation consolidation — 2026-08-21
+
+- [ ] Move contractors and suppliers into a sub-section under Costs & Expenses.
+- [ ] Move contracts and certificates into a sub-section under Costs & Expenses.
+- [ ] Move supplier account statements into a sub-section under Costs & Expenses.
+- [ ] Preserve existing routes as compatibility redirects and keep permissions unchanged.
+- [ ] Add clear internal tabs/cards for the three subsections without duplicating document workflows.
+- [ ] Verify navigation, permissions, TypeScript, Vitest, build, screenshots, and save the checkpoint.
+
+## Cost and expense navigation verification — 2026-08-21
+
+- [x] Add a dedicated navigation grouping for cost and expense party/contract files.
+- [x] Place suppliers and contractors under the cost-and-expense grouping.
+- [x] Place contracts and certificates under the cost-and-expense grouping.
+- [x] Place supplier account statements under the cost-and-expense grouping.
+- [x] Preserve the existing operations and supplier-statement routes for compatibility.
+- [x] Preserve project-manager access to the renamed suppliers/contractors entry.
+- [x] Verify TypeScript, 58 Vitest tests, production build, and screenshots for all affected pages.
+- [ ] Save and publish the navigation checkpoint.
