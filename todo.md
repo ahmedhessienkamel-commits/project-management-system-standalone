@@ -35201,4 +35201,24 @@
 - [x] Add a dashboard liquidity summary card using the selected project’s cash-in, cash-out, net liquidity, funding required, and collection count.
 - [x] Link the dashboard liquidity summary to the detailed cash-flow report.
 - [x] Verify cost-center and dashboard changes with TypeScript, Vitest, build, and screenshots.
-- [ ] Save and publish the checkpoint for cost-center separation and dashboard liquidity.
+- [x] Save and publish the checkpoint for cost-center separation and dashboard liquidity.
+
+## Report data binding, stage comparison, and Excel export — 2026-08-21
+
+- [ ] Audit every report procedure used by the reports page against its operational and accounting data sources.
+- [ ] Verify the project/stage comparison percentage uses the active stage budget and actual values for stage rows, not the whole-project budget.
+- [ ] Add explicit stage-versus-project labels wherever comparison metrics can be confused.
+- [ ] Add Excel export actions to every suitable account statement, financial summary, comparison, and cash-flow report.
+- [ ] Ensure empty report states explain whether there is no data or the selected filters have no matching records.
+- [ ] Run data-flow tests, TypeScript, Vitest, production build, and visual verification for reports and dashboard.
+- [ ] Save and publish the verified report-binding and Excel-export checkpoint.
+
+## Final report-binding review — 2026-08-21
+
+- [x] Confirm Reports page queries live dashboard, financial summary, cash-flow, supplier statement, and account statement procedures.
+- [x] Exclude off-plan claim certificates from project and stage cost and cash-out calculations.
+- [x] Clarify project-wide versus active-stage budget and cost labels in dashboard comparison cards.
+- [x] Convert project comparison and account-statement exports to real XLSX files.
+- [x] Add Excel export to accounting reports, cash-flow details, stage ranking, financial summary, and materials/stage cost reports.
+- [x] Run TypeScript, 57 Vitest tests, production build, and visual screenshots for Reports, Home, and Accounting.
+- [ ] Save and publish the final report-binding checkpoint.
