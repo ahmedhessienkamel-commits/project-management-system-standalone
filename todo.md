@@ -35193,3 +35193,12 @@
 - [x] Visual verification completed for affected routes.
 - [ ] Final checkpoint saved.
 - [ ] Final response delivered with version attachment.
+
+## Cost-center separation and dashboard liquidity — 2026-08-21
+
+- [x] Split the cost-center report into a standalone stages section and a standalone materials/building-materials section.
+- [x] Preserve separate totals and labels for stages versus material cost items in the cost-center report.
+- [x] Add a dashboard liquidity summary card using the selected project’s cash-in, cash-out, net liquidity, funding required, and collection count.
+- [x] Link the dashboard liquidity summary to the detailed cash-flow report.
+- [x] Verify cost-center and dashboard changes with TypeScript, Vitest, build, and screenshots.
+- [ ] Save and publish the checkpoint for cost-center separation and dashboard liquidity.
