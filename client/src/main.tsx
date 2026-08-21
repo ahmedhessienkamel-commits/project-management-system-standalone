@@ -7,6 +7,7 @@ import superjson from "superjson";
 import App from "./App";
 import { startLogin } from "./const";
 import "./index.css";
+import { fetchApiWithRetry } from "./lib/apiFetch";
 
 const queryClient = new QueryClient();
 
@@ -63,7 +64,7 @@ const trpcClient = trpc.createClient({
         return {};
       },
       fetch(input, init) {
-        return globalThis.fetch(input, {
+        return fetchApiWithRetry(input, {
           ...(init ?? {}),
           credentials: "include",
         });

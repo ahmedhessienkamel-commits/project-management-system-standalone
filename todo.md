@@ -35576,3 +35576,16 @@
 - [x] Display the assigned companies and effective permissions in the users and permissions page.
 - [ ] Make user company scope drive visible data, navigation, approvals, and document actions.
 - [x] Add tests for switching, unauthorized access, multi-company membership, and current-company persistence.
+
+### Multi-company implementation checkpoints
+- [x] Isolate dashboard summary and data-quality report by active company project scope.
+- [x] Isolate vendors/customers list, create, update, and restricted delete by active company.
+- [x] Isolate custody and custody-movement lists, statements, and creation by active company.
+- [x] Isolate customer and supplier accounting statements by active-company ledger scope.
+- [ ] Extend active-company scope to remaining accounting reports, master data, attachments, and every protected read/write.
+
+## Bug fix: tRPC returns HTML instead of JSON — 2026-08-21
+- [x] Identify the failing tRPC request and why the server returns the SPA HTML document.
+- [x] Fix the API route, server restart, proxy, or client base URL causing the invalid JSON response.
+- [x] Add a regression test for the affected API path or routing behavior.
+- [x] Verify the home page, browser console, network requests, TypeScript, tests, build, and deployment.
