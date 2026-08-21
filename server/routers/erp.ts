@@ -1545,7 +1545,7 @@ export const erpRouter = router({
         const db = requireDb(await getDb());
         const rows = await db.select().from(accountingDocuments);
         const filtered = rows.filter((row) => !input?.documentType || row.documentType === input.documentType);
-        return Promise.all(filtered.map(async (row) => ({ ...row, lines: await db.select().from(accountingDocumentLines).where(eq(accountingDocumentLines.documentId, row.id)) })));
+        return Promise.all(filtered.map(async (row) => { const creditedAmount = row.documentType === "sales_invoice" ? rows.filter((candidate) => candidate.documentType === "credit_note" && candidate.originalDocumentId === row.id).reduce((sum, candidate) => sum + Number(candidate.totalAmount || 0), 0) : 0; const netTotalAmount = Math.max(Number(row.totalAmount || 0) - creditedAmount, 0); return { ...row, creditedAmount, netTotalAmount, netRemainingAmount: Math.max(netTotalAmount - Number(row.paidAmount || 0), 0), lines: await db.select().from(accountingDocumentLines).where(eq(accountingDocumentLines.documentId, row.id)) }; }));
       }),
       create: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional(), documentType: z.enum(["sales_invoice", "purchase_invoice", "credit_note", "journal_entry", "payment_voucher", "receipt_voucher", "quotation", "purchase_order"]), relatedDocumentType: z.enum(["quotation", "contract", "certificate"]).optional(), relatedDocumentId: z.number().int().positive().optional(), originalDocumentId: z.number().int().positive().optional(), returnType: z.enum(["full", "partial"]).optional(), voucherCategory: z.enum(["contractor", "supplier", "materials", "payroll", "operating", "administrative", "petty_cash"]).optional(), contractorId: z.number().int().positive().optional(), supplierId: z.number().int().positive().optional(), purchaseInvoiceId: z.number().int().positive().optional(), settlementType: z.enum(["invoice", "direct"]).optional(), certificateId: z.number().int().positive().optional(), fixedAssetId: z.number().int().positive().optional(), partyName: z.string().max(255).optional(), partyTaxNumber: z.string().max(64).optional(), documentDate: z.string().optional(), dueDate: z.string().optional(), sourceAccountId: z.number().int().positive().optional(), amount: z.number().nonnegative(), taxAmount: z.number().nonnegative(), totalAmount: z.number().nonnegative(), paymentMethod: z.enum(["cash", "bank"]).optional(), notes: z.string().max(2000).optional(), status: z.enum(["draft", "posted"]).default("draft"), lines: z.array(z.object({ accountId: z.number().int().positive(), costItemId: z.number().int().positive().optional(), projectId: z.number().int().positive().optional(), stageId: z.number().int().positive().optional(), description: z.string().max(500).optional(), debit: z.number().nonnegative(), credit: z.number().nonnegative() })).min(1) })).mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
@@ -1657,10 +1657,12 @@ export const erpRouter = router({
         const cashAccount = (await db.select().from(cashAccounts).where(and(eq(cashAccounts.id, input.cashAccountId), eq(cashAccounts.isActive, 1))).limit(1))[0];
         if (!cashAccount?.accountId) throw new TRPCError({ code: "BAD_REQUEST", message: "اختر بنكًا أو خزينة مرتبطة بحساب محاسبي" });
         const paidBefore = Number(invoice.paidAmount || 0);
-        const remaining = Math.max(Number(invoice.totalAmount || 0) - paidBefore, 0);
-        if (input.amount > remaining + 0.005) throw new TRPCError({ code: "BAD_REQUEST", message: "قيمة المقبوض أكبر من المتبقي على الفاتورة" });
+        const creditedBefore = (await db.select().from(accountingDocuments)).filter((row) => row.documentType === "credit_note" && row.originalDocumentId === invoice.id).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+        const netInvoiceTotal = Math.max(Number(invoice.totalAmount || 0) - creditedBefore, 0);
+        const remaining = Math.max(netInvoiceTotal - paidBefore, 0);
+        if (input.amount > remaining + 0.005) throw new TRPCError({ code: "BAD_REQUEST", message: "قيمة المقبوض أكبر من المتبقي على الفاتورة بعد الإشعارات الدائنة" });
         const paidAfter = paidBefore + input.amount;
-        const paymentStatus = paidAfter >= Number(invoice.totalAmount || 0) - 0.005 ? "paid" : "partially_paid";
+        const paymentStatus = paidAfter >= netInvoiceTotal - 0.005 ? "paid" : "partially_paid";
         const receivable = (await db.select({ id: accounts.id }).from(accounts).where(eq(accounts.code, "1201")).limit(1))[0];
         if (!receivable) throw new TRPCError({ code: "BAD_REQUEST", message: "حساب العملاء 1201 غير موجود" });
         const documentNumber = `RV-${Date.now()}`;
@@ -1668,7 +1670,7 @@ export const erpRouter = router({
         const paymentId = Number(result[0].insertId);
         await db.insert(accountingDocumentLines).values([{ documentId: paymentId, accountId: cashAccount.accountId, projectId: invoice.projectId || null, description: `${cashAccount.name} — ${invoice.documentNumber}`, debit: input.amount.toFixed(2), credit: "0.00" }, { documentId: paymentId, accountId: receivable.id, projectId: invoice.projectId || null, description: `تحصيل من ${invoice.partyName || "العميل"}`, debit: "0.00", credit: input.amount.toFixed(2) }]);
         await db.update(accountingDocuments).set({ paidAmount: paidAfter.toFixed(2), paymentStatus }).where(eq(accountingDocuments.id, invoice.id));
-        return { paymentId, paymentNumber: documentNumber, paidAmount: paidAfter, remaining: Math.max(Number(invoice.totalAmount || 0) - paidAfter, 0), paymentStatus };
+        return { paymentId, paymentNumber: documentNumber, paidAmount: paidAfter, creditedAmount: creditedBefore, remaining: Math.max(netInvoiceTotal - paidAfter, 0), paymentStatus };
       }),
       settlePurchase: protectedProcedure.input(z.object({ purchaseInvoiceId: z.number().int().positive(), cashAccountId: z.number().int().positive(), amount: z.number().positive(), paymentDate: z.string().optional(), notes: z.string().max(2000).optional() })).mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
