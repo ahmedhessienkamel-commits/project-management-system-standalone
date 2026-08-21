@@ -1,8 +1,8 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "81b72fa5-2101-4de0-8003-7adc9a63bbc5",
-  "prevId": "799c39c4-867c-4d95-8bc8-54286dde26e8",
+  "id": "06f3e64b-182c-446e-8c29-985f64c49cb5",
+  "prevId": "a703dedf-749e-4e4a-83d9-5cbded4d64ec",
   "tables": {
     "accountingDocumentLines": {
       "name": "accountingDocumentLines",
@@ -105,7 +105,7 @@
         },
         "documentType": {
           "name": "documentType",
-          "type": "enum('sales_invoice','purchase_invoice','credit_note','journal_entry','payment_voucher','receipt_voucher','quotation','purchase_order')",
+          "type": "enum('sales_invoice','purchase_invoice','purchase_receipt','credit_note','journal_entry','payment_voucher','receipt_voucher','quotation','purchase_order')",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -1130,6 +1130,20 @@
           "notNull": false,
           "autoincrement": false
         },
+        "technicalSpecifications": {
+          "name": "technicalSpecifications",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "certificateItems": {
+          "name": "certificateItems",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "preTaxAmount": {
           "name": "preTaxAmount",
           "type": "decimal(14,2)",
@@ -1485,6 +1499,21 @@
         "description": {
           "name": "description",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "contractType": {
+          "name": "contractType",
+          "type": "enum('building_stage','supply','supply_installation')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'building_stage'"
+        },
+        "contractItems": {
+          "name": "contractItems",
+          "type": "json",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -2935,6 +2964,13 @@
         },
         "sourceDocumentId": {
           "name": "sourceDocumentId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "purchaseInvoiceId": {
+          "name": "purchaseInvoiceId",
           "type": "int",
           "primaryKey": false,
           "notNull": false,

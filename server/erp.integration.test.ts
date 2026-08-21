@@ -102,7 +102,7 @@ describe("ERP sales and collections API flow", () => {
     const vendor = await caller.erp.vendors.create({ name: "مورد عام", taxNumber: "TAX-001", commercialRegistration: "CR-001" });
     const vendorTrace = await caller.erp.controls.trace({ entityType: "vendor", entityId: vendor.id });
     expect(vendorTrace.audits.length).toBeGreaterThan(0);
-    const certificate = await caller.erp.certificates.create({ projectId: 1, stageId: 2, certificateNumber: "CERT-001", description: "مستخلص اختبار", preTaxAmount: 5000, taxRate: 15, paidAmount: 1000 });
+    const certificate = await caller.erp.certificates.create({ projectId: 1, stageId: 2, vendorId: vendor.id, certificateNumber: "CERT-001", description: "مستخلص اختبار", preTaxAmount: 5000, taxRate: 15, paidAmount: 1000 });
     const certificateTrace = await caller.erp.controls.trace({ projectId: 1, entityType: "certificate", entityId: certificate.id });
     expect(certificateTrace.audits.length).toBeGreaterThan(0);
     const custody = await caller.erp.custody.create({ projectId: 1, stageId: 2, holderName: "أحمد", issuedAmount: 2000, settledAmount: 500 });

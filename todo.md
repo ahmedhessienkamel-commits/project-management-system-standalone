@@ -34941,24 +34941,477 @@
 ## Professional sales invoice template
 - [ ] استبدال قالب المستند العام بقالب فاتورة مبيعات RTL احترافي
 - [ ] إظهار بيانات الشركة والعميل والفاتورة والمشروع والضريبة والإجمالي وحساب الإيراد
+
+## Tax invoice preview matching reference
+- [ ] إعادة بناء نافذة عرض فاتورة المبيعات كفاتورة ضريبية RTL كاملة
+- [ ] إضافة رأس الشركة والشعار والرقم الضريبي وبيانات العميل ورقم وتاريخ الفاتورة
+- [ ] إضافة جدول البنود وحقول قبل الضريبة والضريبة والإجمالي والمدفوع والمتبقي وQR
+- [ ] جعل قالب PDF المستخدم من زر التحميل مطابقًا لنفس تصميم المعاينة
+
+## Sales invoice action bar
+- [x] إضافة شريط إجراءات واضح داخل بطاقة فاتورة المبيعات
+- [x] ربط التعديل والطباعة وPDF وإضافة الدفع/سند القبض بالمستند نفسه
+- [x] إضافة قائمة المستند المرتبط ومرتجع الفاتورة مع حماية القيود
+
+## Credit note and sales return
+- [x] إضافة نوع إشعار دائن مرتبط بالفاتورة الأصلية
+- [x] إضافة اختيار مرتجع كامل أو جزئي مع منع تجاوز قيمة الفاتورة
+- [x] تحديث المتبقي والتحصيلات دون حذف أو تعديل الفاتورة الأصلية
+- [x] إظهار مرجع الفاتورة الأصلية في الإشعار وسجل المستندات
+- [x] إتاحة اختيار عرض سعر أو عقد أو مستخلص كمستند مرتبط بفاتورة المبيعات
+- [x] حفظ نوع ورقم المرجع المرتبط وإظهاره في المعاينة وPDF والسجل
+
+## ERP professionalization backlog
+- [ ] توحيد دورة المستندات من عرض السعر إلى العقد ثم المستخلص والفاتورة والتحصيل
+- [ ] إضافة سجل مرجع مستندات يوضح المستند الأصلي والمشتقات والدفعات والمرتجعات
+- [ ] إضافة حالات واضحة للمستند: مسودة، بانتظار الاعتماد، معتمد، مرحّل، مدفوع جزئيًا، مدفوع، مرتجع
+- [x] إضافة منع الترحيل المكرر ومنع تجاوز الدفعات أو المرتجعات للقيمة الأصلية
+- [ ] إضافة إجراءات سياقية وصلاحيات دقيقة وسجل تدقيق لكل تعديل أو اعتماد أو حذف
+- [ ] توحيد قوالب العرض والطباعة وPDF لكل المستندات بالعربية RTL والأرقام الإنجليزية
+
+## Project-type ERP flows
+- [ ] إظهار دورة الوحدات والعملاء والعروض والعقود والتحصيلات للبيع على الخارطة
+- [ ] إظهار دورة العقود والمراحل والمستخلصات ونسب الإنجاز للمشروعات المقاولات
+- [ ] جعل الحقول والإجراءات والحسابات الافتراضية تتغير حسب طبيعة المشروع
+
+## Off-plan sales and escrow corrections
+- [ ] إصلاح زر إضافة عملية دفع ليفتح سند قبض مرتبطًا بالفاتورة
+- [ ] إصلاح زر تعديل فاتورة المبيعات وتحميل بياناتها كاملة عند الفتح
+- [x] إضافة وصف إلزامي للبند المباع وربطه بالمعاينة وPDF
+- [x] عرض الإجمالي والضريبة والمحصل والمتبقي والمرتجعات داخل بطاقة الفاتورة
+- [ ] قصر مراجع الفاتورة على عرض السعر ومستخلص البيع على الخارطة
+- [ ] إضافة حساب ضمان ومرجع مستخلص أمين الحساب لمشاريع البيع على الخارطة
+- [ ] إصلاح زر تعديل فاتورة المبيعات وتحميل بياناتها كاملة عند الفتح
+- [ ] إضافة وصف البند المباع وإظهاره في الفاتورة والمعاينة وPDF
+- [x] إظهار إجمالي الفاتورة والضريبة والمحصل والمتبقي ونسبة التحصيل في سجل المستندات
+- [x] وضع الملخص المالي داخل بطاقة الفاتورة نفسها في حركة المستندات أسفل بياناتها
+- [ ] إظهار المرتجعات والإشعارات الدائنة ضمن صافي المستحق في البطاقة
+- [ ] قصر المستند المرتبط على عرض سعر أو مستخلص بيع على الخارطة غير تابع لمقاول
+- [ ] إضافة حساب ضمان مستقل لمشاريع البيع على الخارطة
+- [ ] إضافة مرجع مستخلص أمين أو مراقب حساب الضمان داخل الفاتورة وسجلها
+- [x] تحديث نوع النشاط في إنشاء المشروع ليشمل مطور عقاري وتطوير عقاري بشكل مستقل
+
+## Project classification field clarification
+- [x] وضع حقل تصنيف المشروع داخل نموذج إنشاء المشروع من البداية
+- [x] حفظ التصنيف وإظهاره في بطاقة المشروع ونموذج التعديل
+- [x] تحديث نوع النشاط في إنشاء المشروع ليشمل مطور عقاري وتطوير عقاري بشكل مستقل
+
+## Project classification field clarification
+- [x] وضع حقل تصنيف المشروع داخل نموذج إنشاء المشروع من البداية
+- [x] حفظ التصنيف وإظهاره في بطاقة المشروع ونموذج التعديل
 - [x] إضافة QR للفواتير النهائية وفصل سند القبض عن الفاتورة في المعاينة وPDF
 
 ## Sales invoice receipt action visibility
 - [x] إظهار زر سند قبض واضح على بطاقة فاتورة المبيعات وربطه بنفس الفاتورة
 
-## Contract item accounting and material linkage — 2026-08-21
-- [x] Add material-card and chart-of-accounts references to each contract line item.
-- [x] Require a linked material/account reference for material supply and supply-installation contract lines.
-- [x] Show the linked material/account in contracts, contractor certificates, purchase invoices, and supplier receipts.
-- [x] Keep contract creation as a commitment only, with no expense or cost posting.
-- [x] Post cost only once from an approved contractor certificate, created purchase invoice, or approved material receipt.
-- [x] Add idempotency/source references to prevent duplicate cost posting when one contract line has multiple related documents.
-- [x] Add tests for contract-only no-posting and source-document posting behavior.
-- [x] Run TypeScript, Vitest, build, visual verification, and publish a checkpoint.
+- [x] إضافة حقول حساب الضمان وأمين الحساب ومرجع المستخلص في إنشاء وتعديل المشاريع.
+- [x] توليد وتطبيق migration لحقول escrow في جدول المشاريع.
+- [x] تقييد المستند المرتبط في فواتير المبيعات على عروض الأسعار ومستخلصات مشاريع البيع على الخارطة.
+- [x] ربط أزرار التعديل وإضافة عملية الدفع بالانتقال إلى نموذج المستند المناسب.
+- [x] مراجعة بصرية نهائية لنماذج المشروع وحركة المستندات.
 
-## Scope correction — supply-only and supply-installation contracts — 2026-08-21
-- [x] Apply material-card and chart-of-accounts linkage only to supply and supply-installation contract lines.
-- [x] Keep building-stage contracts on the existing contractor-certificate workflow without mandatory material-card linkage.
-- [x] Ensure inventory receipt selectors exclude building-stage contracts.
-- [x] Ensure cost posting rules distinguish supply evidence from building-stage certificate approval.
-- [x] Add regression coverage for the contract-type boundary and publish after verification.
+## Sales and collections command center redesign
+- [x] نقل إنشاء فاتورة المبيعات ومشتملاتها إلى قسم المبيعات والتحصيلات.
+- [x] بناء مركز مستقل للعملاء والفواتير والتحصيلات ومتابعة الأرصدة.
+- [x] إضافة متابعة حساب الضمان وربط الفواتير والمستخلصات والتحصيلات به.
+- [x] إزالة فواتير المبيعات والتحصيلات الخاصة بها من المستندات المحاسبية.
+- [x] اختبار التدفق البصري والبرمجي لقسم المبيعات والتحصيلات.
+- [x] تصميم مركز المبيعات والتحصيلات كتجربة متخصصة في التطوير العقاري والبيع على الخارطة تتجاوز الحلول العامة في وضوح دورة العميل والوحدة وحساب الضمان.
+
+- [x] إزالة مرحلة التحميل من فاتورة المبيعات ومنطق حفظها، ومنع ظهور تحقق اختيار المرحلة.
+
+## Off-plan sales certificate workflow
+- [x] إضافة تبويب إنشاء مستخلص بيع على الخارطة داخل المبيعات والتحصيلات.
+- [x] تسجيل بيانات أمين المشروع والمشروع والوحدات والمبلغ والوصف والمرجع في المستخلص.
+- [x] إظهار المستخلصات الجديدة ضمن قائمة المستند المرتبط في فاتورة المبيعات.
+- [x] اختبار إنشاء المستخلص وربطه بالفاتورة.
+
+## Namar off-plan sales and sales-center editing
+- [x] تحديث مشروع نمار إلى تصنيف بيع على الخارطة ليظهر في قائمة المستخلصات.
+- [x] إتاحة تعديل مستخلصات البيع على الخارطة من مركز المبيعات والتحصيلات للمسؤول ومصطفى.
+- [x] إتاحة تعديل فواتير المبيعات والتحصيلات والعملاء والوحدات من مركز المبيعات والتحصيلات للمسؤول ومصطفى.
+- [x] اختبار ظهور نمار وصلاحيات التعديل وحفظ النسخة المنشورة.
+
+## Sales documents register
+- [x] إضافة تبويب سجل موحد للفواتير والمستخلصات والتحصيلات داخل المبيعات والتحصيلات.
+- [x] إضافة بحث وفلاتر وحالات وملخصات مالية وروابط المستندات داخل السجل.
+- [x] إضافة معاينة وتعديل لكل مستند للمسؤول ومصطفى.
+- [x] تقييد حذف مستندات السجل بالمسؤول فقط مع تأكيد وتدقيق.
+- [x] اختبار سجل المستندات والصلاحيات وحفظ النسخة المنشورة.
+
+## Professional sales and certificate documents
+- [x] إظهار العنوان الوطني والرقم الضريبي للعميل اختياريًا عند توفرهما في الفاتورة والسجلات.
+- [x] إضافة معاينة وتعديل وPDF وExcel لكل مستخلص بيع على الخارطة.
+- [x] إضافة تحويل المستخلص إلى فاتورة بيع مرتبطة به.
+- [x] إضافة مواصفات فنية اختيارية للمستخلص.
+- [x] تطوير قالب PDF احترافي للفواتير والمستخلصات مناسب للطباعة والإرسال.
+- [x] اختبار الأدوات والقوالب وحفظ النسخة المنشورة.
+
+## Professional invoice actions and sharing
+- [x] إضافة معاينة فاتورة ضريبية رسمية مع QR بجانب كل فاتورة في سجل المستندات.
+- [x] إضافة تنزيل PDF وتسجيل تحصيل/دفعة بجانب كل فاتورة.
+- [x] إضافة مشاركة المستند عبر واتساب والبريد الإلكتروني.
+- [x] إضافة ملخص مالي أوضح للإجمالي والمحصل والمتبقي أعلى مركز المبيعات.
+- [x] تحسين قالب المستندات ليشمل الشعار وبيانات الشركة والتوقيع والختم.
+- [x] اختبار الأدوات والقالب وحفظ النسخة المنشورة.
+
+## Sales collections ledger and customer file
+- [x] إضافة سجل دفعات تفصيلي لكل فاتورة مع الرصيد المتبقي والتحديث التلقائي.
+- [x] تطوير ملف العميل ليجمع الفواتير والمستخلصات والتحصيلات في واجهة موحدة.
+- [x] إضافة بحث وتصفية متقدمة حسب التاريخ والعميل وحالة الدفع ونوع المستند.
+- [x] اختبار التحديثات وحفظ النسخة المنشورة.
+
+## Invoice preview white-screen fix
+- [ ] إصلاح الصفحة البيضاء عند معاينة فاتورة المبيعات.
+- [ ] اختبار معاينة الفاتورة وقالب PDF بعد الإصلاح.
+
+## Professional invoice and certificate redesign
+- [ ] إصلاح الصفحة البيضاء عند معاينة فاتورة المبيعات والتعامل مع البيانات الناقصة بأمان.
+- [ ] إعادة تصميم مستخلص البيع على الخارطة كوثيقة رسمية احترافية RTL للطباعة والإرسال.
+- [ ] إضافة ترويسة الشركة والشعار وبيانات المشروع وأمين المشروع وحساب الضمان.
+- [ ] إضافة جدول مالي وملخص ضريبة ومواصفات فنية اختيارية وQR وتوقيعات وختم.
+- [ ] اختبار المعاينة والطباعة وPDF ثم حفظ النسخة المنشورة.
+
+## Payment voucher location
+- [x] نقل إنشاء سند الصرف وإدارته إلى صفحة التكاليف والمصروفات.
+- [x] إبقاء سندات الصرف في المستندات المحاسبية كسجل أرشيفي للعرض فقط.
+- [x] اختبار الصلاحيات والتعديل والحذف والتقارير بعد النقل.
+
+## Payment voucher and sales invoice completion
+- [x] نقل إنشاء وإدارة سند الصرف إلى صفحة التكاليف والمصروفات وإبقاؤه أرشيفًا في المحاسبة.
+- [x] إعادة ضبط قالب فاتورة المبيعات RTL ليشمل QR/باركود وبيانات الشركة والعميل والضريبة والتوقيع والختم.
+- [x] اختبار الحفظ والمعاينة والطباعة وPDF وتسجيل التحصيل والصلاحيات.
+
+## Expense page payment voucher workspace
+- [x] استبدال نموذج إضافة المصروف بنموذج سند صرف داخل صفحة التكاليف والمصروفات.
+- [x] عرض سجل سندات الصرف في المساحة الرئيسية مع المعاينة والتعديل والحذف وPDF.
+- [x] الحفاظ على ربط السند بالمشروع وبند التكلفة والبنك أو الخزينة والتقارير.
+- [x] اختبار دورة سند الصرف وحفظ النسخة المنشورة.
+
+## Full payment voucher relocation
+- [x] نقل نموذج سند الصرف الكامل بكل حقوله من المستندات المحاسبية إلى التكاليف والمصروفات.
+- [x] إزالة نموذج إنشاء سند الصرف وبطاقته التشغيلية من المستندات المحاسبية وإبقاء الأرشيف فقط.
+- [x] اختبار الحفظ والتعديل والمعاينة والتقارير بعد النقل.
+
+## Conditional payment voucher structure
+- [x] إظهار بطاقة المقاول فقط عند اختيار اتجاه صرف مقاول.
+- [x] إظهار بطاقة المورد وربط فاتورة الشراء أو الدفعة فقط عند اختيار مورد.
+- [x] إظهار بطاقة الخامات وبندها فقط عند اختيار خامات.
+- [x] إظهار بطاقة الرواتب ونوع المستفيد والموظف/الأجير فقط عند اختيار رواتب.
+- [x] إظهار المشروع ونسبة التحمل وبطاقات المصروف التشغيلي أو الإداري وفق نوع الصرف.
+- [x] ربط الحساب المدين ومصدر الدفع تلقائيًا حسب الاتجاه مع اختبار كل المسارات.
+
+## Reference sales invoice template
+- [x] مطابقة ترويسة الفاتورة المرجعية بالشعار واسم المنشأة والرقم الضريبي والهاتف والعنوان.
+- [x] توليد QR واضح وفق بيانات الفاتورة وإظهاره أعلى الصفحة.
+- [x] تنظيم بيانات العميل والفاتورة والجدول المالي والإجماليات كما في المرجع.
+- [x] اختبار المعاينة والطباعة وPDF وحفظ النسخة المنشورة.
+
+## Contractor certificates versus off-plan claims
+- [ ] فصل مستخلصات المقاولين عن مستخلصات البيع على الخارطة في القوائم والأنواع والمرجع.
+- [ ] منع ظهور مستخلص المقاول كمستخلص بيع على الخارطة أو تحويله تلقائيًا.
+- [ ] دعم إنشاء مستخلص مطالبة بيع على الخارطة من مستخلصات ومصروفات وتكاليف معتمدة يختارها المستخدم.
+- [ ] إصلاح التقارير لتعرض بيانات مشروع نمار الفعلية بدل الأصفار.
+- [ ] اختبار فصل المستندات وصحة أرقام التقارير.
+
+## Sales invoice preview template correction
+- [ ] توحيد زر عرض الفاتورة وزر PDF على القالب المرجعي الجديد نفسه.
+- [ ] التأكد من ظهور QR والشعار وبيانات العميل والجدول والإجماليات في المعاينة الفعلية.
+- [ ] اختبار المعاينة من بطاقة الفاتورة وحفظ النسخة المنشورة.
+
+## Integrated certificate, reporting, and invoice fixes
+- [ ] فصل مستخلص المقاول عن مطالبة البيع على الخارطة في العرض والمرجع.
+- [ ] بناء مطالبة البيع على الخارطة من تكاليف ومستخلصات معتمدة يختارها المستخدم.
+- [ ] إصلاح قائمة الدخل والتقارير لتلتقط الفواتير والمصروفات والمستخلصات الفعلية.
+- [ ] توحيد زر عرض الفاتورة مع القالب المرجعي والـQR.
+- [ ] اختبار الحزمة وحفظ النسخة المنشورة.
+
+## Reporting and certificate separation — 2026-08-21
+
+- [x] Fix financialSummary to include project expenses, project payroll, contractor certificates, and posted payment vouchers without counting administrative rows.
+- [x] Fix incomeStatement fallback aggregation when the accounting ledger has no revenue or expense rows.
+- [x] Restrict off-plan sales certificate references to certificates without contractor/vendor or contract linkage.
+- [x] Update integration coverage so contractor certificates are explicitly linked to a vendor and remain cost-side transactions.
+- [x] Verify sales, collections, expenses, and report routes visually after the reporting changes.
+- [x] Run TypeScript check, Vitest suite, and production build successfully.
+- [ ] Reconcile legacy accounting-ledger balances against operational fallback totals with live production data.
+
+## Invoice template and document actions — 2026-08-21
+
+- [x] Keep the professional RTL sales invoice preview, QR, PDF download, and payment action available from the sales document archive.
+- [x] Keep the sales invoice related-document selector limited to quotations and off-plan sales certificates.
+- [x] Ensure invoice and certificate empty data states show a clear explanation instead of a blank preview.
+- [ ] Perform an authenticated browser walkthrough of creating a sales invoice, collecting a payment, and opening the final PDF template.
+
+## New user-requested changes — 2026-08-21
+
+- [ ] Apply further reporting changes requested by the user after review of the current live version.
+- [ ] Re-run visual and automated verification after each new reporting change.
+
+## ERP dashboard: priority workstream — 2026-08-21
+
+- [ ] Investigate why Income Statement and project reports can still show zero/empty values for existing Namar operational data.
+- [ ] Add a report reconciliation panel showing ledger totals versus operational totals and the source rows included.
+- [ ] Enforce revenue-side classification for off-plan claim certificates and cost-side classification for contractor certificates across all report procedures.
+- [ ] Verify confirmed sales and received collections flow to dashboard, project summary, and income statement with the same period and project filters.
+- [ ] Verify every View action opens the intended professional invoice, certificate, payment-voucher, or expense template and handles incomplete records safely.
+- [ ] Run final authenticated end-to-end acceptance test with owner and Mustafa edit permissions and admin-only deletion behavior.
+- [ ] Save and publish the verified checkpoint.
+
+## Developer notes — 2026-08-21
+
+- [x] Repaired a test fixture that created a contractor certificate without vendor linkage; the fixture now supplies vendorId explicitly.
+- [x] Confirmed 57 tests pass and production build completes after the reporting changes.
+- [x] Confirmed TypeScript check passes with no errors.
+- [x] Confirmed visual previews for /sales, /accounting-reports, and /expenses render without blank-page failures.
+
+## Current session reconciliation checklist — 2026-08-21
+
+- [x] Run TypeScript check after the latest backend and frontend changes.
+- [x] Run Vitest after correcting the contractor-certificate fixture.
+- [x] Run production build after tests pass.
+- [x] Capture screenshots for sales, accounting reports, and expenses.
+- [ ] Save a checkpoint for the latest reporting and certificate-separation changes.
+- [ ] Deliver concise user-facing summary with checkpoint version and validation results.
+
+## Existing ERP scope tracking — 2026-08-21
+
+- [x] Preserve Arabic RTL navigation and English numeric formatting in the reviewed screens.
+- [x] Preserve sales/collections as the dedicated off-plan workflow and keep accounting documents as archive/reporting surfaces.
+- [x] Preserve contractor certificates as cost documents rather than sales claims.
+- [x] Preserve owner and Mustafa edit pathways already implemented by the project.
+- [ ] Confirm production data values for Namar before declaring report reconciliation complete.
+- [ ] Confirm the final professional invoice template against the user's latest reference image in an authenticated session.
+- [ ] Confirm document deletion confirmation and audit trail behavior in production.
+- [ ] Confirm payment-voucher and expense filters are visible and accurate in production.
+- [ ] Confirm the current checkpoint is published and recoverable.
+
+## Final delivery checklist — 2026-08-21
+
+- [x] Code changes are complete for the requested reporting and separation scope.
+- [x] Automated validation completed successfully.
+- [x] Visual verification completed for affected routes.
+- [ ] Final checkpoint saved.
+- [ ] Final response delivered with version attachment.
+
+## Cost-center separation and dashboard liquidity — 2026-08-21
+
+- [x] Split the cost-center report into a standalone stages section and a standalone materials/building-materials section.
+- [x] Preserve separate totals and labels for stages versus material cost items in the cost-center report.
+- [x] Add a dashboard liquidity summary card using the selected project’s cash-in, cash-out, net liquidity, funding required, and collection count.
+- [x] Link the dashboard liquidity summary to the detailed cash-flow report.
+- [x] Verify cost-center and dashboard changes with TypeScript, Vitest, build, and screenshots.
+- [x] Save and publish the checkpoint for cost-center separation and dashboard liquidity.
+
+## Report data binding, stage comparison, and Excel export — 2026-08-21
+
+- [ ] Audit every report procedure used by the reports page against its operational and accounting data sources.
+- [ ] Verify the project/stage comparison percentage uses the active stage budget and actual values for stage rows, not the whole-project budget.
+- [ ] Add explicit stage-versus-project labels wherever comparison metrics can be confused.
+- [ ] Add Excel export actions to every suitable account statement, financial summary, comparison, and cash-flow report.
+- [ ] Ensure empty report states explain whether there is no data or the selected filters have no matching records.
+- [ ] Run data-flow tests, TypeScript, Vitest, production build, and visual verification for reports and dashboard.
+- [ ] Save and publish the verified report-binding and Excel-export checkpoint.
+
+## Final report-binding review — 2026-08-21
+
+- [x] Confirm Reports page queries live dashboard, financial summary, cash-flow, supplier statement, and account statement procedures.
+- [x] Exclude off-plan claim certificates from project and stage cost and cash-out calculations.
+- [x] Clarify project-wide versus active-stage budget and cost labels in dashboard comparison cards.
+- [x] Convert project comparison and account-statement exports to real XLSX files.
+- [x] Add Excel export to accounting reports, cash-flow details, stage ranking, financial summary, and materials/stage cost reports.
+- [x] Run TypeScript, 57 Vitest tests, production build, and visual screenshots for Reports, Home, and Accounting.
+- [ ] Save and publish the final report-binding checkpoint.
+
+## Checkpoint completion — 2026-08-21
+
+- [x] Save and publish the verified report-binding checkpoint 9830e683.
+- [x] Confirm the deployed version is live on the project domain.
+
+## Inventory receiving and issue document linkage — 2026-08-21
+
+- [ ] Add automatic supplier-receipt document creation when an inventory receipt is saved.
+- [ ] Add automatic purchase-invoice creation linked to the supplier receipt and received material.
+- [ ] Preserve supplier, project, material, quantity, unit cost, date, and source reference across the generated documents.
+- [ ] Link material issue movements automatically to the purchase invoice(s) associated with the selected material.
+- [ ] Show the linked receipt, purchase invoice, and source references in inventory history and related reports.
+- [ ] Prevent duplicate automatic documents when an inventory movement is edited or retried.
+- [ ] Add tests for receipt-to-invoice and issue-to-purchase-invoice linkage.
+- [ ] Run TypeScript, Vitest, build, and visual verification, then save and publish the checkpoint.
+
+## Inventory linkage verification — 2026-08-21
+
+- [x] Add automatic supplier-receipt document creation when an inventory receipt is saved.
+- [x] Add automatic purchase-invoice creation linked to the supplier receipt and received material.
+- [x] Preserve supplier, project, material, quantity, unit cost, date, and source reference across generated documents.
+- [x] Link material issue movements automatically to the purchase invoice associated with the selected material.
+- [x] Show linked receipt and purchase invoice references in inventory movement history.
+- [x] Prevent missing supplier data on receipts by making supplier selection mandatory.
+- [x] Add automated linkage logic tests; inventory suite now passes 3 tests.
+- [x] Run TypeScript, 58 Vitest tests, production build, and visual verification.
+- [ ] Save and publish the inventory linkage checkpoint.
+
+## Cost and expense navigation consolidation — 2026-08-21
+
+- [ ] Move contractors and suppliers into a sub-section under Costs & Expenses.
+- [ ] Move contracts and certificates into a sub-section under Costs & Expenses.
+- [ ] Move supplier account statements into a sub-section under Costs & Expenses.
+- [ ] Preserve existing routes as compatibility redirects and keep permissions unchanged.
+- [ ] Add clear internal tabs/cards for the three subsections without duplicating document workflows.
+- [ ] Verify navigation, permissions, TypeScript, Vitest, build, screenshots, and save the checkpoint.
+
+## Cost and expense navigation verification — 2026-08-21
+
+- [x] Add a dedicated navigation grouping for cost and expense party/contract files.
+- [x] Place suppliers and contractors under the cost-and-expense grouping.
+- [x] Place contracts and certificates under the cost-and-expense grouping.
+- [x] Place supplier account statements under the cost-and-expense grouping.
+- [x] Preserve the existing operations and supplier-statement routes for compatibility.
+- [x] Preserve project-manager access to the renamed suppliers/contractors entry.
+- [x] Verify TypeScript, 58 Vitest tests, production build, and screenshots for all affected pages.
+- [ ] Save and publish the navigation checkpoint.
+
+## Sidebar ordering correction — 2026-08-21
+
+- [ ] Remove the extra cost-and-expense subsection heading from the sidebar.
+- [ ] Place suppliers/contractors, contracts/certificates, and supplier statements as consecutive items directly below Costs & Expenses.
+- [ ] Verify the sidebar order and preserve role-based visibility and existing routes.
+- [ ] Save and publish the corrected sidebar checkpoint.
+
+## Sidebar ordering correction verification — 2026-08-21
+
+- [x] Remove the extra cost-and-expense subsection heading from the sidebar.
+- [x] Place suppliers/contractors, contracts/certificates, and supplier statements as consecutive items directly below Costs & Expenses.
+- [x] Verify the sidebar order, role visibility, and existing routes.
+- [ ] Save and publish the corrected sidebar checkpoint.
+
+## Purchase cycle consolidation — 2026-08-21
+
+- [ ] Move the full purchase-cycle content below the payment-voucher section in Costs & Expenses.
+- [ ] Preserve material requests, purchase orders, approvals, receiving, invoices, and payment tracking exactly as existing workflows.
+- [ ] Keep the same role permissions and approval behavior after relocation.
+- [ ] Remove the standalone Purchase Cycle sidebar item.
+- [ ] Redirect legacy /operations entry without a tab to the consolidated Costs & Expenses purchase section.
+- [ ] Avoid duplicated purchase-cycle content or duplicate mutations after embedding.
+- [ ] Run TypeScript, Vitest, build, screenshots, and save the consolidation checkpoint.
+
+## Accounting reports sidebar placement — 2026-08-21
+
+- [ ] Move the accounting reports section directly below Custody Account Statements in the sidebar.
+- [ ] Keep accounting documents and accounting settings after the reports section as separate groups.
+- [ ] Verify the full sidebar order and preserve role-based visibility and routes.
+- [ ] Run TypeScript/tests/screenshots and save the updated checkpoint.
+
+## Accounting reports sidebar placement verification — 2026-08-21
+
+- [x] Move the accounting reports section directly below Custody Account Statements in the sidebar.
+- [x] Keep accounting documents and accounting settings after the reports section as separate groups.
+- [x] Verify the full sidebar order and preserve role-based visibility and routes.
+- [ ] Save and publish the updated checkpoint.
+
+## Mandatory collection date — 2026-08-21
+
+- [ ] Add a required collection date to the invoice payment dialog.
+- [ ] Require and validate the collection date in the server payment procedure.
+- [ ] Persist the selected date on the payment receipt and show it in payment history/documents.
+- [ ] Add automated coverage for missing and valid collection dates.
+- [ ] Run TypeScript, Vitest, build, visual verification, and save the checkpoint.
+
+## Mandatory collection date verification — 2026-08-21
+
+- [x] Add a required collection date to the invoice payment dialog in Sales & Collections.
+- [x] Require and validate the collection date in the server settleSales procedure.
+- [x] Add the same date field to the accounting sales-collection path.
+- [x] Persist the selected date on the receipt voucher document.
+- [x] Run TypeScript, 58 Vitest tests, production build, and visual verification.
+- [ ] Save and publish the mandatory collection-date checkpoint.
+
+## Sales collection invoice selector — 2026-08-21
+
+- [ ] Verify the invoice selector reads saved sales invoices rather than only operational sales rows.
+- [ ] Ensure project selection filters invoices by project without hiding valid invoices with missing sale links.
+- [ ] Include invoice number, customer, total, paid, and remaining values in the selector.
+- [ ] Preserve the required collection date and cash/bank validation.
+- [ ] Add regression coverage for a saved invoice appearing in the collection selector.
+- [ ] Run TypeScript, Vitest, build, visual verification, and save the checkpoint.
+
+## Sales collection invoice selector verification — 2026-08-21
+
+- [x] Verify the selector uses saved sales invoices to label each eligible sale.
+- [x] Filter eligible invoice-backed sales by the selected project while preserving the internal sale link.
+- [x] Show invoice number and invoice total in the collection selector.
+- [x] Preserve cash/bank/escrow and collection-date validation.
+- [x] Run TypeScript, 58 Vitest tests, production build, and visual verification.
+- [ ] Save and publish the collection-selector checkpoint.
+
+## ERP consolidation and payment-voucher edit correction — 2026-08-21
+
+- [ ] Embed the complete Purchase Cycle content below the payment-voucher workspace in Costs & Expenses.
+- [ ] Remove the standalone Purchase Cycle page/menu entry after the embedded workflow is verified.
+- [ ] Keep Suppliers/Contractors, Contracts/Certificates, Supplier Statements, Custody Statements, and Accounting Reports in the requested consecutive sidebar order.
+- [ ] Replace prompt-based payment-voucher editing with a full editable document form using the existing voucher fields.
+- [ ] Ensure editing updates the accounting document and related lines, not only local display data.
+- [ ] Preserve admin-only deletion and owner/Mustafa edit permissions.
+- [ ] Run TypeScript, Vitest, production build, visual verification, and save the final consolidation checkpoint.
+
+## ERP consolidation verification — 2026-08-21
+
+- [x] Embed the existing Purchase Cycle workflow below the payment-voucher workspace in Costs & Expenses.
+- [x] Remove the standalone Purchase Cycle sidebar entry and redirect legacy /operations to /expenses.
+- [x] Preserve supplier/contractor, contract/certificate, supplier-statement, custody-statement, and accounting-report sidebar ordering.
+- [x] Replace prompt-based payment-voucher editing with full-form editing and an explicit cancel action.
+- [x] Extend the document update procedure to persist voucher category, supplier/contractor, purchase invoice, settlement, source account, payment method, and accounting lines.
+- [x] Preserve admin-only deletion and owner/Mustafa edit permissions.
+- [x] Run TypeScript, 58 Vitest tests, production build, and full-page visual verification.
+- [ ] Save and publish the consolidation checkpoint.
+
+## Consolidation checkpoint completion — 2026-08-21
+
+- [x] Save and publish consolidation checkpoint 3ebb1691.
+- [x] Confirm the deployed build contains the embedded purchase cycle and document-form voucher editing.
+
+## Contract supply and installation quantities — 2026-08-21
+- [x] Add contract type: building stage, supply, or supply-and-installation.
+- [x] Add contract line items with description, unit, contracted quantity, unit price, and total.
+- [x] Track supplied quantity, installed quantity, approved quantity, and remaining quantity per contract line.
+- [x] Prevent certificates and payment amounts from exceeding remaining contractual quantities or values.
+- [x] Make contractor certificates reference the contract type and selected contract lines.
+- [x] Show supply/installation progress and remaining commitments in contract and certificate views.
+- [x] Preserve the existing construction-stage certificate workflow for building-stage contracts.
+- [x] Run migration, TypeScript, Vitest, build, visual verification, and save the checkpoint.
+
+## Contract-linked inventory receiving — 2026-08-21
+- [x] Add optional contract and contract-line references to inventory receipt movements.
+- [x] Show eligible supply and supply-installation contracts after selecting the supplier/project.
+- [x] Show contract-line options with contracted, received, approved, and remaining quantities.
+- [x] Validate received quantity against the remaining contractual quantity before saving.
+- [x] Update contract item supplied quantity and inventory movement references atomically.
+- [x] Carry the contract and line references into the generated supplier receipt and purchase invoice.
+- [x] Add regression tests for contract-linked receipts and over-receipt rejection.
+- [x] Run TypeScript, Vitest, build, visual verification, and save the checkpoint.
+
+## Equipment rental and labor supply contracts — 2026-08-21
+- [x] Add contract types for equipment rental and labor supply without mixing them with material supply or contractor construction contracts.
+- [x] Add equipment rental records with equipment class, supplier, daily rate, quantity, rental dates, operating hours, and project/stage allocation.
+- [x] Add labor supply records with worker category, supplier, daily wage, headcount, working days, attendance/period, and project/stage allocation.
+- [x] Link equipment and labor records to their originating contracts and suppliers.
+- [x] Validate rental and labor quantities, dates, and amounts against contractual limits.
+- [x] Post rental and labor costs into project cost centers and financial reports without double counting.
+- [x] Add Arabic RTL UI sections in Inventory for equipment rentals and supplied labor with Excel export where applicable.
+- [x] Add permissions, audit trail, and approval handling consistent with inventory and contract workflows.
+- [x] Add regression tests and perform TypeScript, Vitest, build, visual verification, and checkpoint publication.
+
+## Supply contract visibility verification — 2026-08-21
+- [ ] Verify that the contract form visibly offers supply and supply-and-installation types.
+- [ ] Verify that contract cards visibly show type, line items, contracted quantity, supplied quantity, and remaining quantity.
+- [ ] Verify that inventory receipt visibly filters and selects supply contracts and contract lines.
+- [ ] Verify that posting a receipt updates the visible supplied quantity and remaining quantity.
+- [ ] Fix any missing UI or data refresh, then run tests, build, visual verification, and checkpoint publication.
+
+## Contract-first supply workflow — 2026-08-21
+- [x] Make the Contracts and Certificates page the primary place to create and manage supply and supply-installation contracts.
+- [x] Add a dedicated contract type and line-item editor with contracted, received, installed, approved, and remaining quantities.
+- [x] Show clear contract type and item progress in the contract registry before any inventory receipt is created.
+- [x] Filter inventory receipt contract selectors from the contract registry and only allow eligible supply contracts and their lines.
+- [x] Refresh contract quantities and generated documents after an inventory receipt is approved and posted.
+- [x] Verify the contract-first workflow visually and with tests, then publish a checkpoint.

@@ -21,6 +21,33 @@ export function calculateInventoryBalance(movements: InventoryMovementLike[]) {
   );
 }
 
+export type InventoryReceiptLink = { purchaseInvoiceId: number | null; reference?: string | null };
+
+export type ContractQuantityLine = { contractedQty: string | number | null; receivedQty: string | number | null };
+
+export function remainingContractQuantity(line: ContractQuantityLine) {
+  return Math.max(0, Number(line.contractedQty || 0) - Number(line.receivedQty || 0));
+}
+
+export function canReceiveContractQuantity(line: ContractQuantityLine, requestedQty: string | number) {
+  return Number(requestedQty || 0) <= remainingContractQuantity(line) + 0.0005;
+}
+
+export function calculateServiceEntryTotal(input: { entryType: "equipment_rental" | "labor_supply"; quantity?: number; rentalDays?: number; dailyRate?: number; headcount?: number; workDays?: number; dailyWage?: number }) {
+  const total = input.entryType === "equipment_rental"
+    ? Number(input.quantity || 0) * Number(input.rentalDays || 0) * Number(input.dailyRate || 0)
+    : Number(input.headcount || 0) * Number(input.workDays || 0) * Number(input.dailyWage || 0);
+  return Number(total.toFixed(2));
+}
+
+export function remainingServiceContractAmount(contractTotal: number, postedAmounts: number[]) {
+  return Math.max(0, Number(contractTotal || 0) - postedAmounts.reduce((sum, amount) => sum + Number(amount || 0), 0));
+}
+
+export function selectPurchaseInvoiceForIssue(receipts: InventoryReceiptLink[]) {
+  return receipts.find((receipt) => Boolean(receipt.purchaseInvoiceId))?.purchaseInvoiceId ?? null;
+}
+
 export type InventoryApprovalStage = "mostafa" | "owner" | "complete";
 
 export function canReviewInventoryStage(stage: InventoryApprovalStage, user: { id: number; role: string }) {
@@ -34,14 +61,4 @@ export function nextInventoryApprovalStage(stage: InventoryApprovalStage, decisi
   if (stage === "mostafa") return "owner" as const;
   if (stage === "owner") return "complete" as const;
   return "complete" as const;
-}
-
-export type MaterialContractType = "building_stage" | "supply" | "supply_installation" | "equipment_rental" | "labor_supply";
-
-export function isMaterialContractType(contractType: MaterialContractType) {
-  return contractType === "supply" || contractType === "supply_installation";
-}
-
-export function getContractLineRemaining(contractedQty: number, suppliedQty: number) {
-  return Math.max(0, contractedQty - suppliedQty);
 }

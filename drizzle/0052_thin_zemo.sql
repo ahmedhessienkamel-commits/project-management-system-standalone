@@ -1,2 +1,0 @@
-ALTER TABLE `contractorContracts` ADD `contractType` enum('building_stage','supply','supply_installation','equipment_rental','labor_supply') DEFAULT 'building_stage' NOT NULL;--> statement-breakpoint
-ALTER TABLE `contractorContracts` ADD `contractItems` json NOT NULL;

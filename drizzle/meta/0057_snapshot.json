@@ -1,8 +1,8 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "81b72fa5-2101-4de0-8003-7adc9a63bbc5",
-  "prevId": "799c39c4-867c-4d95-8bc8-54286dde26e8",
+  "id": "d5be41e5-52dc-4bed-b775-5536d32ccede",
+  "prevId": "d186d3d7-1b0b-4650-b852-bfe1c4630ae9",
   "tables": {
     "accountingDocumentLines": {
       "name": "accountingDocumentLines",
@@ -105,7 +105,7 @@
         },
         "documentType": {
           "name": "documentType",
-          "type": "enum('sales_invoice','purchase_invoice','credit_note','journal_entry','payment_voucher','receipt_voucher','quotation','purchase_order')",
+          "type": "enum('sales_invoice','purchase_invoice','purchase_receipt','credit_note','journal_entry','payment_voucher','receipt_voucher','quotation','purchase_order')",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -1125,6 +1125,13 @@
         },
         "description": {
           "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "technicalSpecifications": {
+          "name": "technicalSpecifications",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -2935,6 +2942,13 @@
         },
         "sourceDocumentId": {
           "name": "sourceDocumentId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "purchaseInvoiceId": {
+          "name": "purchaseInvoiceId",
           "type": "int",
           "primaryKey": false,
           "notNull": false,

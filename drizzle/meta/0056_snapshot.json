@@ -1,8 +1,8 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "81b72fa5-2101-4de0-8003-7adc9a63bbc5",
-  "prevId": "799c39c4-867c-4d95-8bc8-54286dde26e8",
+  "id": "d186d3d7-1b0b-4650-b852-bfe1c4630ae9",
+  "prevId": "81b72fa5-2101-4de0-8003-7adc9a63bbc5",
   "tables": {
     "accountingDocumentLines": {
       "name": "accountingDocumentLines",
@@ -1125,6 +1125,13 @@
         },
         "description": {
           "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "technicalSpecifications": {
+          "name": "technicalSpecifications",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
