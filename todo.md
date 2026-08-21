@@ -35371,15 +35371,14 @@
 - [x] Confirm the deployed build contains the embedded purchase cycle and document-form voucher editing.
 
 ## Contract supply and installation quantities — 2026-08-21
-
-- [ ] Add contract type: building stage, supply, or supply-and-installation.
-- [ ] Add contract line items with description, unit, contracted quantity, unit price, and total.
-- [ ] Track supplied quantity, installed quantity, approved quantity, and remaining quantity per contract line.
-- [ ] Prevent certificates and payment amounts from exceeding remaining contractual quantities or values.
-- [ ] Make contractor certificates reference the contract type and selected contract lines.
-- [ ] Show supply/installation progress and remaining commitments in contract and certificate views.
-- [ ] Preserve the existing construction-stage certificate workflow for building-stage contracts.
-- [ ] Run migration, TypeScript, Vitest, build, visual verification, and save the checkpoint.
+- [x] Add contract type: building stage, supply, or supply-and-installation.
+- [x] Add contract line items with description, unit, contracted quantity, unit price, and total.
+- [x] Track supplied quantity, installed quantity, approved quantity, and remaining quantity per contract line.
+- [x] Prevent certificates and payment amounts from exceeding remaining contractual quantities or values.
+- [x] Make contractor certificates reference the contract type and selected contract lines.
+- [x] Show supply/installation progress and remaining commitments in contract and certificate views.
+- [x] Preserve the existing construction-stage certificate workflow for building-stage contracts.
+- [x] Run migration, TypeScript, Vitest, build, visual verification, and save the checkpoint.
 
 ## Contract-linked inventory receiving — 2026-08-21
 - [x] Add optional contract and contract-line references to inventory receipt movements.
