@@ -551,7 +551,7 @@ export const erpRouter = router({
     summary: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
-      const [allProjectRows, stageRows, expenseRows, collectionRows, approvalRows, attachmentRows, salesRows, payrollRows, vendorRows, certificateRows, administrativePayrollRows, payrollAllocationRows, inventoryMovementRows] = await Promise.all([
+      const [allProjectRows, stageRows, expenseRows, collectionRows, approvalRows, attachmentRows, salesRows, payrollRows, vendorRows, certificateRows, administrativePayrollRows, payrollAllocationRows, inventoryMovementRows, accountingDocumentRows, accountingLineRows] = await Promise.all([
         db.select().from(projects),
         db.select().from(stages),
         db.select().from(expenses),
@@ -565,10 +565,15 @@ export const erpRouter = router({
         db.select().from(administrativePayroll),
         db.select().from(payrollAllocations),
         db.select().from(inventoryMovements),
+        db.select({ id: accountingDocuments.id, status: accountingDocuments.status }).from(accountingDocuments),
+        db.select().from(accountingDocumentLines),
       ]);
+      const postedAccountingDocumentIds = new Set(accountingDocumentRows.filter((document) => document.status === "posted").map((document) => document.id));
       const projectRows = allowed ? allProjectRows.filter((row) => allowed.has(row.id)) : allProjectRows;
       const summary = projectRows.map((project) => {
         const projectStages = stageRows.filter((stage) => stage.projectId === project.id);
+        const wipLines = accountingLineRows.filter((line) => line.projectId === project.id && project.wipAccountId && line.accountId === project.wipAccountId && postedAccountingDocumentIds.has(line.documentId));
+        const wipTotals = calculateWipBalance(wipLines);
         const projectExpenses = expenseRows.filter((expense) => expense.projectId === project.id && expense.classification !== "administrative" && ["approved", "posted"].includes(expense.status));
         const projectCollections = collectionRows.filter((collection) => collection.projectId === project.id && collection.status === "received");
         const projectSales = salesRows.filter((sale) => sale.projectId === project.id && sale.status === "confirmed");
@@ -635,6 +640,10 @@ export const erpRouter = router({
         const reasons = projectHealthReasons({ budgetUsage, progress, delayedStages, cashGap, pendingApprovals: projectApprovals.length, overdueApprovals, scheduleVariancePct });
         return {
           project,
+          wipDebit: wipTotals.debit,
+          wipCredit: wipTotals.credit,
+          wipBalance: wipTotals.balance,
+          wipClosed: Boolean(project.wipClosedAt),
           plannedBudget: planned,
           actualCost: actual,
           paidCost: paid,
