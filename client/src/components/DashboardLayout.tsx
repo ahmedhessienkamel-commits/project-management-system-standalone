@@ -160,15 +160,16 @@ function DashboardLayoutContent({
     { label: "فتح مسير الرواتب", path: "/payroll" },
     { label: "تسجيل طلب شراء", path: "/operations" },
     { label: "مراقبة المخزون والكميات", path: "/inventory" },
+    { label: "إسناد مهمة للفريق", path: "/tasks" },
   ];
   const roleLabelAllowList: Record<string, string[] | undefined> = {
-    general_manager: ["لوحة التنفيذ", "التقارير", "الموافقات والمستندات"],
+    general_manager: ["لوحة التنفيذ", "التقارير", "الموافقات والمستندات", "المهام اليومية"],
     project_manager: ["لوحة التنفيذ", "المشاريع والمراحل", "العقود والمستخلصات", "الموردون والمقاولون", "الموافقات والمستندات"],
     procurement_manager: ["لوحة التنفيذ", "مراقبة المخزون والكميات", "التكاليف والمصروفات", "الموافقات والمستندات"],
   };
   const allowedLabels = roleLabelAllowList[user?.role || ""];
   const visibleMenuItems = allowedLabels ? menuItems.filter((item) => "section" in item || allowedLabels.includes(item.label)) : menuItems;
-  const visibleQuickActions = allowedLabels ? quickActions.filter((action) => action.path.includes("/operations") || action.path.includes("/inventory")) : quickActions;
+  const visibleQuickActions = allowedLabels ? quickActions.filter((action) => action.path.includes("/operations") || action.path.includes("/inventory") || action.path.includes("/tasks")) : quickActions;
   const searchResults = normalizedSearch ? visibleMenuItems.filter((item): item is Extract<(typeof menuItems)[number], { path: string }> => "path" in item && item.label.toLowerCase().includes(normalizedSearch)).slice(0, 6) : [];
 
   useEffect(() => {

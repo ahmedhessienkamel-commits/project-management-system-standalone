@@ -12,14 +12,15 @@ import { calculateStageTimeVariance } from "../../shared/stageTiming";
 import { allocateAdministrativeExpense, normalizeExpenseTaxRate, validateExpenseAllocation } from "../../shared/expenseAllocation";
 import { calculateInventoryBalance, canReceiveContractQuantity, canReviewInventoryStage, nextInventoryApprovalStage, remainingContractQuantity, selectPurchaseInvoiceForIssue, calculateServiceEntryTotal, remainingServiceContractAmount, calculateMaterialReceiptCost, materialReceiptExpenseReference, isMaterialContractType, resolveMaterialCostAccount } from "../../shared/inventory";
 import { calculateWipBalance, buildWipClosingLines } from "../../shared/wip";
+import { canAssignTeamTasks } from "../../shared/taskPermissions";
 
 const projectStatus = z.enum(["planning", "active", "paused", "completed", "archived"]);
-const operationKey = z.enum(["payment_voucher", "receipt_voucher", "expense", "certificate", "payroll", "custody", "purchase_invoice", "sales_invoice", "purchase_request", "inventory_item", "inventory_receipt", "inventory_issue", "edit", "delete", "approve"]);
+const operationKey = z.enum(["payment_voucher", "receipt_voucher", "expense", "certificate", "payroll", "custody", "purchase_invoice", "sales_invoice", "purchase_request", "inventory_item", "inventory_receipt", "inventory_issue", "task_assignment", "edit", "delete", "approve"]);
 const operationCatalog = [
   { key: "payment_voucher", label: "سند صرف" }, { key: "receipt_voucher", label: "سند قبض" }, { key: "expense", label: "المصروفات" },
   { key: "certificate", label: "المستخلصات" }, { key: "payroll", label: "الرواتب" }, { key: "custody", label: "العهد" },
   { key: "purchase_invoice", label: "فاتورة شراء" }, { key: "sales_invoice", label: "فاتورة بيع" }, { key: "purchase_request", label: "طلب شراء" },
-  { key: "inventory_item", label: "بطاقات الخامات" }, { key: "inventory_receipt", label: "استلام خامات" }, { key: "inventory_issue", label: "سحب خامات" },
+  { key: "inventory_item", label: "بطاقات الخامات" }, { key: "inventory_receipt", label: "استلام خامات" }, { key: "inventory_issue", label: "سحب خامات" }, { key: "task_assignment", label: "إسناد مهام الفريق" },
   { key: "edit", label: "التعديل" }, { key: "delete", label: "الحذف" }, { key: "approve", label: "الاعتماد" },
 ] as const;
 const projectClassification = z.enum(["operational", "administrative"]);
@@ -161,11 +162,12 @@ async function assertProjectWrite(db: NonNullable<Awaited<ReturnType<typeof getD
 async function assertOperationPermission(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, ctx: { user: { id: number; role: string } }, key: z.infer<typeof operationKey>) {
   if (ctx.user.role === "admin") return "allow" as const;
   const restrictedRoleRules: Record<string, Set<string>> = {
-    general_manager: new Set(["approve"]),
+    general_manager: new Set(["approve", "task_assignment"]),
     project_manager: new Set(["certificate", "approve"]),
     procurement_manager: new Set(["purchase_request", "inventory_item", "inventory_receipt", "inventory_issue"]),
   };
   const allowedForRole = restrictedRoleRules[ctx.user.role];
+  if (key === "task_assignment" && !canAssignTeamTasks(ctx.user.role)) throw new TRPCError({ code: "FORBIDDEN", message: "إسناد مهام الفريق متاح للمدير العام والمالك فقط" });
   if (allowedForRole && !allowedForRole.has(key)) throw new TRPCError({ code: "FORBIDDEN", message: "هذا الدور مخصص للاعتمادات أو عمليات الموقع المحددة فقط" });
   const row = (await db.select({ mode: userOperationPermissions.mode }).from(userOperationPermissions).where(and(eq(userOperationPermissions.userId, ctx.user.id), eq(userOperationPermissions.operationKey, key))).limit(1))[0];
   const fullAccessExceptApproval = new Set(["payroll", "certificate"]);
@@ -306,7 +308,8 @@ export const erpRouter = router({
     }),
     create: protectedProcedure.input(z.object({ projectId: z.number().int().positive().nullable().optional(), assignedEmployeeId: z.number().int().positive().nullable().optional(), title: z.string().min(1), description: z.string().optional(), dueDate: z.string().optional(), priority: z.enum(["low", "normal", "high"]).default("normal") })).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
-      if (input.projectId) await assertProjectWrite(db, ctx, input.projectId);
+      await assertOperationPermission(db, ctx, "task_assignment");
+      if (input.projectId) await assertProjectAccess(db, ctx, input.projectId);
       const result = await db.insert(dailyTasks).values({ ...input, projectId: input.projectId ?? null, assignedEmployeeId: input.assignedEmployeeId ?? null, description: input.description || null, dueDate: input.dueDate ? new Date(input.dueDate) : null, createdBy: ctx.user.id });
       await db.insert(auditLogs).values({ entityType: "daily_task", entityId: Number(result[0].insertId), action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
       return { id: Number(result[0].insertId) };
