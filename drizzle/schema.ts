@@ -362,6 +362,7 @@ export const certificates = mysqlTable("certificates", {
   contractId: int("contractId"),
   certificateNumber: varchar("certificateNumber", { length: 128 }).notNull(),
   description: text("description"),
+  technicalSpecifications: text("technicalSpecifications"),
   preTaxAmount: decimal("preTaxAmount", { precision: 14, scale: 2 }).default("0").notNull(),
   taxAmount: decimal("taxAmount", { precision: 14, scale: 2 }).default("0").notNull(),
   totalAmount: decimal("totalAmount", { precision: 14, scale: 2 }).default("0").notNull(),
