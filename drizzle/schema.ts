@@ -682,6 +682,7 @@ export const costItems = mysqlTable("costItems", {
   code: varchar("code", { length: 32 }).notNull().unique(),
   name: varchar("name", { length: 255 }).notNull(),
   category: varchar("category", { length: 64 }).notNull().default("materials"),
+  accountId: int("accountId"),
   isActive: int("isActive").notNull().default(1),
   createdBy: int("createdBy"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

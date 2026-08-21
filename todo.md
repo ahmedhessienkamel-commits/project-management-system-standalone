@@ -35428,3 +35428,17 @@
 - [x] Link issue movements to the received material source and preserve the project/cost-item allocation.
 - [x] Prevent duplicate posting when receipt, supplier invoice, and related documents refer to the same quantity/value.
 - [x] Add tests for contract-only, receipt, invoice, and duplicate-source scenarios, then publish a protected checkpoint.
+
+## Material cost account filtering — 2026-08-21
+- [ ] Filter the contract-line account selector to debit-appropriate asset and expense accounts only.
+- [ ] Exclude payable, liability, equity, and revenue accounts such as supplier account 2101 from material cost selection.
+- [ ] Enforce the same account-type rule in the server when creating supply and supply-installation contracts.
+- [ ] Preserve automatic supplier/payable credit handling on receipt or invoice posting.
+- [ ] Add regression tests, run TypeScript, Vitest, build, visual verification, and save a checkpoint.
+
+## Automatic material account mapping — 2026-08-21
+- [x] Remove the manual chart-of-accounts selector from supply and supply-installation contract lines.
+- [x] Resolve the debit account automatically from the selected material card and cost item mapping.
+- [x] Keep supplier/payable account automatic on the credit side of receipt and invoice entries.
+- [x] Reject or clearly flag material/cost combinations with no valid account mapping.
+- [x] Add tests, run TypeScript, Vitest, build, visual verification, and save a checkpoint.

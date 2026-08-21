@@ -74,3 +74,11 @@ export function materialReceiptExpenseReference(movementId: number) {
 export function isMaterialContractType(contractType: string | null | undefined) {
   return contractType === "supply" || contractType === "supply_installation";
 }
+
+export type MappedAccount = { id: number; isActive: number; isPostable: number; accountType: string };
+
+export function resolveMaterialCostAccount(costItem: { accountId?: number | null }, accounts: MappedAccount[]) {
+  const account = costItem.accountId ? accounts.find((candidate) => candidate.id === costItem.accountId) : undefined;
+  if (!account || account.isActive !== 1 || account.isPostable !== 1 || !["asset", "expense"].includes(account.accountType)) return null;
+  return account;
+}

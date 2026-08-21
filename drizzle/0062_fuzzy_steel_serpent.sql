@@ -1,0 +1,1 @@
+ALTER TABLE `costItems` ADD `accountId` int;
