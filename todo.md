@@ -35442,3 +35442,13 @@
 - [x] Keep supplier/payable account automatic on the credit side of receipt and invoice entries.
 - [x] Reject or clearly flag material/cost combinations with no valid account mapping.
 - [x] Add tests, run TypeScript, Vitest, build, visual verification, and save a checkpoint.
+
+## Projects under construction accounting — 2026-08-21
+- [x] Add a current-asset account named مشاريع تحت التنفيذ in the chart of accounts.
+- [x] Link each project to a project-specific WIP account or analytical subaccount without duplicating accounting meaning.
+- [x] Route project-specific eligible costs to the project's WIP balance during execution.
+- [ ] Define revenue treatment and project-level loading for project sales/collections without double counting.
+- [x] Add controlled project completion and handover closing workflow with approval and audit trail.
+- [ ] Transfer the completed project's WIP balance to the correct finished asset/cost-of-sales/revenue treatment according to project type.
+- [ ] Update project, financial, dashboard, and account reports with WIP balances and closing status.
+- [x] Add tests, visual verification, TypeScript, Vitest, build, and checkpoint.

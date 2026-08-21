@@ -10,6 +10,7 @@ import { accountingTotals } from "../accountingCalculations";
 import { calculateStageTimeVariance } from "../../shared/stageTiming";
 import { allocateAdministrativeExpense, normalizeExpenseTaxRate, validateExpenseAllocation } from "../../shared/expenseAllocation";
 import { calculateInventoryBalance, canReceiveContractQuantity, canReviewInventoryStage, nextInventoryApprovalStage, remainingContractQuantity, selectPurchaseInvoiceForIssue, calculateServiceEntryTotal, remainingServiceContractAmount, calculateMaterialReceiptCost, materialReceiptExpenseReference, isMaterialContractType, resolveMaterialCostAccount } from "../../shared/inventory";
+import { calculateWipBalance, buildWipClosingLines } from "../../shared/wip";
 
 const projectStatus = z.enum(["planning", "active", "paused", "completed", "archived"]);
 const operationKey = z.enum(["payment_voucher", "receipt_voucher", "expense", "certificate", "payroll", "custody", "purchase_invoice", "sales_invoice", "purchase_request", "inventory_item", "inventory_receipt", "inventory_issue", "edit", "delete", "approve"]);
@@ -33,6 +34,19 @@ function requireDb(db: Awaited<ReturnType<typeof getDb>>) {
 
 type ErpDb = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
+async function ensureProjectWipAccount(db: ErpDb, project: { id: number; code: string; name: string }, actorId: number) {
+  const parent = (await db.select().from(accounts).where(and(eq(accounts.code, "1400"), eq(accounts.accountType, "asset"), eq(accounts.isActive, 1))).limit(1))[0];
+  if (!parent) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "حساب مشاريع تحت التنفيذ 1400 غير موجود في الشجرة المحاسبية" });
+  const existingProject = (await db.select({ wipAccountId: projects.wipAccountId }).from(projects).where(eq(projects.id, project.id)).limit(1))[0];
+  if (existingProject?.wipAccountId) return existingProject.wipAccountId;
+  const code = `1400-${project.code}`.slice(0, 32);
+  const existingAccount = (await db.select().from(accounts).where(eq(accounts.code, code)).limit(1))[0];
+  const accountId = existingAccount?.id ?? Number((await db.insert(accounts).values({ code, name: `مشاريع تحت التنفيذ — ${project.name}`, accountType: "asset", parentId: parent.id, isPostable: 1, isActive: 1 }).then((result) => result[0].insertId)));
+  await db.update(projects).set({ wipAccountId: accountId }).where(eq(projects.id, project.id));
+  await db.insert(auditLogs).values({ entityType: "project", entityId: project.id, action: "wip_account_linked", actorId, afterJson: JSON.stringify({ wipAccountId: accountId, accountCode: code }) });
+  return accountId;
+}
+
 async function createInventoryPurchaseDocuments(db: ErpDb, ctx: { user: { id: number } }, input: { movementId: number; projectId: number; stageId?: number | null; itemId: number; vendorId?: number | null; quantity: number; unitCost: number; movementDate?: string; description?: string | null; contractId?: number | null; contractItemIndex?: number | null }) {
   const [item, vendor] = await Promise.all([
     db.select().from(inventoryItems).where(eq(inventoryItems.id, input.itemId)).limit(1),
@@ -53,13 +67,15 @@ async function createInventoryPurchaseDocuments(db: ErpDb, ctx: { user: { id: nu
   const invoiceResult = await db.insert(accountingDocuments).values({ ...common, documentType: "purchase_invoice", documentNumber: invoiceNumber, relatedDocumentType: "purchase_receipt", relatedDocumentId: receiptId, notes: `فاتورة شراء تلقائية من سند الاستلام ${receiptNumber}. ${input.contractId ? `مرتبطة بالعقد #${input.contractId} والبند ${Number(input.contractItemIndex ?? 0) + 1}. ` : ""}${input.description || ""}`.trim() });
   const invoiceId = Number(invoiceResult[0].insertId);
   const accountRows = await db.select().from(accounts);
+  const project = (await db.select({ id: projects.id, code: projects.code, name: projects.name }).from(projects).where(eq(projects.id, input.projectId)).limit(1))[0];
+  if (!project) throw new TRPCError({ code: "NOT_FOUND", message: "المشروع غير موجود لإنشاء قيد مشاريع تحت التنفيذ" });
+  const wipAccountId = await ensureProjectWipAccount(db, project, ctx.user.id);
   const linkedContract = input.contractId ? (await db.select().from(contractorContracts).where(eq(contractorContracts.id, input.contractId)).limit(1))[0] : null;
   const linkedLine = linkedContract && input.contractItemIndex !== null && input.contractItemIndex !== undefined ? (linkedContract.contractItems ?? [])[input.contractItemIndex] : null;
-  const inventoryAccount = linkedLine?.accountId ? accountRows.find((account) => account.id === linkedLine.accountId) ?? null : accountRows.find((account) => ["1301", "5101"].includes(account.code) || account.name.includes("مخزون")) ?? null;
   const payableAccount = accountRows.find((account) => account.code === "2101" || account.name.includes("مورد")) ?? null;
-  if (inventoryAccount && payableAccount) {
+  if (wipAccountId && payableAccount) {
     await db.insert(accountingDocumentLines).values([
-      { documentId: invoiceId, accountId: inventoryAccount.id, costItemId: linkedLine?.costItemId ?? null, projectId: input.projectId, stageId: input.stageId ?? null, description: `تكلفة الخامة — ${itemRow.name}`, debit: totalAmount.toFixed(2), credit: "0.00" },
+      { documentId: invoiceId, accountId: wipAccountId, costItemId: linkedLine?.costItemId ?? null, projectId: input.projectId, stageId: input.stageId ?? null, description: `تكلفة خامة محمّلة على مشاريع تحت التنفيذ — ${itemRow.name}`, debit: totalAmount.toFixed(2), credit: "0.00" },
       { documentId: invoiceId, accountId: payableAccount.id, projectId: input.projectId, stageId: input.stageId ?? null, description: `مصروف مستحق للمورد — ${partyName}`, debit: "0.00", credit: totalAmount.toFixed(2) },
     ]);
   }
@@ -351,14 +367,15 @@ export const erpRouter = router({
           createdBy: ctx.user.id,
         });
         const projectId = Number(result[0].insertId);
+        const wipAccountId = await ensureProjectWipAccount(db, { id: projectId, code: input.code, name: input.name }, ctx.user.id);
         await db.insert(auditLogs).values({
           entityType: "project",
           entityId: projectId,
           action: "created",
           actorId: ctx.user.id,
-          afterJson: JSON.stringify(input),
+          afterJson: JSON.stringify({ ...input, wipAccountId }),
         });
-        return { id: projectId };
+        return { id: projectId, wipAccountId };
       }),
     update: protectedProcedure
       .input(z.object({ id: z.number().int().positive(), code: z.string().trim().min(2).max(64), name: z.string().trim().min(2).max(255), location: z.string().trim().max(255).optional(), status: projectStatus, classification: projectClassification, projectType: projectType, escrowCashAccountId: z.number().int().positive().nullable().optional(), escrowTrusteeName: z.string().trim().max(255).optional(), escrowStatementReference: z.string().trim().max(128).optional(), contractValue: z.number().nonnegative(), plannedStart: z.string().optional(), plannedEnd: z.string().optional() }))
@@ -368,10 +385,60 @@ export const erpRouter = router({
         if (input.plannedStart && input.plannedEnd && new Date(input.plannedEnd) < new Date(input.plannedStart)) throw new TRPCError({ code: "BAD_REQUEST", message: "نهاية المشروع لا يمكن أن تسبق بدايته" });
         const before = (await db.select().from(projects).where(eq(projects.id, input.id)).limit(1))[0];
         if (!before) throw new TRPCError({ code: "NOT_FOUND", message: "المشروع غير موجود" });
+        await ensureProjectWipAccount(db, { id: input.id, code: input.code, name: input.name }, ctx.user.id);
           await db.update(projects).set({ code: input.code, name: input.name, location: input.location || null, status: input.status, classification: input.classification, projectType: input.projectType, escrowCashAccountId: input.projectType === "off_plan_sales" ? input.escrowCashAccountId || null : null, escrowTrusteeName: input.projectType === "off_plan_sales" ? input.escrowTrusteeName || null : null, escrowStatementReference: input.projectType === "off_plan_sales" ? input.escrowStatementReference || null : null, contractValue: input.contractValue.toFixed(2), plannedStart: input.plannedStart ? new Date(input.plannedStart) : null, plannedEnd: input.plannedEnd ? new Date(input.plannedEnd) : null }).where(eq(projects.id, input.id));
         await db.insert(auditLogs).values({ entityType: "project", entityId: input.id, action: "updated", actorId: ctx.user.id, beforeJson: JSON.stringify(before), afterJson: JSON.stringify(input) });
         return { success: true } as const;
       }),
+    wipSummary: protectedProcedure.input(z.object({ id: z.number().int().positive() })).query(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      await assertProjectAccess(db, ctx, input.id);
+      const project = (await db.select().from(projects).where(eq(projects.id, input.id)).limit(1))[0];
+      if (!project) throw new TRPCError({ code: "NOT_FOUND", message: "المشروع غير موجود" });
+      const wipAccountId = project.wipAccountId || await ensureProjectWipAccount(db, { id: project.id, code: project.code, name: project.name }, ctx.user.id);
+      const wipAccount = (await db.select({ code: accounts.code, name: accounts.name }).from(accounts).where(eq(accounts.id, wipAccountId)).limit(1))[0];
+      const [documents, lines] = await Promise.all([
+        db.select({ id: accountingDocuments.id, status: accountingDocuments.status }).from(accountingDocuments),
+        db.select().from(accountingDocumentLines).where(and(eq(accountingDocumentLines.projectId, project.id), eq(accountingDocumentLines.accountId, wipAccountId))),
+      ]);
+      const posted = new Set(documents.filter((document) => document.status === "posted").map((document) => document.id));
+      const postedLines = lines.filter((line) => posted.has(line.documentId));
+      const totals = calculateWipBalance(postedLines);
+      return { projectId: project.id, wipAccountId, wipAccountCode: wipAccount?.code || null, wipAccountName: wipAccount?.name || null, ...totals, closed: Boolean(project.wipClosedAt), closedAt: project.wipClosedAt, closingDocumentId: project.wipClosingDocumentId };
+    }),
+    closeWip: protectedProcedure.input(z.object({ id: z.number().int().positive(), destinationAccountId: z.number().int().positive(), handoverDate: z.string().min(1), note: z.string().max(2000).optional() })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      await assertProjectAccess(db, ctx, input.id);
+      await assertOperationPermission(db, ctx, "edit");
+      if (ctx.user.role !== "admin" && Number(ctx.user.id) !== 13170001) throw new TRPCError({ code: "FORBIDDEN", message: "إقفال مشاريع تحت التنفيذ متاح للمالك أو المدير المالي المعتمد فقط" });
+      const project = (await db.select().from(projects).where(eq(projects.id, input.id)).limit(1))[0];
+      if (!project) throw new TRPCError({ code: "NOT_FOUND", message: "المشروع غير موجود" });
+      if (project.status !== "completed") throw new TRPCError({ code: "BAD_REQUEST", message: "غيّر حالة المشروع إلى مكتمل بعد التسليم قبل تنفيذ الإقفال" });
+      if (project.wipClosedAt || project.wipClosingDocumentId) throw new TRPCError({ code: "CONFLICT", message: "تم إقفال مشاريع تحت التنفيذ لهذا المشروع مسبقًا" });
+      const wipAccountId = project.wipAccountId || await ensureProjectWipAccount(db, { id: project.id, code: project.code, name: project.name }, ctx.user.id);
+      if (input.destinationAccountId === wipAccountId) throw new TRPCError({ code: "BAD_REQUEST", message: "حساب التحويل يجب أن يختلف عن حساب مشاريع تحت التنفيذ" });
+      const destination = (await db.select().from(accounts).where(eq(accounts.id, input.destinationAccountId)).limit(1))[0];
+      if (!destination || destination.isActive !== 1 || destination.isPostable !== 1 || !["asset", "expense"].includes(destination.accountType)) throw new TRPCError({ code: "BAD_REQUEST", message: "حساب التحويل يجب أن يكون أصلًا أو تكلفة قابلًا للترحيل" });
+      const [documents, lines] = await Promise.all([
+        db.select({ id: accountingDocuments.id, status: accountingDocuments.status }).from(accountingDocuments),
+        db.select().from(accountingDocumentLines).where(and(eq(accountingDocumentLines.projectId, project.id), eq(accountingDocumentLines.accountId, wipAccountId))),
+      ]);
+      const posted = new Set(documents.filter((document) => document.status === "posted").map((document) => document.id));
+      const postedLines = lines.filter((line) => posted.has(line.documentId));
+      const balance = calculateWipBalance(postedLines).balance;
+      if (balance <= 0) throw new TRPCError({ code: "BAD_REQUEST", message: "لا يوجد رصيد مدين مرحّل في مشاريع تحت التنفيذ لإقفاله" });
+      const closingLines = buildWipClosingLines(balance, wipAccountId, input.destinationAccountId);
+      const documentNumber = `WIP-CLOSE-${project.code}-${Date.now()}`.slice(0, 128);
+      const documentResult = await db.insert(accountingDocuments).values({ projectId: project.id, documentType: "journal_entry", documentNumber, documentDate: new Date(input.handoverDate), amount: balance.toFixed(2), taxAmount: "0.00", totalAmount: balance.toFixed(2), paidAmount: "0.00", status: "posted", notes: input.note || `إقفال مشاريع تحت التنفيذ عند تسليم مشروع ${project.name}`, createdBy: ctx.user.id });
+      const documentId = Number(documentResult[0].insertId);
+      await db.insert(accountingDocumentLines).values([
+        { documentId, accountId: closingLines[0].accountId, projectId: project.id, description: `تحويل تكلفة مشروع مكتمل — ${project.name}`, debit: closingLines[0].debit.toFixed(2), credit: closingLines[0].credit.toFixed(2) },
+        { documentId, accountId: closingLines[1].accountId, projectId: project.id, description: `إقفال مشاريع تحت التنفيذ — ${project.name}`, debit: closingLines[1].debit.toFixed(2), credit: closingLines[1].credit.toFixed(2) },
+      ]);
+      await db.update(projects).set({ wipAccountId, wipClosedAt: new Date(input.handoverDate), wipClosedBy: ctx.user.id, wipClosingDocumentId: documentId }).where(eq(projects.id, project.id));
+      await db.insert(auditLogs).values({ entityType: "project", entityId: project.id, action: "wip_closed_on_handover", actorId: ctx.user.id, afterJson: JSON.stringify({ wipAccountId, destinationAccountId: input.destinationAccountId, balance, documentId, handoverDate: input.handoverDate }) });
+      return { success: true, documentId, balance } as const;
+    }),
     delete: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
       const before = (await db.select().from(projects).where(eq(projects.id, input.id)).limit(1))[0];

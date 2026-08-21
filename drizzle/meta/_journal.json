@@ -442,6 +442,13 @@
       "when": 1787321269638,
       "tag": "0062_fuzzy_steel_serpent",
       "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "5",
+      "when": 1787321935505,
+      "tag": "0063_orange_black_bolt",
+      "breakpoints": true
     }
   ]
 }
