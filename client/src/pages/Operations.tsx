@@ -43,7 +43,7 @@ export default function Operations(props: any = {}) {
   const isMainOperations = location === "/operations" && !requestedTab;
   const visibleTabs = isMainOperations ? tabs.filter((item) => item.key === "procurement") : [];
   const { data: me } = trpc.auth.me.useQuery();
-  const isSiteWorker = me?.role === "site_worker";
+  const isSiteWorker = me?.role === "site_worker" || me?.role === "procurement_manager";
   const isGeneralManager = me?.role === "general_manager";
   const canEditMaterialDocuments = me?.role === "admin" || Number(me?.id) === 13170001;
   const canDeleteMaterialDocuments = me?.role === "admin";

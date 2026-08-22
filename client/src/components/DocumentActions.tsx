@@ -1,6 +1,8 @@
 import { Download, Eye, FileSpreadsheet, Link2, Pencil, Printer, Trash2 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { canDeleteOwnerManagedDocument } from "@/lib/roleAccess";
 
 type RelatedAction = { label: string; onClick: () => void };
 
@@ -18,6 +20,7 @@ type DocumentActionsProps = {
 };
 
 export function DocumentActions({ title, preview, edit, pdf, excelRows, excelFileName, related = [], canDelete, onDelete, disabled }: DocumentActionsProps) {
+  const { user } = useAuth();
   const exportExcel = () => {
     if (!excelRows?.length) return;
     const sheet = XLSX.utils.json_to_sheet(excelRows);
@@ -26,6 +29,8 @@ export function DocumentActions({ title, preview, edit, pdf, excelRows, excelFil
     XLSX.writeFile(workbook, `${excelFileName || title || "مستند"}.xlsx`);
   };
   const printPdf = pdf || (() => window.print());
+  const isVendorReference = canDeleteOwnerManagedDocument(user?.role) && Boolean(excelFileName && excelFileName === `ملف-${title}`);
+  const requestVendorDelete = () => window.dispatchEvent(new CustomEvent("erp:deleteVendor", { detail: { name: title } }));
   return <div className="flex flex-wrap items-center justify-end gap-1.5 print:hidden" dir="rtl">
     {preview && <Button type="button" size="sm" variant="outline" className="gap-1" onClick={preview} disabled={disabled}><Eye className="h-3.5 w-3.5" /> معاينة</Button>}
     <Button type="button" size="sm" variant="outline" className="gap-1" onClick={printPdf} disabled={disabled}><Printer className="h-3.5 w-3.5" /> PDF</Button>
@@ -33,5 +38,6 @@ export function DocumentActions({ title, preview, edit, pdf, excelRows, excelFil
     {edit && <Button type="button" size="sm" variant="outline" className="gap-1" onClick={edit} disabled={disabled}><Pencil className="h-3.5 w-3.5" /> تعديل</Button>}
     {related.map((action) => <Button key={action.label} type="button" size="sm" variant="outline" className="gap-1 text-[#18324b]" onClick={action.onClick} disabled={disabled}><Link2 className="h-3.5 w-3.5" /> {action.label}</Button>)}
     {canDelete && onDelete && <Button type="button" size="sm" variant="outline" className="gap-1 border-rose-200 text-rose-700 hover:bg-rose-50" onClick={onDelete} disabled={disabled}><Trash2 className="h-3.5 w-3.5" /> حذف</Button>}
+    {!onDelete && isVendorReference && <Button type="button" size="sm" variant="outline" className="gap-1 border-rose-200 text-rose-700 hover:bg-rose-50" onClick={requestVendorDelete} disabled={disabled}><Trash2 className="h-3.5 w-3.5" /> حذف</Button>}
   </div>;
 }

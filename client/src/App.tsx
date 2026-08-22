@@ -25,16 +25,33 @@ import Inventory from "./pages/Inventory";
 import MyRequests from "./pages/MyRequests";
 import PasswordAuth, { ResetPassword } from "./pages/PasswordAuth";
 import AccountSecurity from "./pages/AccountSecurity";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { canAccessRoute, defaultRouteForRole } from "@/lib/roleAccess";
+import { useEffect } from "react";
+import { useLocation } from "wouter";
 
 function Landing() {
   const legacyToken = new URLSearchParams(window.location.search).get("invite");
   return legacyToken ? <PasswordAuth invitation /> : <Home />;
 }
 
+function RestrictedRoleGate({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  const [location, setLocation] = useLocation();
+  const permitted = canAccessRoute(user?.role, location);
+
+  useEffect(() => {
+    if (!loading && user && !permitted) setLocation(defaultRouteForRole(user.role));
+  }, [loading, permitted, setLocation, user]);
+
+  if (loading || (user && !permitted)) return <div className="min-h-screen bg-[#f7f8fa]" />;
+  return <>{children}</>;
+}
+
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
-    <Switch>
+    <RestrictedRoleGate><Switch>
       <Route path={"/login"} component={() => <PasswordAuth />} />
       <Route path={"/accept-invitation"} component={() => <PasswordAuth invitation />} />
       <Route path={"/account-security"} component={AccountSecurity} />
@@ -73,7 +90,7 @@ function Router() {
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
-    </Switch>
+    </Switch></RestrictedRoleGate>
   );
 }
 

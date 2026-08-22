@@ -3068,7 +3068,7 @@ export const erpRouter = router({
       create: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), stageId: z.number().int().positive().nullable().optional(), itemId: z.number().int().positive(), vendorId: z.number().int().positive().nullable().optional(), movementType: z.enum(["receipt", "issue", "adjustment_in", "adjustment_out"]), quantity: z.number().positive(), unitCost: z.number().nonnegative().default(0), movementDate: z.string().optional(), reference: z.string().max(128).optional(), description: z.string().max(4000).optional(), contractId: z.number().int().positive().nullable().optional(), contractItemIndex: z.number().int().nonnegative().nullable().optional() })).mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
         await assertProjectAccess(db, ctx, input.projectId);
-        const isSiteWorkerMovement = ctx.user.role === "site_worker" && ["receipt", "issue"].includes(input.movementType);
+        const isSiteWorkerMovement = ["site_worker", "procurement_manager"].includes(ctx.user.role) && ["receipt", "issue"].includes(input.movementType);
         if (!isSiteWorkerMovement) await assertProjectWrite(db, ctx, input.projectId);
         if (ctx.user.role === "site_worker" && !isSiteWorkerMovement) throw new TRPCError({ code: "FORBIDDEN", message: "موظف الموقع مسموح له فقط بتسجيل الاستلام أو السحب" });
         await assertOperationPermission(db, ctx, input.movementType === "receipt" || input.movementType === "adjustment_in" ? "inventory_receipt" : "inventory_issue");

@@ -27,6 +27,7 @@ import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
+import { isOperationalOnlyRole } from "@/lib/roleAccess";
 
 const menuItems = [
   { icon: Settings2, label: "معلومات الشركة", path: "/company-settings" },
@@ -143,8 +144,10 @@ function DashboardLayoutContent({
   const { data: availableCompanies = [] } = trpc.erp.companies.list.useQuery();
   const { data: currentCompany } = trpc.erp.companies.current.useQuery();
   const { data: notifications = [] } = trpc.erp.controls.notifications.useQuery();
+  const { data: vendorRecords = [] } = trpc.erp.vendors.list.useQuery();
   const unreadNotifications = notifications.filter((notification) => !notification.readAt).length;
   const switchCompany = trpc.erp.companies.switch.useMutation({ onSuccess: () => { utils.erp.companies.current.invalidate(); utils.erp.company.get.invalidate(); utils.erp.projects.list.invalidate(); } });
+  const deleteVendor = trpc.erp.vendors.remove.useMutation({ onSuccess: () => { void utils.erp.vendors.list.invalidate(); }, onError: (error) => window.alert(error.message || "تعذر حذف ملف المورد أو المقاول") });
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
@@ -169,14 +172,15 @@ function DashboardLayoutContent({
   const roleLabelAllowList: Record<string, string[] | undefined> = {
     general_manager: ["لوحة التنفيذ", "الموافقات والمستندات", "العقود والمستخلصات", "المبيعات والتحصيلات", "تقرير الخامات والكميات", "قائمة دخل المشاريع", "إسناد ومتابعة مهام الفريق"],
     project_manager: ["لوحة التنفيذ", "المشاريع والمراحل", "العقود والمستخلصات", "الموردون والمقاولون", "الموافقات والمستندات"],
-    procurement_manager: ["لوحة التنفيذ", "تقرير الخامات والكميات", "التكاليف والمصروفات", "الموافقات والمستندات"],
-    site_worker: ["لوحة التنفيذ", "تقرير الخامات والكميات", "طلبات المواد", "طلباتي"],
+    procurement_manager: ["تقرير الخامات والكميات", "طلبات المواد", "طلباتي"],
+    site_worker: ["تقرير الخامات والكميات", "طلبات المواد", "طلباتي"],
   };
   const allowedLabels = roleLabelAllowList[user?.role || ""];
   const generalManagerOrder = ["لوحة التنفيذ", "الموافقات والمستندات", "العقود والمستخلصات", "المبيعات والتحصيلات", "تقرير الخامات والكميات", "قائمة دخل المشاريع", "إسناد ومتابعة مهام الفريق"];
   const generalManagerMenuItems = generalManagerOrder.flatMap((label) => { const item = menuItems.find((candidate) => "path" in candidate && candidate.label === label); return item ? [item] : []; });
   const visibleMenuItems = user?.role === "general_manager" ? generalManagerMenuItems : allowedLabels ? menuItems.filter((item) => "section" in item || allowedLabels.includes(item.label)) : menuItems;
-  const visibleQuickActions = user?.role === "general_manager" ? quickActions.filter((action) => action.path === "/operations?tab=certificates" || action.path === "/inventory" || action.path === "/tasks") : user?.role === "site_worker" ? quickActions.filter((action) => action.path === "/inventory" || action.path === "/operations?tab=procurement") : allowedLabels ? quickActions.filter((action) => action.path.includes("/operations") || action.path.includes("/tasks") || action.path.includes("/accounting?type=sales_invoice")) : quickActions;
+  const isOperationalOnly = isOperationalOnlyRole(user?.role);
+  const visibleQuickActions = user?.role === "general_manager" ? quickActions.filter((action) => action.path === "/operations?tab=certificates" || action.path === "/inventory" || action.path === "/tasks") : isOperationalOnly ? [{ label: "تقرير الخامات والكميات", path: "/inventory" }, { label: "تسجيل استلام خامات", path: "/inventory?mode=receipt" }, { label: "تسجيل صرف خامات", path: "/inventory?mode=issue" }, { label: "طلب مواد", path: "/operations?tab=procurement" }, { label: "طلباتي", path: "/my-requests" }] : allowedLabels ? quickActions.filter((action) => action.path.includes("/operations") || action.path.includes("/tasks") || action.path.includes("/accounting?type=sales_invoice")) : quickActions;
   const searchResults = normalizedSearch ? visibleMenuItems.filter((item): item is Extract<(typeof menuItems)[number], { path: string }> => "path" in item && item.label.toLowerCase().includes(normalizedSearch)).slice(0, 6) : [];
 
   useEffect(() => {
@@ -189,6 +193,18 @@ function DashboardLayoutContent({
     window.addEventListener("keydown", handleGlobalShortcut);
     return () => window.removeEventListener("keydown", handleGlobalShortcut);
   }, []);
+
+  useEffect(() => {
+    if (user?.role !== "admin") return;
+    const handleVendorDelete = (event: Event) => {
+      const vendorName = (event as CustomEvent<{ name?: string }>).detail?.name;
+      const vendor = vendorRecords.find((record) => record.name === vendorName);
+      if (!vendor) return;
+      if (window.confirm(`سيتم حذف ملف «${vendor.name}» نهائيًا إذا لم يكن مرتبطًا بعقود أو حركات أو مستندات. هل تريد المتابعة؟`)) deleteVendor.mutate({ id: vendor.id });
+    };
+    window.addEventListener("erp:deleteVendor", handleVendorDelete);
+    return () => window.removeEventListener("erp:deleteVendor", handleVendorDelete);
+  }, [user?.role, vendorRecords, deleteVendor]);
 
   useEffect(() => {
     if (isCollapsed) {
@@ -349,7 +365,7 @@ function DashboardLayoutContent({
           <div className="flex items-center gap-2">
             {availableCompanies.length > 0 && <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="max-w-[220px] gap-2 border-[#b28a3b]/40 text-[#18324b]"><Landmark className="h-4 w-4 shrink-0 text-[#b28a3b]" /><span className="truncate">{currentCompany?.company?.tradeName || currentCompany?.company?.legalName || "اختيار الشركة"}</span></Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-72"><div className="border-b border-slate-100 px-3 py-2 text-xs text-slate-500">الشركة الحالية · اختر شركة مصرحًا بها</div>{availableCompanies.map((company) => <DropdownMenuItem key={company.id} disabled={switchCompany.isPending || company.id === currentCompany?.company?.id} onClick={() => switchCompany.mutate({ companyId: company.id })} className="cursor-pointer"><div className="flex min-w-0 flex-col"><span className="truncate font-semibold">{company.tradeName || company.legalName}</span><span className="truncate text-xs text-slate-500">{company.commercialRegistration || company.taxNumber || "بيانات الشركة"}</span></div></DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>}
             <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="gap-2 border-[#b28a3b]/40 text-[#18324b]"><Plus className="h-4 w-4" /> إجراء سريع</Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-56">{visibleQuickActions.map((action) => <DropdownMenuItem key={action.path} onClick={() => setLocation(action.path)} className="cursor-pointer">{action.label}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
-            <Button variant="outline" size="icon" aria-label="فتح التنبيهات والموافقات" title={unreadNotifications ? `${unreadNotifications} إشعار غير مقروء` : "التنبيهات والموافقات"} onClick={() => setLocation("/approvals")} className="relative border-slate-200"><Bell className="h-4 w-4 text-[#b28a3b]" />{unreadNotifications > 0 && <Badge className="absolute -right-2 -top-2 min-w-5 justify-center rounded-full bg-rose-600 px-1 text-[10px] text-white">{unreadNotifications > 99 ? "99+" : unreadNotifications}</Badge>}</Button>
+            {!isOperationalOnly && <Button variant="outline" size="icon" aria-label="فتح التنبيهات والموافقات" title={unreadNotifications ? `${unreadNotifications} إشعار غير مقروء` : "التنبيهات والموافقات"} onClick={() => setLocation("/approvals")} className="relative border-slate-200"><Bell className="h-4 w-4 text-[#b28a3b]" />{unreadNotifications > 0 && <Badge className="absolute -right-2 -top-2 min-w-5 justify-center rounded-full bg-rose-600 px-1 text-[10px] text-white">{unreadNotifications > 99 ? "99+" : unreadNotifications}</Badge>}</Button>}
           </div>
         </div>
         <main className="flex-1 p-4">{children}</main>
