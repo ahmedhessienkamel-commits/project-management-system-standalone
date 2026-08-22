@@ -73,6 +73,15 @@ export default function Operations(props: any = {}) {
   const { data: employeeDirectory = [] } = trpc.erp.employees.list.useQuery();
   const attendance = trpc.erp.attendance.list.useQuery();
   const attachments = trpc.erp.attachments.list.useQuery({ projectId: selectedProjectId ?? 0 }, { enabled: Boolean(selectedProjectId) });
+  useEffect(() => {
+    (window as typeof window & { __erpDocumentPreviewData?: unknown }).__erpDocumentPreviewData = {
+      companyProfile,
+      projects,
+      vendors: vendors.data ?? [],
+      contracts: contractorContracts.data ?? [],
+      certificates: certificates.data ?? [],
+    };
+  }, [companyProfile, projects, vendors.data, contractorContracts.data, certificates.data]);
   const utils = trpc.useUtils();
   const createVendor = trpc.erp.vendors.create.useMutation({ onSuccess: () => utils.erp.vendors.list.invalidate() });
   const updateVendor = trpc.erp.vendors.update.useMutation({ onSuccess: () => { utils.erp.vendors.list.invalidate(); setEditingVendorId(null); } });
@@ -185,7 +194,48 @@ function CostCenterPanel({ data, loading, projectName }: { data: any[]; loading:
 function typeLabel(type: string) { return ({ materials: "تكلفة خامات", operating_tools: "عدد تشغيل", equipment_rental: "إيجار معدات", contractor: "مقاولات", transport: "نقل", maintenance: "صيانة", services: "خدمات", operating: "تشغيل", administrative: "إدارة" } as Record<string, string>)[type] || type; }
 function FormCard({ title, children, className = "" }: { title: string; children: React.ReactNode; className?: string }) { return <Card className={`border-0 shadow-sm ${className}`}><CardHeader><CardTitle className="text-lg text-[#18324b]">{title}</CardTitle></CardHeader><CardContent>{children}</CardContent></Card>; }
 function ListCard({ title, children, className = "" }: { title: string; children: React.ReactNode; className?: string }) { return <Card className={`border-0 shadow-sm ${className}`}><CardHeader><CardTitle className="text-lg text-[#18324b]">{title}</CardTitle></CardHeader><CardContent className="max-h-[620px] space-y-3 overflow-auto">{children || <p className="py-10 text-center text-slate-500">لا توجد بيانات بعد.</p>}</CardContent></Card>; }
-function openListRowPreview(title: string, subtitle: string, badge: string, companyProfile?: any, autoPrint = false, signatureWorkflow?: any) { const popup = window.open("", "_blank", "width=1000,height=900"); if (!popup) return; const html = buildProfessionalDocumentHtml(companyProfile, { title, englishTitle: "PROJECT MANAGEMENT DOCUMENT", documentNumber: title, status: badge, partyLabel: "التفاصيل", partyName: subtitle, category: badge, description: "تمت معاينة المستند من سجل النظام. يرجى استخدام زر التعديل أو الإجراء المرتبط للوصول إلى العملية الأصلية.", details: [{ label: "رقم/مرجع المستند", value: title }, { label: "الحالة", value: badge }], rows: [{ "البيان": subtitle, "الحالة": badge }], signatureWorkflow }); popup.document.write(autoPrint ? html : html.replace("<script>window.onload=()=>setTimeout(()=>window.print(),250)</script>", "")); popup.document.close(); }
+function openListRowPreview(title: string, subtitle: string, badge: string, companyProfile?: any, autoPrint = false, signatureWorkflow?: any) {
+  const popup = window.open("", "_blank", "width=1000,height=900");
+  if (!popup) return;
+  const previewData = (window as typeof window & { __erpDocumentPreviewData?: any }).__erpDocumentPreviewData || {};
+  const documentNumber = title.replace(/^(عقد|مستخلص)\s+/, "").trim();
+  const contract = title.startsWith("عقد ") ? (previewData.contracts || []).find((row: any) => row.contractNumber === documentNumber) : undefined;
+  const certificate = title.startsWith("مستخلص ") ? (previewData.certificates || []).find((row: any) => row.certificateNumber === documentNumber) : undefined;
+  const record = contract || certificate;
+  const project = (previewData.projects || []).find((row: any) => row.id === record?.projectId);
+  const vendor = (previewData.vendors || []).find((row: any) => row.id === record?.vendorId);
+  const isContract = Boolean(contract);
+  const rows = isContract
+    ? (contract.contractItems?.length ? contract.contractItems.map((item: any) => ({ "البند": item.description || "بند العقد", "الوحدة": item.unit || "—", "الكمية": Number(item.contractedQty || 0), "سعر الوحدة": Number(item.unitPrice || 0), "الإجمالي": Number(item.contractedQty || 0) * Number(item.unitPrice || 0) })) : [{ "البند": contract.description || "بند العقد", "الإجمالي": Number(contract.totalAmount || 0) }])
+    : certificate?.certificateItems?.length ? certificate.certificateItems.map((item: any) => ({ "البند": item.description || "بند المستخلص", "الكمية المعتمدة": Number(item.approvedQty || 0), "سعر الوحدة": Number(item.unitPrice || 0), "الإجمالي": Number(item.approvedQty || 0) * Number(item.unitPrice || 0) })) : [{ "البيان": certificate?.description || subtitle, "الإجمالي": Number(certificate?.totalAmount || 0) }];
+  const actualCompanyProfile = companyProfile || previewData.companyProfile;
+  const html = buildProfessionalDocumentHtml(actualCompanyProfile, {
+    title,
+    englishTitle: isContract ? "CONTRACT DOCUMENT" : certificate ? "CONTRACTOR PAYMENT CERTIFICATE" : "PROJECT MANAGEMENT DOCUMENT",
+    kind: isContract ? "contract" : certificate ? "certificate" : undefined,
+    documentNumber,
+    date: record?.contractDate || record?.certificateDate || record?.createdAt,
+    status: badge,
+    partyLabel: isContract ? "المقاول / المورد" : certificate ? "المقاول" : "التفاصيل",
+    partyName: vendor?.name || subtitle,
+    projectName: project?.name || (record?.projectId ? `مشروع #${record.projectId}` : undefined),
+    description: record?.description || "تمت معاينة المستند من سجل النظام.",
+    amount: Number(record?.preTaxAmount || 0),
+    taxAmount: Number(record?.taxAmount || 0),
+    totalAmount: Number(record?.totalAmount || 0),
+    paidAmount: Number(certificate?.paidAmount || 0),
+    category: badge,
+    details: [
+      { label: "رقم/مرجع المستند", value: documentNumber },
+      { label: "المشروع", value: project?.name || (record?.projectId ? `مشروع #${record.projectId}` : "—") },
+      { label: "الحالة", value: badge },
+    ],
+    rows,
+    signatureWorkflow,
+  });
+  popup.document.write(autoPrint ? html : html.replace("<script>window.onload=()=>setTimeout(()=>window.print(),250)</script>", ""));
+  popup.document.close();
+}
 function ListRow({ title, subtitle, badge, projectId, entityType, entityId, onEdit, related = [] }: { title: string; subtitle: string; badge: string; projectId?: number | null; entityType?: string; entityId?: number; onEdit?: () => void; related?: Array<{ label: string; onClick: () => void }> }) { const { data: companyProfile } = trpc.erp.company.get.useQuery(); const excelRows = [{ "العنوان": title, "التفاصيل": subtitle, "الحالة": badge, "المشروع": projectId || "" , "نوع الكيان": entityType || "", "رقم الكيان": entityId || "" }]; return <div className="flex flex-col gap-3 rounded-xl border border-slate-100 bg-white p-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold text-[#18324b]">{title}</p><p className="mt-1 text-xs text-slate-500">{subtitle}</p>{entityType && entityId ? <TraceLink projectId={projectId} entityType={entityType} entityId={entityId} /> : null}</div><div className="flex flex-wrap items-center justify-end gap-2"><Badge variant="outline">{badge}</Badge><DocumentActions title={title} preview={() => openListRowPreview(title, subtitle, badge, companyProfile)} pdf={() => openListRowPreview(title, subtitle, badge, companyProfile, true)} excelRows={excelRows} excelFileName={title.replace(/\\s+/g, "-")} edit={onEdit} related={related} /></div></div>; }
 function TraceLink({ projectId, entityType, entityId }: { projectId?: number | null; entityType: string; entityId: number }) { const { data } = trpc.erp.controls.trace.useQuery({ projectId: projectId || undefined, entityType, entityId }); return <p className="mt-1 text-[11px] text-slate-500">{data?.approval ? `اعتماد #${data.approval.id} · ${data.approval.status}` : "سجل تدقيق محفوظ"} · {data?.approvalPolicy ? `الحد ${money.format(Number(data.approvalPolicy.thresholdAmount))} ر.س` : "اعتماد فوري بلا حد مُخصص"} · أحداث {data?.audits.length ?? 0}</p>; }
 function Field({ label, value, onChange, placeholder, type = "text" }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string }) { return <div className="space-y-1.5"><Label className="text-sm text-slate-600">{label}</Label><Input dir="rtl" type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="h-10 border-slate-200 bg-white" /></div>; }

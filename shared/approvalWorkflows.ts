@@ -22,3 +22,10 @@ export function nextCertificateApproval(stageOrder: number | null | undefined) {
   if (stageOrder === 3) return { approvalStage: "general_manager" as const, stageOrder: 4 };
   return null;
 }
+
+export function nextMaterialRequisitionApproval(stage: string | null | undefined) {
+  if (stage === "mostafa") return { approvalStage: "owner" as const, stageOrder: 2 };
+  if (stage === "owner") return { approvalStage: "project_manager" as const, stageOrder: 3 };
+  if (stage === "project_manager") return { approvalStage: "general_manager" as const, stageOrder: 4 };
+  return null;
+}

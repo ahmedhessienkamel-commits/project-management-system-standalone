@@ -43,4 +43,29 @@ describe("professional document preview mode", () => {
     expect(html).toContain("اعتماد المدير العام والختم");
     expect(html).toContain("بانتظار المستخدم المخول");
   });
+
+  it("renders real company, project, rows, and financial totals for contracts and certificates", () => {
+    const html = buildProfessionalDocumentHtml({
+      legalName: "شركة أنظمة البناء المتقدمة المحدودة",
+      commercialRegistration: "1010628913",
+      taxNumber: "310484788500003",
+      nationalAddress: "الرياض — العنوان الوطني",
+    }, {
+      title: "عقد A.B.00079",
+      kind: "contract",
+      documentNumber: "A.B.00079",
+      projectName: "نمار",
+      partyName: "شركة درة العلاء للمقاولات",
+      amount: 66879,
+      taxAmount: 10031.85,
+      totalAmount: 76910.85,
+      rows: [{ "البند": "أعمال الحفر", "الإجمالي": 76910.85 }],
+    });
+    expect(html).toContain("شركة أنظمة البناء المتقدمة المحدودة");
+    expect(html).toContain("نمار");
+    expect(html).toContain("شركة درة العلاء للمقاولات");
+    expect(html).toContain("أعمال الحفر");
+    expect(html).toContain("٧٦٬٩١٠٫٨٥");
+    expect(html).not.toContain("اسم المنشأة");
+  });
 });

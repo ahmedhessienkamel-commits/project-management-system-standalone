@@ -11,7 +11,7 @@ import { accountingTotals } from "../accountingCalculations";
 import { calculateStageTimeVariance } from "../../shared/stageTiming";
 import { allocateAdministrativeExpense, normalizeExpenseTaxRate, validateExpenseAllocation } from "../../shared/expenseAllocation";
 import { calculateInventoryBalance, canReceiveContractQuantity, canReviewInventoryStage, nextInventoryApprovalStage, remainingContractQuantity, selectPurchaseInvoiceForIssue, calculateServiceEntryTotal, remainingServiceContractAmount, calculateMaterialReceiptCost, materialReceiptExpenseReference, materialIssueExpenseReference, isMaterialContractType, resolveMaterialCostAccount, requiresSupplierInvoicePaymentApproval } from "../../shared/inventory";
-import { canReviewCertificateApproval, getCertificateInitialApproval, nextCertificateApproval } from "../../shared/approvalWorkflows";
+import { canReviewCertificateApproval, getCertificateInitialApproval, nextCertificateApproval, nextMaterialRequisitionApproval } from "../../shared/approvalWorkflows";
 import { calculateWipBalance, buildWipClosingLines } from "../../shared/wip";
 import { canAssignTeamTasks } from "../../shared/taskPermissions";
 import { sendApprovalEmail, sendInvitationEmail, sendTaskReminderEmail } from "../email";
@@ -1358,24 +1358,20 @@ export const erpRouter = router({
         if (!approval) throw new TRPCError({ code: "BAD_REQUEST", message: "لا توجد مرحلة اعتماد معلقة لهذا الطلب" });
         const stage = approval.approvalStage === "owner" ? "owner" : approval.approvalStage === "project_manager" ? "project_manager" : approval.approvalStage === "general_manager" ? "general_manager" : "mostafa";
         const canReviewStage = stage === "mostafa" ? Number(ctx.user.id) === 13170001 : stage === "project_manager" ? ctx.user.role === "project_manager" : stage === "owner" ? ctx.user.role === "admin" : ctx.user.role === "general_manager";
-        if (!canReviewStage) throw new TRPCError({ code: "FORBIDDEN", message: stage === "mostafa" ? "اعتماد طلب المواد في المرحلة الأولى مخصص لمصطفى" : stage === "project_manager" ? "اعتماد طلب المواد في المرحلة الثانية مخصص لمدير المشاريع" : "الاعتماد النهائي مخصص للمدير العام" });
+        if (!canReviewStage) throw new TRPCError({ code: "FORBIDDEN", message: stage === "mostafa" ? "اعتماد طلب المواد في المرحلة الأولى مخصص لمصطفى" : stage === "owner" ? "اعتماد طلب المواد في المرحلة الثانية مخصص للمالك" : stage === "project_manager" ? "اعتماد طلب المواد في المرحلة الثالثة مخصص لمدير المشاريع" : "الاعتماد النهائي مخصص للمدير العام" });
         await db.update(approvalRequests).set({ status: input.decision, reviewedBy: ctx.user.id, note: input.note || null, reviewedAt: new Date() }).where(eq(approvalRequests.id, approval.id));
         if (input.decision === "rejected") {
           await db.update(materialRequisitions).set({ status: "rejected" }).where(eq(materialRequisitions.id, input.id));
           await db.insert(auditLogs).values({ entityType: "materialRequisition", entityId: input.id, action: "rejected", actorId: ctx.user.id, afterJson: JSON.stringify({ ...input, stage }) });
           return { success: true, status: "rejected" as const, approvalStage: "rejected" as const };
         }
-        if (stage === "mostafa") {
-          await db.insert(approvalRequests).values({ projectId: request.projectId, entityType: "materialRequisition", entityId: request.id, requestedBy: request.requestedBy, status: "pending", approvalStage: "project_manager", stageOrder: 2 });
-          await db.insert(auditLogs).values({ entityType: "materialRequisition", entityId: input.id, action: "mostafa_approved_project_manager_pending", actorId: ctx.user.id, afterJson: JSON.stringify({ note: input.note || null }) });
-          await notifyApprovalUsers(db, { type: "material_requisition_project_manager_pending", title: `طلب مواد بانتظار مدير المشاريع #${input.id}`, message: `اعتمد مصطفى طلب المواد #${input.id} وأصبح بانتظار اعتماد مدير المشاريع.`, roles: ["project_manager"] });
-          return { success: true, status: "pending_approval" as const, approvalStage: "project_manager" as const };
-        }
-        if (stage === "project_manager") {
-          await db.insert(approvalRequests).values({ projectId: request.projectId, entityType: "materialRequisition", entityId: request.id, requestedBy: request.requestedBy, status: "pending", approvalStage: "general_manager", stageOrder: 3 });
-          await db.insert(auditLogs).values({ entityType: "materialRequisition", entityId: input.id, action: "project_manager_approved_general_manager_pending", actorId: ctx.user.id, afterJson: JSON.stringify({ note: input.note || null }) });
-          await notifyApprovalUsers(db, { type: "material_requisition_general_manager_pending", title: `طلب مواد بانتظار اعتماد المدير العام #${input.id}`, message: `اعتمد مدير المشاريع طلب المواد #${input.id} وأصبح بانتظار اعتماد المدير العام.`, roles: ["general_manager"] });
-          return { success: true, status: "pending_approval" as const, approvalStage: "general_manager" as const };
+        const nextStage = nextMaterialRequisitionApproval(stage);
+        if (nextStage) {
+          await db.insert(approvalRequests).values({ projectId: request.projectId, entityType: "materialRequisition", entityId: request.id, requestedBy: request.requestedBy, status: "pending", approvalStage: nextStage.approvalStage, stageOrder: nextStage.stageOrder });
+          const recipientConfig = nextStage.approvalStage === "owner" ? { roles: ["admin"] as UserRole[], type: "material_requisition_owner_pending", title: `طلب مواد بانتظار اعتماد المالك #${input.id}`, message: `اعتمد مصطفى طلب المواد #${input.id} وأصبح بانتظار اعتماد المالك.` } : nextStage.approvalStage === "project_manager" ? { roles: ["project_manager"] as UserRole[], type: "material_requisition_project_manager_pending", title: `طلب مواد بانتظار مدير المشاريع #${input.id}`, message: `اعتمد المالك طلب المواد #${input.id} وأصبح بانتظار اعتماد مدير المشاريع.` } : { roles: ["general_manager"] as UserRole[], type: "material_requisition_general_manager_pending", title: `طلب مواد بانتظار اعتماد المدير العام #${input.id}`, message: `اعتمد مدير المشاريع طلب المواد #${input.id} وأصبح بانتظار اعتماد المدير العام.` };
+          await db.insert(auditLogs).values({ entityType: "materialRequisition", entityId: input.id, action: `${stage}_approved_${nextStage.approvalStage}_pending`, actorId: ctx.user.id, afterJson: JSON.stringify({ note: input.note || null }) });
+          await notifyApprovalUsers(db, recipientConfig);
+          return { success: true, status: "pending_approval" as const, approvalStage: nextStage.approvalStage };
         }
         await db.update(materialRequisitions).set({ status: "approved" }).where(eq(materialRequisitions.id, input.id));
         await db.insert(auditLogs).values({ entityType: "materialRequisition", entityId: input.id, action: "general_manager_approved", actorId: ctx.user.id, afterJson: JSON.stringify({ note: input.note || null }) });

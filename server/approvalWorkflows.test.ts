@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MOSTAFA_USER_ID, canReviewCertificateApproval, getCertificateInitialApproval, nextCertificateApproval } from "../shared/approvalWorkflows";
+import { MOSTAFA_USER_ID, canReviewCertificateApproval, getCertificateInitialApproval, nextCertificateApproval, nextMaterialRequisitionApproval } from "../shared/approvalWorkflows";
 
 describe("certificate approval workflow", () => {
   it("sends a certificate created by Mostafa directly to the owner", () => {
@@ -24,5 +24,14 @@ describe("certificate approval workflow", () => {
     expect(nextCertificateApproval(2)).toEqual({ approvalStage: "project_manager", stageOrder: 3 });
     expect(nextCertificateApproval(3)).toEqual({ approvalStage: "general_manager", stageOrder: 4 });
     expect(nextCertificateApproval(4)).toBeNull();
+  });
+});
+
+describe("material requisition workflow", () => {
+  it("requires Mostafa, then owner, then project manager, then general manager", () => {
+    expect(nextMaterialRequisitionApproval("mostafa")).toEqual({ approvalStage: "owner", stageOrder: 2 });
+    expect(nextMaterialRequisitionApproval("owner")).toEqual({ approvalStage: "project_manager", stageOrder: 3 });
+    expect(nextMaterialRequisitionApproval("project_manager")).toEqual({ approvalStage: "general_manager", stageOrder: 4 });
+    expect(nextMaterialRequisitionApproval("general_manager")).toBeNull();
   });
 });
