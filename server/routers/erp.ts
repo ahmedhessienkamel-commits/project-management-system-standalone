@@ -1446,7 +1446,9 @@ export const erpRouter = router({
           await db.update(purchaseOrderItems).set({ receivedQuantity: (Number(item.receivedQuantity) + quantity).toFixed(3) }).where(eq(purchaseOrderItems.id, item.id));
         }
         if (receivedCost > 0) await db.insert(expenses).values({ projectId: order.projectId, stageId: order.stageId || null, vendorId: order.vendorId, reference: receiptNumber, description: `استلام مواد من أمر شراء ${order.orderNumber}`, unit: "استلام", quantity: "1.000", expenseType: "materials", classification: "project", preTaxAmount: receivedCost.toFixed(2), taxRate: "0.00", taxAmount: "0.00", totalAmount: receivedCost.toFixed(2), paidAmount: "0.00", status: "posted", expenseDate: input.receivedDate ? new Date(input.receivedDate) : new Date(), createdBy: ctx.user.id });
-        await db.update(purchaseOrders).set({ status: "partially_received" }).where(eq(purchaseOrders.id, order.id));
+        const refreshedOrderItems = await db.select().from(purchaseOrderItems).where(eq(purchaseOrderItems.purchaseOrderId, order.id));
+        const fullyReceived = refreshedOrderItems.length > 0 && refreshedOrderItems.every((item) => Number(item.receivedQuantity) >= Number(item.quantity) - 0.0001);
+        await db.update(purchaseOrders).set({ status: fullyReceived ? "received" : "partially_received" }).where(eq(purchaseOrders.id, order.id));
         await db.insert(auditLogs).values({ entityType: "purchaseReceipt", entityId: receiptId, action: "posted", actorId: ctx.user.id, afterJson: JSON.stringify({ ...input, receivedCost }) });
         return { id: receiptId, receiptNumber, receivedCost };
       }),
@@ -1838,6 +1840,7 @@ export const erpRouter = router({
       await assertProjectAccess(db, ctx, input.projectId);
       await assertProjectWrite(db, ctx, input.projectId);
       await assertPeriodOpen(db, ctx, input.projectId, input.contractDate ? new Date(input.contractDate) : new Date());
+      const projectCompany = (await db.select({ companyId: projects.companyId }).from(projects).where(eq(projects.id, input.projectId)).limit(1))[0];
       if (input.contractType !== "building_stage" && input.contractItems.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: "عقد التوريد أو التوريد والتركيب يجب أن يحتوي على بند كمي واحد على الأقل" });
       let normalizedContractItems = input.contractItems;
       if (isMaterialContractType(input.contractType)) {
@@ -1855,7 +1858,7 @@ export const erpRouter = router({
       }
       const itemAmount = normalizedContractItems.reduce((sum, item) => sum + item.contractedQty * item.unitPrice, 0);
       const totals = calculateExpenseTotals(normalizedContractItems.length ? itemAmount : input.preTaxAmount, input.taxRate);
-      const result = await db.insert(contractorContracts).values({ projectId: input.projectId, stageId: input.stageId || null, vendorId: input.vendorId, contractNumber: input.contractNumber, description: input.description || null, contractType: input.contractType, contractItems: normalizedContractItems, preTaxAmount: totals.preTaxAmount.toFixed(2), taxRate: input.taxRate.toFixed(2), taxAmount: totals.taxAmount.toFixed(2), totalAmount: totals.totalAmount.toFixed(2), status: "active", contractDate: input.contractDate ? new Date(input.contractDate) : null, createdBy: ctx.user.id });
+      const result = await db.insert(contractorContracts).values({ companyId: projectCompany?.companyId ?? null, projectId: input.projectId, stageId: input.stageId || null, vendorId: input.vendorId, contractNumber: input.contractNumber, description: input.description || null, contractType: input.contractType, contractItems: normalizedContractItems, preTaxAmount: totals.preTaxAmount.toFixed(2), taxRate: input.taxRate.toFixed(2), taxAmount: totals.taxAmount.toFixed(2), totalAmount: totals.totalAmount.toFixed(2), status: "active", contractDate: input.contractDate ? new Date(input.contractDate) : null, createdBy: ctx.user.id });
       const id = Number(result[0].insertId);
       await db.insert(auditLogs).values({ entityType: "contractor_contract", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify({ ...input, contractItems: normalizedContractItems, ...totals }) });
       return { id, totalAmount: totals.totalAmount };
@@ -1932,6 +1935,7 @@ export const erpRouter = router({
       await assertProjectAccess(db, ctx, input.projectId);
       await assertProjectWrite(db, ctx, input.projectId);
       await assertPeriodOpen(db, ctx, input.projectId, input.certificateDate ? new Date(input.certificateDate) : new Date());
+      const projectCompany = (await db.select({ companyId: projects.companyId }).from(projects).where(eq(projects.id, input.projectId)).limit(1))[0];
       const totals = calculateExpenseTotals(input.preTaxAmount, input.taxRate);
       if (input.contractId) {
         const contract = (await db.select().from(contractorContracts).where(eq(contractorContracts.id, input.contractId)).limit(1))[0];
@@ -1943,7 +1947,7 @@ export const erpRouter = router({
         const used = previous.filter((row) => row.status !== "rejected").reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
         if (used + totals.totalAmount > Number(contract.totalAmount) + 0.01) throw new TRPCError({ code: "BAD_REQUEST", message: `قيمة المستخلص تتجاوز المتبقي من العقد. المتبقي الحالي ${Math.max(0, Number(contract.totalAmount) - used).toFixed(2)} ر.س` });
       }
-      const result = await db.insert(certificates).values({ projectId: input.projectId, contractId: input.contractId || null, stageId: input.stageId || null, vendorId: input.vendorId || null, certificateNumber: input.certificateNumber, description: input.description || null, technicalSpecifications: input.technicalSpecifications || null, certificateItems: input.certificateItems, preTaxAmount: totals.preTaxAmount.toFixed(2), taxAmount: totals.taxAmount.toFixed(2), totalAmount: totals.totalAmount.toFixed(2), paidAmount: Math.min(input.paidAmount, totals.totalAmount).toFixed(2), status: "pending", certificateDate: input.certificateDate ? new Date(input.certificateDate) : null, createdBy: ctx.user.id });
+      const result = await db.insert(certificates).values({ companyId: projectCompany?.companyId ?? null, projectId: input.projectId, contractId: input.contractId || null, stageId: input.stageId || null, vendorId: input.vendorId || null, certificateNumber: input.certificateNumber, description: input.description || null, technicalSpecifications: input.technicalSpecifications || null, certificateItems: input.certificateItems, preTaxAmount: totals.preTaxAmount.toFixed(2), taxAmount: totals.taxAmount.toFixed(2), totalAmount: totals.totalAmount.toFixed(2), paidAmount: Math.min(input.paidAmount, totals.totalAmount).toFixed(2), status: "pending", certificateDate: input.certificateDate ? new Date(input.certificateDate) : null, createdBy: ctx.user.id });
       const id = Number(result[0].insertId);
       const initialApproval = getCertificateInitialApproval(Number(ctx.user.id));
       await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "certificate", entityId: id, requestedBy: ctx.user.id, status: "pending", approvalStage: initialApproval.approvalStage, stageOrder: initialApproval.stageOrder });
