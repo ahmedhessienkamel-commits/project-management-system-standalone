@@ -63,7 +63,7 @@ export default function Home() {
           <header className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div className="w-full lg:order-2 lg:w-72"><label className="mb-2 block text-xs font-semibold text-slate-500">المشروع المعروض في المؤشرات</label><select value={selectedSummary ? String(selectedSummary.project.id) : ""} onChange={(event) => setSelectedProjectId(Number(event.target.value))} className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-[#18324b] shadow-sm outline-none focus:border-[#b28a3b]"><option value="" disabled>اختر مشروعًا</option>{summaries.map((item) => <option key={item.project.id} value={item.project.id}>{item.project.name}</option>)}</select></div>
             <div>
-              <p className="mb-2 text-sm font-semibold tracking-wide text-[#b28a3b]">مركز القيادة التنفيذية</p>
+              <p className="mb-2 text-sm font-semibold tracking-wide text-[#b28a3b]">{user?.role === "general_manager" ? "واجهة المدير العام التنفيذية" : "مركز القيادة التنفيذية"}</p><div className="mb-2 inline-flex rounded-full border border-[#eadfca] bg-[#fcfaf5] px-3 py-1 text-xs font-semibold text-[#8b6b2f]">{user?.role === "general_manager" ? "عرض تقارير وموافقات فقط · واجهة مختلفة عن المحاسب ومدير المشاريع" : "لوحة متابعة تنفيذية"}</div>
               <h1 className="text-3xl font-bold tracking-tight text-[#18324b] sm:text-4xl">صورة المشروع في لحظة</h1>
               <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-500">اعرف من أول نظرة هل التنفيذ يسير وفق المخطط، وما سبب أي انحراف في الميزانية أو المراحل أو السيولة.</p>
             </div>
