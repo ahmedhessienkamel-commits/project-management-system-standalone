@@ -34,7 +34,7 @@ const menuItems = [
   { icon: LayoutDashboard, label: "لوحة التنفيذ", path: "/" },
   { section: true, label: "التشغيل الأساسي" },
   { icon: ClipboardList, label: "المشاريع والمراحل", path: "/projects" },
-  { icon: Boxes, label: "مراقبة المخزون والكميات", path: "/inventory" },
+  { icon: Boxes, label: "تقرير الخامات والكميات", path: "/inventory" },
   { icon: ClipboardList, label: "طلبات المواد", path: "/operations?tab=procurement" },
   { icon: WalletCards, label: "المبيعات والتحصيلات", path: "/sales" },
   { icon: FileText, label: "التكاليف والمصروفات", path: "/expenses" },
@@ -164,17 +164,17 @@ function DashboardLayoutContent({
     { label: "إنشاء سند صرف أو قبض", path: "/accounting" },
     { label: "فتح مسير الرواتب", path: "/payroll" },
     { label: "تسجيل طلب شراء", path: "/operations" },
-    { label: "مراقبة المخزون والكميات", path: "/inventory" },
+    { label: "تقرير الخامات والكميات", path: "/inventory" },
     { label: "إسناد مهمة للفريق", path: "/tasks" },
   ];
   const roleLabelAllowList: Record<string, string[] | undefined> = {
-    general_manager: ["لوحة التنفيذ", "الموافقات والمستندات", "العقود والمستخلصات", "المبيعات والتحصيلات", "مراقبة المخزون والكميات", "قائمة دخل المشاريع", "إسناد ومتابعة مهام الفريق"],
+    general_manager: ["لوحة التنفيذ", "الموافقات والمستندات", "العقود والمستخلصات", "المبيعات والتحصيلات", "تقرير الخامات والكميات", "قائمة دخل المشاريع", "إسناد ومتابعة مهام الفريق"],
     project_manager: ["لوحة التنفيذ", "المشاريع والمراحل", "العقود والمستخلصات", "الموردون والمقاولون", "الموافقات والمستندات"],
-    procurement_manager: ["لوحة التنفيذ", "مراقبة المخزون والكميات", "التكاليف والمصروفات", "الموافقات والمستندات"],
-    site_worker: ["لوحة التنفيذ", "مراقبة المخزون والكميات", "طلبات المواد", "طلباتي"],
+    procurement_manager: ["لوحة التنفيذ", "تقرير الخامات والكميات", "التكاليف والمصروفات", "الموافقات والمستندات"],
+    site_worker: ["لوحة التنفيذ", "تقرير الخامات والكميات", "طلبات المواد", "طلباتي"],
   };
   const allowedLabels = roleLabelAllowList[user?.role || ""];
-  const generalManagerOrder = ["لوحة التنفيذ", "الموافقات والمستندات", "العقود والمستخلصات", "المبيعات والتحصيلات", "مراقبة المخزون والكميات", "قائمة دخل المشاريع", "إسناد ومتابعة مهام الفريق"];
+  const generalManagerOrder = ["لوحة التنفيذ", "الموافقات والمستندات", "العقود والمستخلصات", "المبيعات والتحصيلات", "تقرير الخامات والكميات", "قائمة دخل المشاريع", "إسناد ومتابعة مهام الفريق"];
   const generalManagerMenuItems = generalManagerOrder.flatMap((label) => { const item = menuItems.find((candidate) => "path" in candidate && candidate.label === label); return item ? [item] : []; });
   const visibleMenuItems = user?.role === "general_manager" ? generalManagerMenuItems : allowedLabels ? menuItems.filter((item) => "section" in item || allowedLabels.includes(item.label)) : menuItems;
   const visibleQuickActions = user?.role === "general_manager" ? quickActions.filter((action) => action.path === "/operations?tab=certificates" || action.path === "/inventory" || action.path === "/tasks") : user?.role === "site_worker" ? quickActions.filter((action) => action.path === "/inventory" || action.path === "/operations?tab=procurement") : allowedLabels ? quickActions.filter((action) => action.path.includes("/operations") || action.path.includes("/tasks") || action.path.includes("/accounting?type=sales_invoice")) : quickActions;
