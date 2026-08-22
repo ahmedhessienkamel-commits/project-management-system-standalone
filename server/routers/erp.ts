@@ -1494,21 +1494,24 @@ export const erpRouter = router({
         const db = requireDb(await getDb());
         const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
         const companyId = await resolveActiveCompanyId(db, ctx);
-        const [requests, projectRows, userRows, memberRows, certificateRows, payrollRows, requisitionRows, documentRows] = await Promise.all([
+        const [requests, projectRows, userRows, memberRows, certificateRows, payrollRows, requisitionRows, documentRows, saleRows] = await Promise.all([
           db.select().from(approvalRequests).where(eq(approvalRequests.status, "pending")).orderBy(approvalRequests.createdAt),
           companyId ? db.select({ id: projects.id, name: projects.name }).from(projects).where(eq(projects.companyId, companyId)) : db.select({ id: projects.id, name: projects.name }).from(projects),
           db.select({ id: users.id, name: users.name, email: users.email, role: users.role }).from(users),
           db.select({ projectId: projectMembers.projectId, userId: projectMembers.userId, projectRole: projectMembers.projectRole }).from(projectMembers),
-          db.select({ id: certificates.id, certificateNumber: certificates.certificateNumber, projectId: certificates.projectId }).from(certificates),
-          db.select({ id: payroll.id, month: payroll.month, year: payroll.year }).from(payroll),
-          db.select({ id: materialRequisitions.id, requestNumber: materialRequisitions.requestNumber, projectId: materialRequisitions.projectId }).from(materialRequisitions),
-          db.select({ id: accountingDocuments.id, documentNumber: accountingDocuments.documentNumber, documentType: accountingDocuments.documentType }).from(accountingDocuments),
+          db.select({ id: certificates.id, certificateNumber: certificates.certificateNumber, projectId: certificates.projectId, description: certificates.description, totalAmount: certificates.totalAmount, certificateDate: certificates.certificateDate, createdBy: certificates.createdBy }).from(certificates),
+          db.select({ id: payroll.id, month: payroll.month, year: payroll.year, employeeName: payroll.employeeName, totalAmount: payroll.totalAmount, createdAt: payroll.createdAt, createdBy: payroll.createdBy }).from(payroll),
+          db.select({ id: materialRequisitions.id, requestNumber: materialRequisitions.requestNumber, projectId: materialRequisitions.projectId, description: materialRequisitions.description, createdAt: materialRequisitions.createdAt, requestedBy: materialRequisitions.requestedBy }).from(materialRequisitions),
+          db.select({ id: accountingDocuments.id, documentNumber: accountingDocuments.documentNumber, documentType: accountingDocuments.documentType, notes: accountingDocuments.notes, totalAmount: accountingDocuments.totalAmount, documentDate: accountingDocuments.documentDate, createdBy: accountingDocuments.createdBy }).from(accountingDocuments),
+          db.select({ id: sales.id, projectId: sales.projectId, customerName: sales.customerName, totalAmount: sales.totalAmount, saleDate: sales.saleDate, createdBy: sales.createdBy }).from(sales),
         ]);
         const projectMap = new Map(projectRows.map((row) => [row.id, row]));
         const certificateMap = new Map(certificateRows.map((row) => [row.id, row]));
         const payrollMap = new Map(payrollRows.map((row) => [row.id, row]));
         const requisitionMap = new Map(requisitionRows.map((row) => [row.id, row]));
         const documentMap = new Map(documentRows.map((row) => [row.id, row]));
+        const saleMap = new Map(saleRows.map((row) => [row.id, row]));
+        const userMap = new Map(userRows.map((row) => [row.id, row]));
         const stageLabel = (stage?: string | null) => stage === "mostafa" ? "مصطفى" : stage === "owner" ? "المالك" : stage === "project_manager" ? "مدير المشاريع" : stage === "general_manager" ? "المدير العام" : "المسؤول المعتمد";
         const recipientsFor = (request: typeof requests[number]) => {
           if (request.approvalStage === "mostafa") return userRows.filter((user) => user.id === 13170001);
@@ -1525,10 +1528,18 @@ export const erpRouter = router({
           const payrollRow = request.entityType === "payroll" ? payrollMap.get(request.entityId) : undefined;
           const requisition = request.entityType === "materialRequisition" ? requisitionMap.get(request.entityId) : undefined;
           const document = ["purchase_payment", "payment_voucher"].includes(request.entityType) ? documentMap.get(request.entityId) : undefined;
-          const title = certificate?.certificateNumber || (payrollRow ? `مسير ${payrollRow.month}/${payrollRow.year}` : requisition?.requestNumber || document?.documentNumber || `${request.entityType} #${request.entityId}`);
+          const sale = request.entityType === "sale" ? saleMap.get(request.entityId) : undefined;
+          const typeLabel = certificate ? "مستخلص مقاول" : payrollRow ? "مسير رواتب" : requisition ? "طلب شراء مواد" : document ? (document.documentType === "purchase_invoice" ? "فاتورة شراء" : document.documentType === "payment_voucher" ? "سند صرف" : "مستند محاسبي") : sale ? "مبيعات" : request.entityType;
+          const title = certificate?.certificateNumber || (payrollRow ? `مسير ${payrollRow.month}/${payrollRow.year}` : requisition?.requestNumber || document?.documentNumber || (sale ? `بيع الوحدة — ${sale.customerName}` : `${request.entityType} #${request.entityId}`));
+          const source = certificate || payrollRow || requisition || document || sale;
+          const requestedBy = request.requestedBy || (source as { createdBy?: number | null } | undefined)?.createdBy || requisition?.requestedBy || null;
           const recipients = recipientsFor(request);
-          return { ...request, title, projectName: request.projectId ? projectMap.get(request.projectId)?.name || `مشروع #${request.projectId}` : "بدون مشروع", stageLabel: stageLabel(request.approvalStage), responsibleUsers: recipients, isCurrentUserResponsible: recipients.some((user) => user.id === ctx.user.id), waitingDays: Math.max(0, Math.floor((Date.now() - new Date(request.createdAt).getTime()) / 86400000)) };
-        });
+          const description = certificate?.description || requisition?.description || document?.notes || (sale ? `بيع وحدة للعميل ${sale.customerName}` : payrollRow ? `مسير شهر ${payrollRow.month}/${payrollRow.year} — ${payrollRow.employeeName}` : "—");
+          const workflowLabel = request.entityType === "payroll" ? "مصطفى ← المالك ← المدير العام" : request.entityType === "certificate" ? "مصطفى ← المالك ← مدير المشاريع ← المدير العام" : request.entityType === "materialRequisition" ? "موظف الموقع ← مصطفى ← مدير المشاريع ← المدير العام" : "منشئ المستند ← المسؤول المعتمد";
+          const recordLabel = `${title} ${description}`.includes("تجريبي") ? "سجل تجريبي" : "مستند فعلي";
+          const sourceExists = Boolean(source);
+          return { ...request, title, typeLabel, description, amount: Number(certificate?.totalAmount || payrollRow?.totalAmount || document?.totalAmount || sale?.totalAmount || 0), documentDate: certificate?.certificateDate || payrollRow?.createdAt || requisition?.createdAt || document?.documentDate || sale?.saleDate || request.createdAt, requesterName: requestedBy ? userMap.get(requestedBy)?.name || `مستخدم #${requestedBy}` : "غير محدد", requestedBy, workflowLabel, recordLabel, sourceExists, projectName: request.projectId ? projectMap.get(request.projectId)?.name || `مشروع #${request.projectId}` : "بدون مشروع", stageLabel: stageLabel(request.approvalStage), responsibleUsers: recipients, isCurrentUserResponsible: recipients.some((user) => user.id === ctx.user.id), waitingDays: Math.max(0, Math.floor((Date.now() - new Date(request.createdAt).getTime()) / 86400000)) };
+        }).filter((item) => item.sourceExists);
       }),
       sendReminder: protectedProcedure.input(z.object({ approvalId: z.number().int().positive(), message: z.string().trim().max(1000).optional() })).mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
