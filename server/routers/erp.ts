@@ -172,7 +172,7 @@ function canManagePartners(user: { role: string; id: number }) {
 }
 
 function canReviewApproval(user: { role: string; id: number }, request: { entityType: string; approvalStage?: string | null }) {
-  if (user.role === "admin") return true;
+  if (user.role === "admin") return !(request.entityType === "payroll" || request.entityType === "certificate") || request.approvalStage === "owner";
   if (Number(user.id) === 13170001) return request.entityType === "certificate" && request.approvalStage === "mostafa";
   if (user.role === "general_manager") return (request.entityType === "payroll" && request.approvalStage === "general_manager") || (request.entityType === "purchase_payment" && request.approvalStage === "general_manager") || (request.entityType === "certificate" && request.approvalStage === "general_manager");
   if (user.role === "project_manager") return (request.entityType === "certificate" && request.approvalStage === "project_manager") || request.approvalStage === "project_manager";
@@ -1336,7 +1336,7 @@ export const erpRouter = router({
         const approval = (await db.select().from(approvalRequests).where(and(eq(approvalRequests.entityType, "materialRequisition"), eq(approvalRequests.entityId, input.id), eq(approvalRequests.status, "pending"))).limit(1))[0];
         if (!approval) throw new TRPCError({ code: "BAD_REQUEST", message: "لا توجد مرحلة اعتماد معلقة لهذا الطلب" });
         const stage = approval.approvalStage === "owner" ? "owner" : approval.approvalStage === "project_manager" ? "project_manager" : approval.approvalStage === "general_manager" ? "general_manager" : "mostafa";
-        const canReviewStage = stage === "mostafa" ? (ctx.user.role === "admin" || Number(ctx.user.id) === 13170001) : stage === "project_manager" ? (ctx.user.role === "admin" || ctx.user.role === "project_manager") : stage === "owner" ? ctx.user.role === "admin" : (ctx.user.role === "admin" || ctx.user.role === "general_manager");
+        const canReviewStage = stage === "mostafa" ? Number(ctx.user.id) === 13170001 : stage === "project_manager" ? ctx.user.role === "project_manager" : stage === "owner" ? ctx.user.role === "admin" : ctx.user.role === "general_manager";
         if (!canReviewStage) throw new TRPCError({ code: "FORBIDDEN", message: stage === "mostafa" ? "اعتماد طلب المواد في المرحلة الأولى مخصص لمصطفى" : stage === "project_manager" ? "اعتماد طلب المواد في المرحلة الثانية مخصص لمدير المشاريع" : "الاعتماد النهائي مخصص للمدير العام" });
         await db.update(approvalRequests).set({ status: input.decision, reviewedBy: ctx.user.id, note: input.note || null, reviewedAt: new Date() }).where(eq(approvalRequests.id, approval.id));
         if (input.decision === "rejected") {

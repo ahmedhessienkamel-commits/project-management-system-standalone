@@ -150,7 +150,8 @@ describe("ERP sales and collections API flow", () => {
     const admin = appRouter.createCaller(context(1, "admin"));
     const vendor = await admin.erp.vendors.create({ projectId: 1, name: "مورد مواد", taxNumber: "TAX-PO", commercialRegistration: "CR-PO" });
     const requisition = await admin.erp.procurement.requisitions.create({ projectId: 1, stageId: 2, description: "مواد خرسانة", items: [{ description: "حديد", unit: "طن", quantity: 2, estimatedUnitCost: 1000 }] });
-    await admin.erp.procurement.requisitions.decide({ id: requisition.id, decision: "approved" });
+    const mostafa = appRouter.createCaller(context(13170001, "user"));
+    await mostafa.erp.procurement.requisitions.decide({ id: requisition.id, decision: "approved" });
     state.materialRequisitions[0].status = "approved";
     const order = await admin.erp.procurement.purchaseOrders.create({ requisitionId: requisition.id, vendorId: vendor.id, items: [{ description: "حديد", unit: "طن", quantity: 2, unitCost: 1000 }] });
     await admin.erp.procurement.purchaseOrders.decide({ id: order.id, decision: "approved" });
