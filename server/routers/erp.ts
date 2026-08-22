@@ -1489,6 +1489,66 @@ export const erpRouter = router({
       const companyRows = rows.filter((row) => row.projectId === null || companyProjectIds.has(row.projectId));
       return allowed ? companyRows.filter((row) => row.projectId === null || allowed.has(row.projectId)) : companyRows;
     }),
+    pendingElsewhere: router({
+      list: protectedProcedure.query(async ({ ctx }) => {
+        const db = requireDb(await getDb());
+        const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
+        const companyId = await resolveActiveCompanyId(db, ctx);
+        const [requests, projectRows, userRows, memberRows, certificateRows, payrollRows, requisitionRows, documentRows] = await Promise.all([
+          db.select().from(approvalRequests).where(eq(approvalRequests.status, "pending")).orderBy(approvalRequests.createdAt),
+          companyId ? db.select({ id: projects.id, name: projects.name }).from(projects).where(eq(projects.companyId, companyId)) : db.select({ id: projects.id, name: projects.name }).from(projects),
+          db.select({ id: users.id, name: users.name, email: users.email, role: users.role }).from(users),
+          db.select({ projectId: projectMembers.projectId, userId: projectMembers.userId, projectRole: projectMembers.projectRole }).from(projectMembers),
+          db.select({ id: certificates.id, certificateNumber: certificates.certificateNumber, projectId: certificates.projectId }).from(certificates),
+          db.select({ id: payroll.id, month: payroll.month, year: payroll.year }).from(payroll),
+          db.select({ id: materialRequisitions.id, requestNumber: materialRequisitions.requestNumber, projectId: materialRequisitions.projectId }).from(materialRequisitions),
+          db.select({ id: accountingDocuments.id, documentNumber: accountingDocuments.documentNumber, documentType: accountingDocuments.documentType }).from(accountingDocuments),
+        ]);
+        const projectMap = new Map(projectRows.map((row) => [row.id, row]));
+        const certificateMap = new Map(certificateRows.map((row) => [row.id, row]));
+        const payrollMap = new Map(payrollRows.map((row) => [row.id, row]));
+        const requisitionMap = new Map(requisitionRows.map((row) => [row.id, row]));
+        const documentMap = new Map(documentRows.map((row) => [row.id, row]));
+        const stageLabel = (stage?: string | null) => stage === "mostafa" ? "مصطفى" : stage === "owner" ? "المالك" : stage === "project_manager" ? "مدير المشاريع" : stage === "general_manager" ? "المدير العام" : "المسؤول المعتمد";
+        const recipientsFor = (request: typeof requests[number]) => {
+          if (request.approvalStage === "mostafa") return userRows.filter((user) => user.id === 13170001);
+          if (request.approvalStage === "project_manager") {
+            const memberIds = memberRows.filter((member) => member.projectId === request.projectId && member.projectRole === "manager").map((member) => member.userId);
+            return userRows.filter((user) => memberIds.includes(user.id) || user.role === "project_manager");
+          }
+          if (request.approvalStage === "general_manager") return userRows.filter((user) => user.role === "general_manager");
+          return userRows.filter((user) => user.role === "admin");
+        };
+        const visible = allowed ? requests.filter((row) => row.projectId === null || allowed.has(row.projectId)) : requests;
+        return visible.map((request) => {
+          const certificate = request.entityType === "certificate" ? certificateMap.get(request.entityId) : undefined;
+          const payrollRow = request.entityType === "payroll" ? payrollMap.get(request.entityId) : undefined;
+          const requisition = request.entityType === "materialRequisition" ? requisitionMap.get(request.entityId) : undefined;
+          const document = ["purchase_payment", "payment_voucher"].includes(request.entityType) ? documentMap.get(request.entityId) : undefined;
+          const title = certificate?.certificateNumber || (payrollRow ? `مسير ${payrollRow.month}/${payrollRow.year}` : requisition?.requestNumber || document?.documentNumber || `${request.entityType} #${request.entityId}`);
+          const recipients = recipientsFor(request);
+          return { ...request, title, projectName: request.projectId ? projectMap.get(request.projectId)?.name || `مشروع #${request.projectId}` : "بدون مشروع", stageLabel: stageLabel(request.approvalStage), responsibleUsers: recipients, isCurrentUserResponsible: recipients.some((user) => user.id === ctx.user.id), waitingDays: Math.max(0, Math.floor((Date.now() - new Date(request.createdAt).getTime()) / 86400000)) };
+        });
+      }),
+      sendReminder: protectedProcedure.input(z.object({ approvalId: z.number().int().positive(), message: z.string().trim().max(1000).optional() })).mutation(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        const request = (await db.select().from(approvalRequests).where(and(eq(approvalRequests.id, input.approvalId), eq(approvalRequests.status, "pending"))).limit(1))[0];
+        if (!request) throw new TRPCError({ code: "NOT_FOUND", message: "الموافقة المعلقة غير موجودة" });
+        const canSendReminder = ctx.user.role === "admin" || ctx.user.role === "general_manager" || ctx.user.role === "project_manager" || Number(ctx.user.id) === 13170001;
+        if (!canSendReminder) throw new TRPCError({ code: "FORBIDDEN", message: "إرسال تذكير الموافقة متاح للمسؤولين فقط" });
+        const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
+        if (request.projectId && allowed && !allowed.has(request.projectId)) throw new TRPCError({ code: "FORBIDDEN", message: "لا تملك صلاحية على هذا المشروع" });
+        const userRows = await db.select({ id: users.id, name: users.name, email: users.email, role: users.role }).from(users);
+        const recipients = request.approvalStage === "mostafa" ? userRows.filter((user) => user.id === 13170001) : request.approvalStage === "general_manager" ? userRows.filter((user) => user.role === "general_manager") : request.approvalStage === "project_manager" ? userRows.filter((user) => user.role === "project_manager") : userRows.filter((user) => user.role === "admin");
+        const withEmail = recipients.filter((user) => user.email);
+        if (!withEmail.length) throw new TRPCError({ code: "BAD_REQUEST", message: "لا يوجد بريد إلكتروني للمسؤول الحالي" });
+        const message = input.message || `يوجد مستند بانتظار ${request.approvalStage === "mostafa" ? "مراجعتك" : "اعتمادك"}. يرجى فتح صفحة الموافقات واتخاذ القرار أو الرفض بسبب واضح.`;
+        await Promise.all(withEmail.map((user) => sendApprovalEmail({ to: user.email!, recipientName: user.name, title: "تذكير بموافقة معلقة", message, approvalUrl: `${process.env.APP_URL || process.env.VITE_APP_URL || "https://metaadscntr-8ymftbnn.manus.space"}/approvals` })));
+        await Promise.all(withEmail.map((user) => db.insert(notifications).values({ userId: user.id, type: "approval_reminder", title: "تذكير بموافقة معلقة", message })));
+        await db.insert(auditLogs).values({ entityType: "approval", entityId: request.id, action: "reminder_sent", actorId: ctx.user.id, afterJson: JSON.stringify({ recipients: withEmail.map((user) => user.id), message }) });
+        return { success: true, recipients: withEmail.map((user) => user.name) } as const;
+      }),
+    }),
     decide: protectedProcedure
       .input(z.object({ id: z.number().int().positive(), decision: z.enum(["approved", "rejected"]), note: z.string().max(1000).optional() }))
       .mutation(async ({ ctx, input }) => {
