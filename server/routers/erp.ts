@@ -900,6 +900,26 @@ export const erpRouter = router({
       }
       return summary;
     }),
+    sendProjectAlert: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), message: z.string().trim().min(2).max(2000) })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      if (ctx.user.role !== "admin" && ctx.user.role !== "general_manager") throw new TRPCError({ code: "FORBIDDEN", message: "إرسال تنبيهات المشاريع متاح للمدير العام والمالك فقط" });
+      const project = (await db.select({ id: projects.id, name: projects.name, companyId: projects.companyId }).from(projects).where(eq(projects.id, input.projectId)).limit(1))[0];
+      if (!project) throw new TRPCError({ code: "NOT_FOUND", message: "المشروع غير موجود" });
+      const activeCompanyId = await resolveActiveCompanyId(db, ctx);
+      if (activeCompanyId && project.companyId !== activeCompanyId) throw new TRPCError({ code: "FORBIDDEN", message: "المشروع لا يتبع الشركة النشطة" });
+      const managers = await db.select({ id: users.id, name: users.name, email: users.email }).from(projectMembers).innerJoin(users, eq(projectMembers.userId, users.id)).where(and(eq(projectMembers.projectId, input.projectId), eq(projectMembers.projectRole, "manager")));
+      const recipients = managers.filter((manager) => manager.id !== ctx.user.id);
+      if (!recipients.length) throw new TRPCError({ code: "BAD_REQUEST", message: "لا يوجد مدير مشروع مسند إلى هذا المشروع" });
+      const title = `تنبيه سريع بخصوص مشروع ${project.name}`;
+      await Promise.all(recipients.map(async (recipient) => {
+        await db.insert(notifications).values({ userId: recipient.id, type: "project_manager_alert", title, message: input.message });
+        if (recipient.email) {
+          try { await sendApprovalEmail({ to: recipient.email, recipientName: recipient.name, title, message: input.message, approvalUrl: `${process.env.APP_URL || process.env.VITE_APP_URL || "https://metaadscntr-8ymftbnn.manus.space"}/projects/${project.id}` }); } catch (error) { console.warn("[ProjectAlert] email failed", error); }
+        }
+      }));
+      await db.insert(auditLogs).values({ entityType: "project", entityId: project.id, action: "manager_alert_sent", actorId: ctx.user.id, afterJson: JSON.stringify({ recipients: recipients.map((recipient) => recipient.id), message: input.message }) });
+      return { success: true, recipientCount: recipients.length } as const;
+    }),
     companySummary: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
