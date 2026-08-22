@@ -751,6 +751,7 @@ export const accountingDocuments = mysqlTable("accountingDocuments", {
   relatedDocumentType: varchar("relatedDocumentType", { length: 64 }),
   relatedDocumentId: int("relatedDocumentId"),
   originalDocumentId: int("originalDocumentId"),
+  sourceDocumentId: int("sourceDocumentId"),
   returnType: mysqlEnum("returnType", ["full", "partial"]),
   settlementType: mysqlEnum("settlementType", ["invoice", "direct"]),
   certificateId: int("certificateId"),
