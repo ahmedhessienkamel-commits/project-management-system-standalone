@@ -168,11 +168,12 @@ async function postInventoryLinkedDocuments(db: ErpDb, movement: { id?: number; 
 }
 
 function canManagePartners(user: { role: string; id: number }) {
-  return user.role === "admin" || Number(user.id) === 13170001;
+  return user.role === "admin";
 }
 
 function canReviewApproval(user: { role: string; id: number }, request: { entityType: string; approvalStage?: string | null }) {
-  if (user.role === "admin" || Number(user.id) === 13170001) return true;
+  if (user.role === "admin") return true;
+  if (Number(user.id) === 13170001) return request.approvalStage === "mostafa";
   if (user.role === "general_manager") return request.entityType === "certificate" || request.entityType === "payroll" || (request.entityType === "purchase_payment" && request.approvalStage === "general_manager") || request.approvalStage === "general_manager";
   if (user.role === "project_manager") return request.entityType === "certificate" || request.approvalStage === "project_manager";
   return false;
@@ -210,7 +211,7 @@ async function assertOperationPermission(db: NonNullable<Awaited<ReturnType<type
     procurement_manager: new Set(["purchase_request", "inventory_item", "inventory_receipt", "inventory_issue"]),
     site_worker: new Set(["purchase_request", "inventory_receipt", "inventory_issue"]),
   };
-  const allowedForRole = restrictedRoleRules[ctx.user.role];
+  const allowedForRole = Number(ctx.user.id) === 13170001 ? new Set(["purchase_request", "inventory_receipt", "inventory_issue"]) : restrictedRoleRules[ctx.user.role];
   if (key === "task_assignment" && !canAssignTeamTasks(ctx.user.role)) throw new TRPCError({ code: "FORBIDDEN", message: "إسناد مهام الفريق متاح للمدير العام والمالك فقط" });
   if (allowedForRole && !allowedForRole.has(key)) throw new TRPCError({ code: "FORBIDDEN", message: "هذا الدور مخصص للاعتمادات أو عمليات الموقع المحددة فقط" });
   const row = (await db.select({ mode: userOperationPermissions.mode }).from(userOperationPermissions).where(and(eq(userOperationPermissions.userId, ctx.user.id), eq(userOperationPermissions.operationKey, key))).limit(1))[0];
