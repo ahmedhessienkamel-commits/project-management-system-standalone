@@ -99,8 +99,9 @@ export default function Operations(props: any = {}) {
       vendors: vendors.data ?? [],
       contracts: contractorContracts.data ?? [],
       certificates: certificates.data ?? [],
+      custodyMovements,
     };
-  }, [companyProfile, projects, vendors.data, contractorContracts.data, certificates.data]);
+  }, [companyProfile, projects, vendors.data, contractorContracts.data, certificates.data, custodyMovements]);
   const utils = trpc.useUtils();
   const createVendor = trpc.erp.vendors.create.useMutation({ onSuccess: () => utils.erp.vendors.list.invalidate() });
   const updateVendor = trpc.erp.vendors.update.useMutation({ onSuccess: () => { utils.erp.vendors.list.invalidate(); setEditingVendorId(null); } });
@@ -215,32 +216,35 @@ function CostCenterPanel({ data, loading, projectName }: { data: any[]; loading:
 function typeLabel(type: string) { return ({ materials: "تكلفة خامات", operating_tools: "عدد تشغيل", equipment_rental: "إيجار معدات", contractor: "مقاولات", transport: "نقل", maintenance: "صيانة", services: "خدمات", operating: "تشغيل", administrative: "إدارة" } as Record<string, string>)[type] || type; }
 function FormCard({ title, children, className = "" }: { title: string; children: React.ReactNode; className?: string }) { return <Card className={`border-0 shadow-sm ${className}`}><CardHeader><CardTitle className="text-lg text-[#18324b]">{title}</CardTitle></CardHeader><CardContent>{children}</CardContent></Card>; }
 function ListCard({ title, children, className = "" }: { title: string; children: React.ReactNode; className?: string }) { return <Card className={`border-0 shadow-sm ${className}`}><CardHeader><CardTitle className="text-lg text-[#18324b]">{title}</CardTitle></CardHeader><CardContent className="max-h-[620px] space-y-3 overflow-auto">{children || <p className="py-10 text-center text-slate-500">لا توجد بيانات بعد.</p>}</CardContent></Card>; }
-function openListRowPreview(title: string, subtitle: string, badge: string, companyProfile?: any, autoPrint = false, signatureWorkflow?: any) {
+function openListRowPreview(title: string, subtitle: string, badge: string, companyProfile?: any, autoPrint = false, signatureWorkflow?: any, entity?: { entityType?: string; entityId?: number }) {
   const popup = window.open("", "_blank", "width=1000,height=900");
   if (!popup) return;
   const previewData = (window as typeof window & { __erpDocumentPreviewData?: any }).__erpDocumentPreviewData || {};
   const documentNumber = title.replace(/^(عقد|مستخلص)\s+/, "").trim();
   const contract = title.startsWith("عقد ") ? (previewData.contracts || []).find((row: any) => row.contractNumber === documentNumber) : undefined;
   const certificate = title.startsWith("مستخلص ") ? (previewData.certificates || []).find((row: any) => String(row.certificateNumber) === documentNumber || title.includes(String(row.certificateNumber))) : undefined;
+  const custodyMovement = entity?.entityType === "custodyMovement" ? (previewData.custodyMovements || []).find((row: any) => Number(row.id) === Number(entity.entityId)) : undefined;
   const supplierProfile = !contract && !certificate ? (previewData.vendors || []).find((row: any) => row.name === title) : undefined;
-  const record = contract || certificate || supplierProfile;
+  const record = contract || certificate || custodyMovement || supplierProfile;
   const project = (previewData.projects || []).find((row: any) => row.id === record?.projectId);
   const vendor = (previewData.vendors || []).find((row: any) => row.id === record?.vendorId) || supplierProfile;
   const isContract = Boolean(contract);
-  const rows = supplierProfile ? [{ "الرقم الضريبي": supplierProfile.taxNumber || "غير مضاف", "السجل التجاري": supplierProfile.commercialRegistration || "غير مضاف", "IBAN": supplierProfile.iban || "غير مضاف", "الهاتف / البريد": [supplierProfile.phone, supplierProfile.email, supplierProfile.contact].filter(Boolean).join(" · ") || "غير مضاف" }] : isContract
+  const isCustody = Boolean(custodyMovement);
+  const custodyMovementLabel = ({ issue: "استلام عهدة", spend: "صرف من العهدة", return: "رد عهدة", settlement: "تسوية عهدة" } as Record<string, string>)[custodyMovement?.movementType] || custodyMovement?.movementType;
+  const rows = isCustody ? [{ "نوع الحركة": custodyMovementLabel || "حركة عهدة", "الوصف": custodyMovement?.description || "—", "نوع العهدة": custodyAllocationLabels[custodyMovement?.allocationType as CustodyAllocationType] || custodyMovement?.allocationType || "—", "المبلغ": Number(custodyMovement?.amount || 0), "الرصيد بعد الحركة": custodyMovement?.balance === undefined ? "—" : Number(custodyMovement.balance) }] : supplierProfile ? [{ "الرقم الضريبي": supplierProfile.taxNumber || "غير مضاف", "السجل التجاري": supplierProfile.commercialRegistration || "غير مضاف", "IBAN": supplierProfile.iban || "غير مضاف", "الهاتف / البريد": [supplierProfile.phone, supplierProfile.email, supplierProfile.contact].filter(Boolean).join(" · ") || "غير مضاف" }] : isContract
     ? (contract.contractItems?.length ? contract.contractItems.map((item: any) => ({ "البند": item.description || "بند العقد", "الوحدة": item.unit || "—", "الكمية": Number(item.contractedQty || 0), "سعر الوحدة": Number(item.unitPrice || 0), "الإجمالي": Number(item.contractedQty || 0) * Number(item.unitPrice || 0) })) : [{ "البند": contract.description || "بند العقد", "الإجمالي": Number(contract.totalAmount || 0) }])
     : certificate?.certificateItems?.length ? certificate.certificateItems.map((item: any) => ({ "البند": item.description || "بند المستخلص", "الكمية المعتمدة": Number(item.approvedQty || 0), "سعر الوحدة": Number(item.unitPrice || 0), "الإجمالي": Number(item.approvedQty || 0) * Number(item.unitPrice || 0) })) : [{ "البيان": certificate?.description || subtitle, "الإجمالي": Number(certificate?.totalAmount || 0) }];
   const actualCompanyProfile = companyProfile || previewData.companyProfile;
   const html = buildProfessionalDocumentHtml(actualCompanyProfile, {
     title,
-    englishTitle: isContract ? "CONTRACT DOCUMENT" : certificate ? "CONTRACTOR PAYMENT CERTIFICATE" : "PROJECT MANAGEMENT DOCUMENT",
-    kind: isContract ? "contract" : certificate ? "certificate" : undefined,
-    showFinancialSummary: Boolean(contract || certificate),
+    englishTitle: isContract ? "CONTRACT DOCUMENT" : certificate ? "CONTRACTOR PAYMENT CERTIFICATE" : isCustody ? "CUSTODY MOVEMENT" : "PROJECT MANAGEMENT DOCUMENT",
+    kind: isContract ? "contract" : certificate ? "certificate" : isCustody ? "voucher" : undefined,
+    showFinancialSummary: Boolean(contract || certificate || custodyMovement),
     documentNumber,
     date: record?.contractDate || record?.certificateDate || record?.createdAt,
     status: badge,
-    partyLabel: isContract ? "المقاول / المورد" : certificate ? "المقاول" : "التفاصيل",
-    partyName: vendor?.name || subtitle,
+    partyLabel: isContract ? "المقاول / المورد" : certificate ? "المقاول" : isCustody ? "صاحب العهدة" : "التفاصيل",
+    partyName: isCustody ? custodyMovement?.employeeName || title : vendor?.name || subtitle,
     projectName: project?.name || (record?.projectId ? `مشروع #${record.projectId}` : undefined),
     description: record?.description || "تمت معاينة المستند من سجل النظام.",
     amount: Number(record?.preTaxAmount ?? record?.amount ?? 0),
@@ -251,10 +255,7 @@ function openListRowPreview(title: string, subtitle: string, badge: string, comp
     details: [
       { label: "رقم/مرجع المستند", value: documentNumber },
       { label: "المشروع", value: project?.name || (record?.projectId ? `مشروع #${record.projectId}` : "—") },
-      { label: "المقاول / المورد", value: vendor?.name || "غير محدد" },
-      { label: "العنوان الوطني للمقاول", value: vendor?.nationalAddress || vendor?.address || "غير مضاف" },
-      { label: "الرقم الضريبي", value: vendor?.taxNumber || "غير مضاف" },
-      { label: "السجل التجاري", value: vendor?.commercialRegistration || "غير مضاف" },
+      ...(isCustody ? [{ label: "نوع الحركة", value: custodyMovementLabel || "—" }, { label: "نوع العهدة", value: custodyAllocationLabels[custodyMovement?.allocationType as CustodyAllocationType] || custodyMovement?.allocationType || "—" }, { label: "الرصيد بعد الحركة", value: custodyMovement?.balance === undefined ? "—" : `${money.format(Number(custodyMovement.balance))} ر.س` }] : [{ label: "المقاول / المورد", value: vendor?.name || "غير محدد" }, { label: "العنوان الوطني للمقاول", value: vendor?.nationalAddress || vendor?.address || "غير مضاف" }, { label: "الرقم الضريبي", value: vendor?.taxNumber || "غير مضاف" }, { label: "السجل التجاري", value: vendor?.commercialRegistration || "غير مضاف" }]),
       { label: "الحالة", value: badge },
     ],
     rows,
@@ -263,7 +264,7 @@ function openListRowPreview(title: string, subtitle: string, badge: string, comp
   popup.document.write(autoPrint ? html : html.replace("<script>window.onload=()=>setTimeout(()=>window.print(),250)</script>", ""));
   popup.document.close();
 }
-function ListRow({ title, subtitle, badge, projectId, entityType, entityId, onEdit, related = [] }: { title: string; subtitle: string; badge: string; projectId?: number | null; entityType?: string; entityId?: number; onEdit?: () => void; related?: Array<{ label: string; onClick: () => void }> }) { const { data: companyProfile } = trpc.erp.company.get.useQuery(); const excelRows = [{ "العنوان": title, "التفاصيل": subtitle, "الحالة": badge, "المشروع": projectId || "" , "نوع الكيان": entityType || "", "رقم الكيان": entityId || "" }]; return <div className="flex flex-col gap-3 rounded-xl border border-slate-100 bg-white p-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold text-[#18324b]">{title}</p><p className="mt-1 text-xs text-slate-500">{subtitle}</p>{entityType && entityId ? <TraceLink projectId={projectId} entityType={entityType} entityId={entityId} /> : null}</div><div className="flex flex-wrap items-center justify-end gap-2"><Badge variant="outline">{badge}</Badge><DocumentActions title={title} preview={() => openListRowPreview(title, subtitle, badge, companyProfile)} pdf={() => openListRowPreview(title, subtitle, badge, companyProfile, true)} excelRows={excelRows} excelFileName={title.replace(/\\s+/g, "-")} edit={onEdit} related={related} /></div></div>; }
+function ListRow({ title, subtitle, badge, projectId, entityType, entityId, onEdit, related = [] }: { title: string; subtitle: string; badge: string; projectId?: number | null; entityType?: string; entityId?: number; onEdit?: () => void; related?: Array<{ label: string; onClick: () => void }> }) { const { data: companyProfile } = trpc.erp.company.get.useQuery(); const excelRows = [{ "العنوان": title, "التفاصيل": subtitle, "الحالة": badge, "المشروع": projectId || "" , "نوع الكيان": entityType || "", "رقم الكيان": entityId || "" }]; const entity = { entityType, entityId }; return <div className="flex flex-col gap-3 rounded-xl border border-slate-100 bg-white p-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold text-[#18324b]">{title}</p><p className="mt-1 text-xs text-slate-500">{subtitle}</p>{entityType && entityId ? <TraceLink projectId={projectId} entityType={entityType} entityId={entityId} /> : null}</div><div className="flex flex-wrap items-center justify-end gap-2"><Badge variant="outline">{badge}</Badge><DocumentActions title={title} preview={() => openListRowPreview(title, subtitle, badge, companyProfile, false, undefined, entity)} pdf={() => openListRowPreview(title, subtitle, badge, companyProfile, true, undefined, entity)} excelRows={excelRows} excelFileName={title.replace(/\\s+/g, "-")} edit={onEdit} related={related} /></div></div>; }
 function TraceLink({ projectId, entityType, entityId }: { projectId?: number | null; entityType: string; entityId: number }) { const { data } = trpc.erp.controls.trace.useQuery({ projectId: projectId || undefined, entityType, entityId }); return <p className="mt-1 text-[11px] text-slate-500">{data?.approval ? `اعتماد #${data.approval.id} · ${data.approval.status}` : "سجل تدقيق محفوظ"} · {data?.approvalPolicy ? `الحد ${money.format(Number(data.approvalPolicy.thresholdAmount))} ر.س` : "اعتماد فوري بلا حد مُخصص"} · أحداث {data?.audits.length ?? 0}</p>; }
 function Field({ label, value, onChange, placeholder, type = "text" }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string }) { return <div className="space-y-1.5"><Label className="text-sm text-slate-600">{label}</Label><Input dir="rtl" type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="h-10 border-slate-200 bg-white" /></div>; }
 function SelectField({ label, value, options, onChange }: { label: string; value: string; options: { value: string; label: string }[]; onChange: (v: string) => void }) { return <div className="space-y-1.5"><Label className="text-sm text-slate-600">{label}</Label><select value={value} onChange={(e) => onChange(e.target.value)} className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700" required><option value="">اختر...</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>; }

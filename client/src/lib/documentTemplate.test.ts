@@ -81,6 +81,6 @@ describe("professional document preview mode", () => {
     });
     expect(html).toContain("شركة درة العلاء للمقاولات");
     expect(html).toContain("الرياض — حي النرجس");
-    expect(html).toContain(".summary{display:none!important}");
+    expect(html).toContain("document.querySelector('.summary')?.remove()");
   });
 });
