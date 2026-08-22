@@ -2110,7 +2110,27 @@ export const erpRouter = router({
     notifications: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
       const approvalTypes = ["approval", "certificate_approval", "certificate_approval_stage", "leave_approval", "advance_approval", "payroll_approval", "purchase_payment_pending"] as const;
-      return db.select().from(notifications).where(and(eq(notifications.userId, ctx.user.id), inArray(notifications.type, approvalTypes))).orderBy(notifications.createdAt);
+      const [notificationRows, pendingApprovals, pendingLeaves, pendingAdvances] = await Promise.all([
+        db.select().from(notifications).where(and(eq(notifications.userId, ctx.user.id), inArray(notifications.type, approvalTypes))).orderBy(notifications.createdAt),
+        db.select({ entityType: approvalRequests.entityType, projectId: approvalRequests.projectId, projectName: projects.name }).from(approvalRequests).leftJoin(projects, eq(projects.id, approvalRequests.projectId)).where(eq(approvalRequests.status, "pending")),
+        db.select({ id: leaveRequests.id }).from(leaveRequests).where(eq(leaveRequests.status, "pending")),
+        db.select({ id: advanceRequests.id }).from(advanceRequests).where(eq(advanceRequests.status, "pending")),
+      ]);
+      const pendingTypes = new Set(pendingApprovals.map((row) => row.entityType));
+      const hasPendingProjectMatch = (notification: (typeof notificationRows)[number], entityType?: string) => pendingApprovals.some((row) => (!entityType || row.entityType === entityType) && (!row.projectName || notification.title.includes(row.projectName)));
+      const hasRealSource = (notification: (typeof notificationRows)[number]) => {
+        if (notification.type === "approval") return hasPendingProjectMatch(notification);
+        if (["certificate_approval", "certificate_approval_stage"].includes(notification.type)) return hasPendingProjectMatch(notification, "certificate");
+        if (notification.type === "payroll_approval") return hasPendingProjectMatch(notification, "payroll");
+        if (notification.type === "purchase_payment_pending") return hasPendingProjectMatch(notification, "purchase_payment");
+        if (notification.type === "leave_approval") return pendingLeaves.length > 0;
+        if (notification.type === "advance_approval") return pendingAdvances.length > 0;
+        return pendingTypes.size > 0;
+      };
+      const validNotifications = notificationRows.filter(hasRealSource);
+      const staleUnread = notificationRows.filter((notification) => !notification.readAt && !hasRealSource(notification));
+      for (const notification of staleUnread) await db.update(notifications).set({ readAt: new Date() }).where(eq(notifications.id, notification.id));
+      return validNotifications;
     }),
     markNotificationRead: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
