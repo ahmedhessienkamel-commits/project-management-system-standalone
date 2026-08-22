@@ -68,4 +68,19 @@ describe("professional document preview mode", () => {
     expect(html).toContain("٧٦٬٩١٠٫٨٥");
     expect(html).not.toContain("اسم المنشأة");
   });
+
+  it("suppresses misleading financial summary cards for a supplier reference profile", () => {
+    const html = buildProfessionalDocumentHtml(undefined, {
+      title: "شركة درة العلاء للمقاولات",
+      documentNumber: "VENDOR-1",
+      kind: "generic",
+      showFinancialSummary: false,
+      partyLabel: "المورد / المقاول",
+      partyName: "شركة درة العلاء للمقاولات",
+      rows: [{ "العنوان الوطني": "الرياض — حي النرجس", "السجل التجاري": "1010628913" }],
+    });
+    expect(html).toContain("شركة درة العلاء للمقاولات");
+    expect(html).toContain("الرياض — حي النرجس");
+    expect(html).toContain(".summary{display:none!important}");
+  });
 });

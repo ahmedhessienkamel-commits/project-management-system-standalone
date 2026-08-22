@@ -352,6 +352,25 @@ export const employees = mysqlTable("employees", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+export const employeeWorkStarts = mysqlTable("employeeWorkStarts", {
+  id: int("id").autoincrement().primaryKey(),
+  employeeId: int("employeeId").notNull(),
+  projectId: int("projectId"),
+  workStartDate: date("workStartDate").notNull(),
+  jobTitle: varchar("jobTitle", { length: 255 }),
+  workLocation: varchar("workLocation", { length: 255 }),
+  notes: text("notes"),
+  employeeSignatureName: varchar("employeeSignatureName", { length: 255 }).notNull(),
+  employeeSignedAt: timestamp("employeeSignedAt").notNull(),
+  generalManagerUserId: int("generalManagerUserId"),
+  generalManagerSignedAt: timestamp("generalManagerSignedAt"),
+  status: mysqlEnum("status", ["pending_general_manager", "signed", "rejected"]).default("pending_general_manager").notNull(),
+  rejectionReason: text("rejectionReason"),
+  createdBy: int("createdBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
 export const payroll = mysqlTable("payroll", {
   id: int("id").autoincrement().primaryKey(),
   payrollRunId: int("payrollRunId"),

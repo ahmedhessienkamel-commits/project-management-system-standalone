@@ -57,12 +57,15 @@ function AccountSelect({ label, value, accounts, onChange }: { label: string; va
 export async function downloadDocumentPdf(document: { documentType?: string; documentNumber?: string | null; partyName?: string | null; partyTaxNumber?: string | null; documentDate?: Date | string | null; relatedDocumentType?: string | null; relatedDocumentId?: number | null; amount?: string | number | null; taxAmount?: string | number | null; totalAmount?: string | number | null; paidAmount?: string | number | null; projectName?: string | null; status?: string; lines?: Array<{ description?: string | null }> }, companyProfile?: { legalName?: string | null; tradeName?: string | null; taxNumber?: string | null; commercialRegistration?: string | null; nationalAddress?: string | null; phone?: string | null; email?: string | null; logoUrl?: string | null }, autoPrint = true) {
   const popup = window.open("", "_blank", "width=980,height=900");
   if (!popup) { window.alert("اسمح بفتح النوافذ المنبثقة لتحميل المستند كملف PDF"); return; }
-  const base = Number(document.amount || 0), tax = Number(document.taxAmount || 0), total = Number(document.totalAmount || base + tax), paid = Number(document.paidAmount || 0);
+  const storedAmount = Number(document.amount || 0), tax = Number(document.taxAmount || 0), storedTotal = Number(document.totalAmount || 0);
+  const invoice = document.documentType === "sales_invoice";
+  const total = storedTotal || storedAmount + tax;
+  const base = invoice && tax > 0 ? Math.max(total - tax, 0) : storedAmount;
+  const paid = Number(document.paidAmount || 0);
   const date = document.documentDate ? String(document.documentDate).slice(0, 10) : "—";
   const seller = companyProfile?.tradeName || companyProfile?.legalName || "اسم المنشأة";
   const qrText = `${seller}|${companyProfile?.taxNumber || ""}|${document.documentNumber || ""}|${total.toFixed(2)}|${tax.toFixed(2)}`;
   const qr = document.documentType === "sales_invoice" ? await QRCode.toDataURL(qrText, { margin: 1, width: 190, errorCorrectionLevel: "H" }) : "";
-  const invoice = document.documentType === "sales_invoice";
   const status = document.status === "posted" ? "فاتورة نهائية / Final Invoice" : document.status === "draft" ? "مسودة / Draft" : document.status || "—";
   const relatedLabel = document.relatedDocumentType === "quotation" ? "عرض سعر" : document.relatedDocumentType === "contract" ? "عقد" : document.relatedDocumentType === "certificate" ? "مستخلص" : "";
   const relatedReference = relatedLabel ? `${relatedLabel} #${document.relatedDocumentId || "—"}` : "";

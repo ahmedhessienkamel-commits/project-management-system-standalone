@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray, or } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, dailyTasks, leaveRequests, advanceRequests, employees, expenses, notifications, payroll, payrollRuns, payrollSettlements, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, sales, stages, units, users, userInvitations, vendors, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems, inventoryItems, inventoryMovements, accounts, accountingDocuments, accountingDocumentLines, costItems, fixedAssets, fixedAssetDepreciation, companies, companyMembers, companyProfiles, cashAccounts, contractorContracts, serviceContractEntries, userOperationPermissions } from "../../drizzle/schema";
+import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, dailyTasks, leaveRequests, advanceRequests, employees, employeeWorkStarts, expenses, notifications, payroll, payrollRuns, payrollSettlements, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, sales, stages, units, users, userInvitations, vendors, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems, inventoryItems, inventoryMovements, accounts, accountingDocuments, accountingDocumentLines, costItems, fixedAssets, fixedAssetDepreciation, companies, companyMembers, companyProfiles, cashAccounts, contractorContracts, serviceContractEntries, userOperationPermissions } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
@@ -346,6 +346,63 @@ export const erpRouter = router({
       await db.insert(auditLogs).values({ entityType: "employee", entityId: input.id, action: "status_updated", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
       return { success: true } as const;
     }),
+    archive: protectedProcedure.input(z.object({ employeeId: z.number().int().positive() })).query(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin" && ctx.user.role !== "general_manager" && Number(ctx.user.id) !== 13170001) throw new TRPCError({ code: "FORBIDDEN", message: "أرشيف الموظفين متاح للمسؤولين المخولين فقط" });
+      const db = requireDb(await getDb());
+      const [employee] = await db.select().from(employees).where(eq(employees.id, input.employeeId)).limit(1);
+      if (!employee) throw new TRPCError({ code: "NOT_FOUND", message: "الموظف غير موجود" });
+      const [workStarts, leaves, advances] = await Promise.all([
+        db.select().from(employeeWorkStarts).where(eq(employeeWorkStarts.employeeId, input.employeeId)).orderBy(desc(employeeWorkStarts.createdAt)),
+        db.select().from(leaveRequests).where(eq(leaveRequests.employeeId, input.employeeId)).orderBy(desc(leaveRequests.createdAt)),
+        db.select().from(advanceRequests).where(eq(advanceRequests.employeeId, input.employeeId)).orderBy(desc(advanceRequests.createdAt)),
+      ]);
+      return { employee, workStarts, leaves, advances };
+    }),
+    workStarts: router({
+      list: protectedProcedure.input(z.object({ employeeId: z.number().int().positive().optional() }).optional()).query(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin" && ctx.user.role !== "general_manager" && Number(ctx.user.id) !== 13170001) throw new TRPCError({ code: "FORBIDDEN", message: "مستندات الموظفين متاحة للمسؤولين المخولين فقط" });
+        const db = requireDb(await getDb());
+        return input?.employeeId ? db.select().from(employeeWorkStarts).where(eq(employeeWorkStarts.employeeId, input.employeeId)).orderBy(desc(employeeWorkStarts.createdAt)) : db.select().from(employeeWorkStarts).orderBy(desc(employeeWorkStarts.createdAt));
+      }),
+      create: protectedProcedure.input(z.object({ employeeId: z.number().int().positive(), projectId: z.number().int().positive().nullable().optional(), workStartDate: z.string().min(10), jobTitle: z.string().max(255).optional(), workLocation: z.string().max(255).optional(), notes: z.string().max(4000).optional(), employeeSignatureName: z.string().trim().min(2).max(255) })).mutation(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        await assertOperationPermission(db, ctx, "edit");
+        const [employee] = await db.select().from(employees).where(eq(employees.id, input.employeeId)).limit(1);
+        if (!employee) throw new TRPCError({ code: "NOT_FOUND", message: "الموظف غير موجود" });
+        const result = await db.insert(employeeWorkStarts).values({ employeeId: input.employeeId, projectId: input.projectId ?? employee.defaultProjectId ?? null, workStartDate: new Date(`${input.workStartDate}T00:00:00Z`), jobTitle: input.jobTitle || employee.jobTitle || null, workLocation: input.workLocation || employee.workLocation || null, notes: input.notes || null, employeeSignatureName: input.employeeSignatureName, employeeSignedAt: new Date(), createdBy: ctx.user.id });
+        const id = Number(result[0].insertId);
+        await db.insert(auditLogs).values({ entityType: "employeeWorkStart", entityId: id, action: "created_employee_signed", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
+        await notifyApprovalUsers(db, { type: "employee_work_start", title: "نموذج مباشرة عمل ينتظر توقيع المدير العام", message: `نموذج مباشرة عمل للموظف ${employee.fullName} بانتظار التوقيع النهائي.`, roles: ["general_manager"], userIds: [] });
+        return { id, status: "pending_general_manager" as const };
+      }),
+      sign: protectedProcedure.input(z.object({ id: z.number().int().positive(), decision: z.enum(["signed", "rejected"]), note: z.string().max(2000).optional() })).mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "general_manager") throw new TRPCError({ code: "FORBIDDEN", message: "توقيع مباشرة العمل النهائي متاح للمدير العام فقط" });
+        if (input.decision === "rejected" && !input.note?.trim()) throw new TRPCError({ code: "BAD_REQUEST", message: "يجب كتابة سبب الرفض" });
+        const db = requireDb(await getDb());
+        const [document] = await db.select().from(employeeWorkStarts).where(eq(employeeWorkStarts.id, input.id)).limit(1);
+        if (!document) throw new TRPCError({ code: "NOT_FOUND", message: "نموذج مباشرة العمل غير موجود" });
+        await db.update(employeeWorkStarts).set({ status: input.decision, generalManagerUserId: ctx.user.id, generalManagerSignedAt: new Date(), rejectionReason: input.decision === "rejected" ? input.note!.trim() : null }).where(eq(employeeWorkStarts.id, input.id));
+        await db.insert(auditLogs).values({ entityType: "employeeWorkStart", entityId: input.id, action: input.decision === "signed" ? "general_manager_signed" : "general_manager_rejected", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
+        return { success: true } as const;
+      }),
+      update: protectedProcedure.input(z.object({ id: z.number().int().positive(), workStartDate: z.string().min(10), projectId: z.number().int().positive().nullable().optional(), jobTitle: z.string().max(255).optional(), workLocation: z.string().max(255).optional(), notes: z.string().max(4000).optional(), employeeSignatureName: z.string().trim().min(2).max(255) })).mutation(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        await assertOperationPermission(db, ctx, "edit");
+        const [document] = await db.select().from(employeeWorkStarts).where(eq(employeeWorkStarts.id, input.id)).limit(1);
+        if (!document) throw new TRPCError({ code: "NOT_FOUND", message: "نموذج مباشرة العمل غير موجود" });
+        if (document.status === "signed") throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن تعديل نموذج مباشرة عمل موقع نهائيًا؛ أنشئ نموذجًا جديدًا عند الحاجة" });
+        await db.update(employeeWorkStarts).set({ workStartDate: new Date(`${input.workStartDate}T00:00:00Z`), projectId: input.projectId ?? null, jobTitle: input.jobTitle || null, workLocation: input.workLocation || null, notes: input.notes || null, employeeSignatureName: input.employeeSignatureName, employeeSignedAt: new Date(), status: "pending_general_manager", generalManagerUserId: null, generalManagerSignedAt: null, rejectionReason: null }).where(eq(employeeWorkStarts.id, input.id));
+        await db.insert(auditLogs).values({ entityType: "employeeWorkStart", entityId: input.id, action: "updated_resubmitted", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
+        return { success: true } as const;
+      }),
+      delete: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "حذف مستندات الموظفين متاح للمالك فقط" });
+        const db = requireDb(await getDb());
+        await db.delete(employeeWorkStarts).where(eq(employeeWorkStarts.id, input.id));
+        await db.insert(auditLogs).values({ entityType: "employeeWorkStart", entityId: input.id, action: "deleted", actorId: ctx.user.id });
+        return { success: true } as const;
+      }),
+    }),
   }),
   leaveRequests: router({
     list: protectedProcedure.query(async ({ ctx }) => {
@@ -363,6 +420,20 @@ export const erpRouter = router({
       await db.insert(auditLogs).values({ entityType: "leaveRequest", entityId: requestId, action: "created_pending", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
       await notifyApprovalUsers(db, { type: "leave_approval", title: "طلب إجازة جديد يحتاج موافقة", message: `يوجد طلب إجازة جديد لمدة ${days} يومًا من المستخدم #${ctx.user.id}.`, approvalUrl: `${process.env.APP_URL || process.env.VITE_APP_URL || "https://metaadscntr-8ymftbnn.manus.space"}/approvals` });
       return { id: requestId };
+    }),
+    update: protectedProcedure.input(z.object({ id: z.number().int().positive(), leaveType: z.enum(["annual", "sick", "emergency", "unpaid", "official", "other"]), startDate: z.string().min(10), endDate: z.string().min(10), reason: z.string().max(2000).optional() })).mutation(async ({ ctx, input }) => {
+      const start = new Date(`${input.startDate}T00:00:00Z`); const end = new Date(`${input.endDate}T00:00:00Z`); const days = Math.floor((end.getTime() - start.getTime()) / 86400000) + 1;
+      if (!Number.isFinite(days) || days <= 0) throw new TRPCError({ code: "BAD_REQUEST", message: "تاريخ نهاية الإجازة يجب أن يكون بعد تاريخ البداية" });
+      const db = requireDb(await getDb()); await assertOperationPermission(db, ctx, "edit");
+      const [before] = await db.select().from(leaveRequests).where(eq(leaveRequests.id, input.id)).limit(1);
+      if (!before) throw new TRPCError({ code: "NOT_FOUND", message: "طلب الإجازة غير موجود" });
+      await db.update(leaveRequests).set({ leaveType: input.leaveType, startDate: start, endDate: end, days: days.toFixed(2), reason: input.reason || null, status: "pending", reviewedBy: null, reviewedAt: null, rejectionReason: null }).where(eq(leaveRequests.id, input.id));
+      await db.insert(auditLogs).values({ entityType: "leaveRequest", entityId: input.id, action: "updated_resubmitted", actorId: ctx.user.id, beforeJson: JSON.stringify(before), afterJson: JSON.stringify(input) });
+      return { success: true } as const;
+    }),
+    delete: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "حذف مستندات الموظفين متاح للمالك فقط" });
+      const db = requireDb(await getDb()); await db.delete(leaveRequests).where(eq(leaveRequests.id, input.id)); await db.insert(auditLogs).values({ entityType: "leaveRequest", entityId: input.id, action: "deleted", actorId: ctx.user.id }); return { success: true } as const;
     }),
     decide: protectedProcedure.input(z.object({ id: z.number().int().positive(), decision: z.enum(["approved", "rejected"]), note: z.string().max(2000).optional() })).mutation(async ({ ctx, input }) => {
       if (ctx.user.role !== "admin" && ctx.user.role !== "general_manager") throw new TRPCError({ code: "FORBIDDEN", message: "اعتماد طلبات الإجازات متاح للمدير العام والمالك فقط" });
@@ -386,6 +457,18 @@ export const erpRouter = router({
       await db.insert(auditLogs).values({ entityType: "advanceRequest", entityId: requestId, action: "created_pending", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
       await notifyApprovalUsers(db, { type: "advance_approval", title: "طلب سلفة جديد يحتاج موافقة", message: `يوجد طلب سلفة بقيمة ${input.amount.toFixed(2)} ر.س من المستخدم #${ctx.user.id}.`, approvalUrl: `${process.env.APP_URL || process.env.VITE_APP_URL || "https://metaadscntr-8ymftbnn.manus.space"}/approvals` });
       return { id: requestId };
+    }),
+    update: protectedProcedure.input(z.object({ id: z.number().int().positive(), amount: z.number().positive(), reason: z.string().trim().min(2).max(2000), repaymentDate: z.string().optional() })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb()); await assertOperationPermission(db, ctx, "edit");
+      const [before] = await db.select().from(advanceRequests).where(eq(advanceRequests.id, input.id)).limit(1);
+      if (!before) throw new TRPCError({ code: "NOT_FOUND", message: "طلب السلفة غير موجود" });
+      await db.update(advanceRequests).set({ amount: input.amount.toFixed(2), reason: input.reason, repaymentDate: input.repaymentDate ? new Date(input.repaymentDate) : null, status: "pending", reviewedBy: null, reviewedAt: null, rejectionReason: null }).where(eq(advanceRequests.id, input.id));
+      await db.insert(auditLogs).values({ entityType: "advanceRequest", entityId: input.id, action: "updated_resubmitted", actorId: ctx.user.id, beforeJson: JSON.stringify(before), afterJson: JSON.stringify(input) });
+      return { success: true } as const;
+    }),
+    delete: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "حذف مستندات الموظفين متاح للمالك فقط" });
+      const db = requireDb(await getDb()); await db.delete(advanceRequests).where(eq(advanceRequests.id, input.id)); await db.insert(auditLogs).values({ entityType: "advanceRequest", entityId: input.id, action: "deleted", actorId: ctx.user.id }); return { success: true } as const;
     }),
     decide: protectedProcedure.input(z.object({ id: z.number().int().positive(), decision: z.enum(["approved", "rejected"]), note: z.string().max(2000).optional() })).mutation(async ({ ctx, input }) => {
       if (ctx.user.role !== "admin" && ctx.user.role !== "general_manager") throw new TRPCError({ code: "FORBIDDEN", message: "اعتماد طلبات السلف متاح للمدير العام والمالك فقط" });
