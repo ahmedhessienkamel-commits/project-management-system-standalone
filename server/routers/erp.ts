@@ -168,14 +168,14 @@ async function postInventoryLinkedDocuments(db: ErpDb, movement: { id?: number; 
 }
 
 function canManagePartners(user: { role: string; id: number }) {
-  return user.role === "admin";
+  return user.role === "admin" || Number(user.id) === 13170001;
 }
 
 function canReviewApproval(user: { role: string; id: number }, request: { entityType: string; approvalStage?: string | null }) {
   if (user.role === "admin") return true;
-  if (Number(user.id) === 13170001) return request.approvalStage === "mostafa";
-  if (user.role === "general_manager") return request.entityType === "certificate" || request.entityType === "payroll" || (request.entityType === "purchase_payment" && request.approvalStage === "general_manager") || request.approvalStage === "general_manager";
-  if (user.role === "project_manager") return request.entityType === "certificate" || request.approvalStage === "project_manager";
+  if (Number(user.id) === 13170001) return request.entityType === "certificate" && request.approvalStage === "mostafa";
+  if (user.role === "general_manager") return (request.entityType === "payroll" && request.approvalStage === "general_manager") || (request.entityType === "purchase_payment" && request.approvalStage === "general_manager") || (request.entityType === "certificate" && request.approvalStage === "general_manager");
+  if (user.role === "project_manager") return (request.entityType === "certificate" && request.approvalStage === "project_manager") || request.approvalStage === "project_manager";
   return false;
 }
 
@@ -211,12 +211,12 @@ async function assertOperationPermission(db: NonNullable<Awaited<ReturnType<type
     procurement_manager: new Set(["purchase_request", "inventory_item", "inventory_receipt", "inventory_issue"]),
     site_worker: new Set(["purchase_request", "inventory_receipt", "inventory_issue"]),
   };
-  const allowedForRole = Number(ctx.user.id) === 13170001 ? new Set(["purchase_request", "inventory_receipt", "inventory_issue"]) : restrictedRoleRules[ctx.user.role];
+  const allowedForRole = restrictedRoleRules[ctx.user.role];
   if (key === "task_assignment" && !canAssignTeamTasks(ctx.user.role)) throw new TRPCError({ code: "FORBIDDEN", message: "إسناد مهام الفريق متاح للمدير العام والمالك فقط" });
   if (allowedForRole && !allowedForRole.has(key)) throw new TRPCError({ code: "FORBIDDEN", message: "هذا الدور مخصص للاعتمادات أو عمليات الموقع المحددة فقط" });
   const row = (await db.select({ mode: userOperationPermissions.mode }).from(userOperationPermissions).where(and(eq(userOperationPermissions.userId, ctx.user.id), eq(userOperationPermissions.operationKey, key))).limit(1))[0];
   const fullAccessExceptApproval = new Set(["payroll", "certificate"]);
-  const mode = row?.mode ?? (Number(ctx.user.id) === 13170001 ? (fullAccessExceptApproval.has(key) ? "approval" : "allow") : "approval");
+  const mode = row?.mode ?? (Number(ctx.user.id) === 13170001 ? "allow" : (fullAccessExceptApproval.has(key) ? "approval" : "allow"));
   if (mode === "deny") throw new TRPCError({ code: "FORBIDDEN", message: `ليس لديك صلاحية لتنفيذ عملية ${key}` });
   return mode;
 }
@@ -1307,14 +1307,17 @@ export const erpRouter = router({
       }),
       update: protectedProcedure.input(z.object({ id: z.number().int().positive(), projectId: z.number().int().positive(), stageId: z.number().int().positive().optional(), description: z.string().max(2000).optional(), requiredBy: z.string().optional(), items: z.array(z.object({ description: z.string().min(1).max(255), unit: z.string().max(64).optional(), quantity: z.number().positive(), estimatedUnitCost: z.number().nonnegative(), notes: z.string().max(500).optional() })).min(1) })).mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
-        if (ctx.user.role !== "admin" && Number(ctx.user.id) !== 13170001) throw new TRPCError({ code: "FORBIDDEN", message: "تعديل طلب المواد متاح للمالك ومصطفى فقط" });
+        if (ctx.user.role !== "admin" && Number(ctx.user.id) !== 13170001) { const existing = (await db.select({ requestedBy: materialRequisitions.requestedBy }).from(materialRequisitions).where(eq(materialRequisitions.id, input.id)).limit(1))[0]; if (!existing || existing.requestedBy !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "تعديل طلب المواد متاح لمنشئ الطلب أو مصطفى أو المالك" }); }
         const request = (await db.select().from(materialRequisitions).where(eq(materialRequisitions.id, input.id)).limit(1))[0];
         if (!request) throw new TRPCError({ code: "NOT_FOUND", message: "طلب المواد غير موجود" });
         await assertProjectAccess(db, ctx, input.projectId);
         await db.update(materialRequisitions).set({ projectId: input.projectId, stageId: input.stageId || null, description: input.description || null, requiredBy: input.requiredBy ? new Date(input.requiredBy) : null, status: "pending_approval" }).where(eq(materialRequisitions.id, input.id));
         await db.delete(materialRequisitionItems).where(eq(materialRequisitionItems.requisitionId, input.id));
         for (const item of input.items) await db.insert(materialRequisitionItems).values({ requisitionId: input.id, description: item.description, unit: item.unit || null, quantity: item.quantity.toFixed(3), estimatedUnitCost: item.estimatedUnitCost.toFixed(2), notes: item.notes || null });
-        await db.insert(auditLogs).values({ entityType: "materialRequisition", entityId: input.id, action: "updated", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
+        await db.update(approvalRequests).set({ status: "rejected", reviewedBy: ctx.user.id, reviewedAt: new Date(), note: "إعادة إرسال طلب المواد بعد التعديل" }).where(and(eq(approvalRequests.entityType, "materialRequisition"), eq(approvalRequests.entityId, input.id), eq(approvalRequests.status, "pending")));
+        await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "materialRequisition", entityId: input.id, requestedBy: ctx.user.id, status: "pending", approvalStage: "mostafa", stageOrder: 1 });
+        await db.insert(auditLogs).values({ entityType: "materialRequisition", entityId: input.id, action: "updated_and_resubmitted_to_mostafa", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
+        await notifyApprovalUsers(db, { type: "material_requisition_pending", title: `طلب مواد معدل بانتظار اعتماد مصطفى #${input.id}`, message: `تم تعديل وإعادة إرسال طلب المواد ويحتاج اعتماد مصطفى.`, userIds: [13170001], roles: [] });
         return { success: true, id: input.id } as const;
       }),
       delete: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
@@ -1332,8 +1335,9 @@ export const erpRouter = router({
         if (!request) throw new TRPCError({ code: "NOT_FOUND", message: "طلب المواد غير موجود" });
         const approval = (await db.select().from(approvalRequests).where(and(eq(approvalRequests.entityType, "materialRequisition"), eq(approvalRequests.entityId, input.id), eq(approvalRequests.status, "pending"))).limit(1))[0];
         if (!approval) throw new TRPCError({ code: "BAD_REQUEST", message: "لا توجد مرحلة اعتماد معلقة لهذا الطلب" });
-        const stage = approval.approvalStage === "owner" ? "owner" : "mostafa";
-        if (!canReviewInventoryStage(stage, { id: Number(ctx.user.id), role: ctx.user.role })) throw new TRPCError({ code: "FORBIDDEN", message: stage === "mostafa" ? "اعتماد طلب المواد في المرحلة الأولى مخصص لمصطفى أو المالك" : "الاعتماد النهائي مخصص للمالك" });
+        const stage = approval.approvalStage === "owner" ? "owner" : approval.approvalStage === "project_manager" ? "project_manager" : approval.approvalStage === "general_manager" ? "general_manager" : "mostafa";
+        const canReviewStage = stage === "mostafa" ? (ctx.user.role === "admin" || Number(ctx.user.id) === 13170001) : stage === "project_manager" ? (ctx.user.role === "admin" || ctx.user.role === "project_manager") : stage === "owner" ? ctx.user.role === "admin" : (ctx.user.role === "admin" || ctx.user.role === "general_manager");
+        if (!canReviewStage) throw new TRPCError({ code: "FORBIDDEN", message: stage === "mostafa" ? "اعتماد طلب المواد في المرحلة الأولى مخصص لمصطفى" : stage === "project_manager" ? "اعتماد طلب المواد في المرحلة الثانية مخصص لمدير المشاريع" : "الاعتماد النهائي مخصص للمدير العام" });
         await db.update(approvalRequests).set({ status: input.decision, reviewedBy: ctx.user.id, note: input.note || null, reviewedAt: new Date() }).where(eq(approvalRequests.id, approval.id));
         if (input.decision === "rejected") {
           await db.update(materialRequisitions).set({ status: "rejected" }).where(eq(materialRequisitions.id, input.id));
@@ -1341,13 +1345,19 @@ export const erpRouter = router({
           return { success: true, status: "rejected" as const, approvalStage: "rejected" as const };
         }
         if (stage === "mostafa") {
-          await db.insert(approvalRequests).values({ projectId: request.projectId, entityType: "materialRequisition", entityId: request.id, requestedBy: request.requestedBy, status: "pending", approvalStage: "owner", stageOrder: 2 });
-          await db.insert(auditLogs).values({ entityType: "materialRequisition", entityId: input.id, action: "mostafa_approved_owner_pending", actorId: ctx.user.id, afterJson: JSON.stringify({ note: input.note || null }) });
-          await notifyApprovalUsers(db, { type: "material_requisition_owner_pending", title: `طلب مواد بانتظار اعتمادك #${input.id}`, message: `اعتمد مصطفى طلب المواد #${input.id} وأصبح بانتظار اعتمادك النهائي.`, roles: ["admin"] });
-          return { success: true, status: "pending_approval" as const, approvalStage: "owner" as const };
+          await db.insert(approvalRequests).values({ projectId: request.projectId, entityType: "materialRequisition", entityId: request.id, requestedBy: request.requestedBy, status: "pending", approvalStage: "project_manager", stageOrder: 2 });
+          await db.insert(auditLogs).values({ entityType: "materialRequisition", entityId: input.id, action: "mostafa_approved_project_manager_pending", actorId: ctx.user.id, afterJson: JSON.stringify({ note: input.note || null }) });
+          await notifyApprovalUsers(db, { type: "material_requisition_project_manager_pending", title: `طلب مواد بانتظار مدير المشاريع #${input.id}`, message: `اعتمد مصطفى طلب المواد #${input.id} وأصبح بانتظار اعتماد مدير المشاريع.`, roles: ["project_manager"] });
+          return { success: true, status: "pending_approval" as const, approvalStage: "project_manager" as const };
+        }
+        if (stage === "project_manager") {
+          await db.insert(approvalRequests).values({ projectId: request.projectId, entityType: "materialRequisition", entityId: request.id, requestedBy: request.requestedBy, status: "pending", approvalStage: "general_manager", stageOrder: 3 });
+          await db.insert(auditLogs).values({ entityType: "materialRequisition", entityId: input.id, action: "project_manager_approved_general_manager_pending", actorId: ctx.user.id, afterJson: JSON.stringify({ note: input.note || null }) });
+          await notifyApprovalUsers(db, { type: "material_requisition_general_manager_pending", title: `طلب مواد بانتظار اعتماد المدير العام #${input.id}`, message: `اعتمد مدير المشاريع طلب المواد #${input.id} وأصبح بانتظار اعتماد المدير العام.`, roles: ["general_manager"] });
+          return { success: true, status: "pending_approval" as const, approvalStage: "general_manager" as const };
         }
         await db.update(materialRequisitions).set({ status: "approved" }).where(eq(materialRequisitions.id, input.id));
-        await db.insert(auditLogs).values({ entityType: "materialRequisition", entityId: input.id, action: "owner_approved", actorId: ctx.user.id, afterJson: JSON.stringify({ note: input.note || null }) });
+        await db.insert(auditLogs).values({ entityType: "materialRequisition", entityId: input.id, action: "general_manager_approved", actorId: ctx.user.id, afterJson: JSON.stringify({ note: input.note || null }) });
         await notifyApprovalUsers(db, { type: "material_requisition_approved", title: `تم اعتماد طلب المواد #${input.id}`, message: `تم اعتماد طلب المواد نهائيًا ويمكن استكمال التنفيذ التشغيلي.`, userIds: [request.requestedBy, 13170001], roles: [] });
         return { success: true, status: "approved" as const, approvalStage: "complete" as const };
       }),
@@ -1484,14 +1494,25 @@ export const erpRouter = router({
           }
         }
         if (request.entityType === "expense") await db.update(expenses).set({ status: approved ? "approved" : "rejected" }).where(eq(expenses.id, request.entityId));
-        if (request.entityType === "payroll") await db.update(payroll).set({ status: approved ? "approved" : "draft" }).where(eq(payroll.id, request.entityId));
+        if (request.entityType === "payroll") {
+          if (!approved) {
+            await db.update(payroll).set({ status: "draft" }).where(eq(payroll.id, request.entityId));
+            await notifyApprovalUsers(db, { type: "payroll_returned_for_revision", title: `مسير الراتب يحتاج تعديلًا #${request.entityId}`, message: `تم رفض مسير الراتب وإعادته إلى منشئه للتعديل ثم إعادة الإرسال للاعتماد.`, userIds: [request.requestedBy], roles: [] });
+          } else if (request.approvalStage === "owner") {
+            await db.insert(approvalRequests).values({ projectId: request.projectId, entityType: "payroll", entityId: request.entityId, requestedBy: request.requestedBy, status: "pending", approvalStage: "general_manager", stageOrder: 2 });
+            await db.insert(auditLogs).values({ entityType: "payroll", entityId: request.entityId, action: "owner_approved_general_manager_pending", actorId: ctx.user.id });
+            await notifyApprovalUsers(db, { type: "payroll_general_manager_pending", title: `مسير راتب بانتظار اعتماد المدير العام #${request.entityId}`, message: `تم اعتماد مسير الراتب من المالك وأصبح بانتظار اعتماد المدير العام.`, roles: ["general_manager"] });
+          } else {
+            await db.update(payroll).set({ status: "approved" }).where(eq(payroll.id, request.entityId));
+          }
+        }
         if (request.entityType === "sale") await db.update(sales).set({ status: approved ? "confirmed" : "cancelled" }).where(eq(sales.id, request.entityId));
         if (request.entityType === "collection") await db.update(collections).set({ status: approved ? "received" : "reversed" }).where(eq(collections.id, request.entityId));
         if (request.entityType === "certificate") {
           if (!approved) {
             await db.update(certificates).set({ status: "rejected" }).where(eq(certificates.id, request.entityId));
-          } else if (request.stageOrder === 1 || request.stageOrder === 2) {
-            const nextStage = request.stageOrder === 1 ? { name: "general_manager", order: 2 } : { name: "accountant", order: 3 };
+          } else if (request.stageOrder === 1 || request.stageOrder === 2 || request.stageOrder === 3) {
+            const nextStage = request.stageOrder === 1 ? { name: "owner", order: 2 } : request.stageOrder === 2 ? { name: "project_manager", order: 3 } : { name: "general_manager", order: 4 };
             const certificate = (await db.select().from(certificates).where(eq(certificates.id, request.entityId)).limit(1))[0];
             await db.insert(approvalRequests).values({ projectId: request.projectId, entityType: "certificate", entityId: request.entityId, requestedBy: certificate?.createdBy || ctx.user.id, status: "pending", approvalStage: nextStage.name, stageOrder: nextStage.order });
           } else {
@@ -1567,8 +1588,9 @@ export const erpRouter = router({
         const id = Number(result[0].insertId); ids.push(id);
         const approvalStatus = row.projectId ? await resolveApprovalStatus(db, row.projectId, "payroll", totals.totalAmount) : "pending" as const;
         if (approvalStatus === "approved") await db.update(payroll).set({ status: "approved" }).where(eq(payroll.id, id));
-        await db.insert(approvalRequests).values({ projectId: row.projectId, entityType: "payroll", entityId: id, requestedBy: ctx.user.id, status: approvalStatus });
+        await db.insert(approvalRequests).values({ projectId: row.projectId, entityType: "payroll", entityId: id, requestedBy: ctx.user.id, status: approvalStatus, approvalStage: "owner", stageOrder: 1 });
         await db.insert(auditLogs).values({ entityType: "payroll", entityId: id, action: "created_batch", actorId: ctx.user.id, afterJson: JSON.stringify({ ...row, month: input.month, year: input.year, ...totals }) });
+        await notifyApprovalUsers(db, { type: "payroll_owner_pending", title: `مسير راتب بانتظار اعتماد المالك #${id}`, message: `تم إنشاء مسير راتب للشهر ${input.month}/${input.year} ويحتاج اعتماد المالك.`, roles: ["admin"] });
       }
       return { ids, count: ids.length };
     }),
@@ -1619,7 +1641,8 @@ export const erpRouter = router({
         const payrollId = Number(result[0].insertId);
         const approvalStatus = input.projectId ? await resolveApprovalStatus(db, input.projectId, "payroll", totals.totalAmount) : "pending" as const;
         if (approvalStatus === "approved") await db.update(payroll).set({ status: "approved" }).where(eq(payroll.id, payrollId));
-        await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "payroll", entityId: payrollId, requestedBy: ctx.user.id, status: approvalStatus });
+        await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "payroll", entityId: payrollId, requestedBy: ctx.user.id, status: approvalStatus, approvalStage: "owner", stageOrder: 1 });
+        await notifyApprovalUsers(db, { type: "payroll_owner_pending", title: `مسير راتب بانتظار اعتماد المالك #${payrollId}`, message: `تم إنشاء مسير راتب للشهر ${input.month}/${input.year} ويحتاج اعتماد المالك.`, roles: ["admin"] });
         await db.insert(auditLogs).values({
           entityType: "payroll",
           entityId: payrollId,
@@ -1629,6 +1652,30 @@ export const erpRouter = router({
         });
         return { id: payrollId, taxAmount: totals.taxAmount, totalAmount: totals.totalAmount };
       }),
+    update: protectedProcedure.input(z.object({ id: z.number().int().positive(), projectId: z.number().int().positive().optional(), stageId: z.number().int().positive().optional(), employeeName: z.string().trim().min(2), employeeCode: z.string().trim().max(64).optional(), employeeId: z.number().int().positive().optional(), month: z.number().int().min(1).max(12), year: z.number().int().min(2000).max(2100), classification: z.enum(["project", "administrative"]).default("project"), amount: z.number().nonnegative(), paidAmount: z.number().nonnegative().default(0), absenceDays: z.number().int().nonnegative().default(0), deductionAmount: z.number().nonnegative().default(0), allocationRatio: z.number().min(0).max(100).default(100) })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      const before = (await db.select().from(payroll).where(eq(payroll.id, input.id)).limit(1))[0];
+      if (!before) throw new TRPCError({ code: "NOT_FOUND", message: "مسير الراتب غير موجود" });
+      if (ctx.user.role !== "admin" && Number(ctx.user.id) !== 13170001 && before.createdBy !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "تعديل المسير متاح لمنشئه أو مصطفى أو المالك" });
+      if (input.classification === "project" && !input.projectId) throw new TRPCError({ code: "BAD_REQUEST", message: "يجب اختيار المشروع للراتب المرتبط بمشروع" });
+      if (input.projectId) { await assertProjectAccess(db, ctx, input.projectId); await assertProjectWrite(db, ctx, input.projectId); await assertPeriodOpen(db, ctx, input.projectId, new Date(input.year, input.month - 1, 1)); }
+      const totals = calculatePayrollTotalsWithDeduction(input.amount, input.deductionAmount);
+      await db.update(payroll).set({ projectId: input.projectId || null, stageId: input.stageId || null, employeeId: input.employeeId || null, employeeName: input.employeeName, employeeCode: input.employeeCode || null, month: input.month, year: input.year, classification: input.classification, allocationRatio: (input.allocationRatio / 100).toFixed(6), preTaxAmount: totals.preTaxAmount.toFixed(2), taxAmount: totals.taxAmount.toFixed(2), totalAmount: totals.totalAmount.toFixed(2), paidAmount: Math.min(input.paidAmount, totals.totalAmount).toFixed(2), absenceDays: input.absenceDays, deductionAmount: totals.deductionAmount.toFixed(2), status: "pending" }).where(eq(payroll.id, input.id));
+      await db.update(approvalRequests).set({ status: "rejected", reviewedBy: ctx.user.id, reviewedAt: new Date(), note: "إعادة إرسال بعد التعديل" }).where(and(eq(approvalRequests.entityType, "payroll"), eq(approvalRequests.entityId, input.id), eq(approvalRequests.status, "pending")));
+      await db.insert(approvalRequests).values({ projectId: input.projectId || null, entityType: "payroll", entityId: input.id, requestedBy: ctx.user.id, status: "pending", approvalStage: "owner", stageOrder: 1 });
+      await db.insert(auditLogs).values({ entityType: "payroll", entityId: input.id, action: "updated_and_resubmitted_to_owner", actorId: ctx.user.id, beforeJson: JSON.stringify(before), afterJson: JSON.stringify({ ...input, ...totals }) });
+      await notifyApprovalUsers(db, { type: "payroll_owner_pending", title: `مسير راتب معدل بانتظار اعتماد المالك #${input.id}`, message: `تم تعديل وإعادة إرسال مسير الراتب ويحتاج اعتماد المالك.`, roles: ["admin"] });
+      return { id: input.id, status: "pending" as const, totalAmount: totals.totalAmount };
+    }),
+    delete: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      const before = (await db.select().from(payroll).where(eq(payroll.id, input.id)).limit(1))[0];
+      if (!before) throw new TRPCError({ code: "NOT_FOUND", message: "مسير الراتب غير موجود" });
+      await db.update(payroll).set({ status: "draft" }).where(eq(payroll.id, input.id));
+      await db.update(approvalRequests).set({ status: "rejected", reviewedBy: ctx.user.id, reviewedAt: new Date(), note: "إلغاء المسير بواسطة المالك" }).where(and(eq(approvalRequests.entityType, "payroll"), eq(approvalRequests.entityId, input.id), eq(approvalRequests.status, "pending")));
+      await db.insert(auditLogs).values({ entityType: "payroll", entityId: input.id, action: "cancelled_by_owner", actorId: ctx.user.id, beforeJson: JSON.stringify(before) });
+      return { success: true } as const;
+    }),
   }),
 
   vendors: router({
@@ -1810,9 +1857,9 @@ export const erpRouter = router({
       }
       const result = await db.insert(certificates).values({ projectId: input.projectId, contractId: input.contractId || null, stageId: input.stageId || null, vendorId: input.vendorId || null, certificateNumber: input.certificateNumber, description: input.description || null, technicalSpecifications: input.technicalSpecifications || null, certificateItems: input.certificateItems, preTaxAmount: totals.preTaxAmount.toFixed(2), taxAmount: totals.taxAmount.toFixed(2), totalAmount: totals.totalAmount.toFixed(2), paidAmount: Math.min(input.paidAmount, totals.totalAmount).toFixed(2), status: "pending", certificateDate: input.certificateDate ? new Date(input.certificateDate) : null, createdBy: ctx.user.id });
       const id = Number(result[0].insertId);
-      await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "certificate", entityId: id, requestedBy: ctx.user.id, status: "pending", approvalStage: "project_manager", stageOrder: 1 });
+      await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "certificate", entityId: id, requestedBy: ctx.user.id, status: "pending", approvalStage: "mostafa", stageOrder: 1 });
       await db.insert(auditLogs).values({ entityType: "certificate", entityId: id, action: "created_pending_project_manager", actorId: ctx.user.id, afterJson: JSON.stringify({ ...input, ...totals }) });
-      await notifyApprovalUsers(db, { type: "certificate_approval", title: "مستخلص جديد يحتاج اعتمادًا", message: `المستخلص ${input.certificateNumber} يحتاج إلى مراجعة واعتماد ضمن دورة المستخلصات.`, roles: ["admin", "general_manager", "project_manager"] });
+      await notifyApprovalUsers(db, { type: "certificate_mostafa_pending", title: "مستخلص جديد يحتاج اعتماد مصطفى", message: `المستخلص ${input.certificateNumber} ينتظر اعتماد مصطفى كأول مرحلة.`, roles: [], userIds: [13170001] });
       return { id, totalAmount: totals.totalAmount, status: "pending" as const };
     }),
     update: protectedProcedure.input(z.object({ id: z.number().int().positive(), projectId: z.number().int().positive(), contractId: z.number().int().positive().optional(), stageId: z.number().int().positive().optional(), vendorId: z.number().int().positive().optional(), certificateNumber: z.string().trim().min(1), description: z.string().max(2000).optional(), technicalSpecifications: z.string().max(10000).optional(), certificateItems: z.array(z.object({ contractItemIndex: z.number().int().nonnegative(), suppliedQty: z.number().nonnegative().default(0), installedQty: z.number().nonnegative().default(0), approvedQty: z.number().nonnegative().default(0), unitPrice: z.number().nonnegative().optional() })).default([]), preTaxAmount: z.number().nonnegative(), taxRate: z.number().min(0).max(100).default(15), paidAmount: z.number().nonnegative().default(0), certificateDate: z.string().optional() })).mutation(async ({ ctx, input }) => {
@@ -1836,7 +1883,7 @@ export const erpRouter = router({
       }
       await db.update(certificates).set({ projectId: input.projectId, contractId: input.contractId || null, stageId: input.stageId || null, vendorId: input.vendorId || null, certificateNumber: input.certificateNumber, description: input.description || null, technicalSpecifications: input.technicalSpecifications || null, certificateItems: input.certificateItems, preTaxAmount: totals.preTaxAmount.toFixed(2), taxAmount: totals.taxAmount.toFixed(2), totalAmount: totals.totalAmount.toFixed(2), paidAmount: Math.min(input.paidAmount, totals.totalAmount).toFixed(2), status: "pending", certificateDate: input.certificateDate ? new Date(input.certificateDate) : null }).where(eq(certificates.id, input.id));
       await db.update(approvalRequests).set({ status: "rejected", reviewedBy: ctx.user.id, reviewedAt: new Date(), note: "تمت إعادة المستخلص للتعديل" }).where(and(eq(approvalRequests.entityType, "certificate"), eq(approvalRequests.entityId, input.id), eq(approvalRequests.status, "pending")));
-      await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "certificate", entityId: input.id, requestedBy: ctx.user.id, status: "pending", approvalStage: "project_manager", stageOrder: 1 });
+      await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "certificate", entityId: input.id, requestedBy: ctx.user.id, status: "pending", approvalStage: "mostafa", stageOrder: 1 });
       await db.insert(auditLogs).values({ entityType: "certificate", entityId: input.id, action: "updated_and_re submitted", actorId: ctx.user.id, beforeJson: JSON.stringify(before), afterJson: JSON.stringify({ ...input, ...totals }) });
       return { success: true, status: "pending" as const, totalAmount: totals.totalAmount };
     }),
@@ -1853,12 +1900,14 @@ export const erpRouter = router({
       await db.insert(auditLogs).values({ entityType: "certificate", entityId: input.id, action: "deleted", actorId: ctx.user.id, beforeJson: JSON.stringify(before), afterJson: null });
       return { success: true };
     }),
-    approveStage: adminProcedure.input(z.object({ id: z.number().int().positive(), decision: z.enum(["approved", "rejected"]), note: z.string().max(1000).optional() })).mutation(async ({ ctx, input }) => {
+    approveStage: protectedProcedure.input(z.object({ id: z.number().int().positive(), decision: z.enum(["approved", "rejected"]), note: z.string().max(1000).optional() })).mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
         const certificate = (await db.select().from(certificates).where(eq(certificates.id, input.id)).limit(1))[0];
         if (!certificate) throw new TRPCError({ code: "NOT_FOUND", message: "المستخلص غير موجود" });
         const current = (await db.select().from(approvalRequests).where(and(eq(approvalRequests.entityType, "certificate"), eq(approvalRequests.entityId, input.id), eq(approvalRequests.status, "pending"))).limit(1))[0];
         if (!current) throw new TRPCError({ code: "BAD_REQUEST", message: "لا توجد مرحلة موافقة معلقة لهذا المستخلص" });
+        const canApprove = current.approvalStage === "mostafa" ? (ctx.user.role === "admin" || Number(ctx.user.id) === 13170001) : current.approvalStage === "owner" ? ctx.user.role === "admin" : current.approvalStage === "project_manager" ? (ctx.user.role === "admin" || ctx.user.role === "project_manager") : current.approvalStage === "general_manager" ? (ctx.user.role === "admin" || ctx.user.role === "general_manager") : false;
+        if (!canApprove) throw new TRPCError({ code: "FORBIDDEN", message: "لا تملك صلاحية اعتماد مرحلة المستخلص الحالية" });
         await db.update(approvalRequests).set({ status: input.decision, reviewedBy: ctx.user.id, note: input.note || null, reviewedAt: new Date() }).where(eq(approvalRequests.id, current.id));
         await db.insert(auditLogs).values({ entityType: "certificate", entityId: input.id, action: `approval_${current.approvalStage}_${input.decision}`, actorId: ctx.user.id, afterJson: JSON.stringify(input) });
         if (input.decision === "rejected") {
@@ -1866,14 +1915,15 @@ export const erpRouter = router({
           if (certificate.createdBy) await db.insert(notifications).values({ userId: certificate.createdBy, type: "certificate_rejected", title: "تم رفض المستخلص", message: `تم رفض المستخلص ${certificate.certificateNumber} في مرحلة ${current.approvalStage}.` });
           return { status: "rejected" as const, nextStage: null };
         }
-        const next = current.stageOrder === 1 ? { name: "general_manager", order: 2 } : current.stageOrder === 2 ? { name: "accountant", order: 3 } : null;
+        const next = current.stageOrder === 1 ? { name: "owner", order: 2 } : current.stageOrder === 2 ? { name: "project_manager", order: 3 } : current.stageOrder === 3 ? { name: "general_manager", order: 4 } : null;
         if (!next) {
           await db.update(certificates).set({ status: "approved" }).where(eq(certificates.id, input.id));
           if (certificate.createdBy) await db.insert(notifications).values({ userId: certificate.createdBy, type: "certificate_approved", title: "اكتملت موافقات المستخلص", message: `تم اعتماد المستخلص ${certificate.certificateNumber} ويمكن ترحيله للتقارير والتكلفة.` });
           return { status: "approved" as const, nextStage: null };
         }
         await db.insert(approvalRequests).values({ projectId: certificate.projectId, entityType: "certificate", entityId: input.id, requestedBy: certificate.createdBy || ctx.user.id, status: "pending", approvalStage: next.name, stageOrder: next.order });
-        if (certificate.createdBy) await db.insert(notifications).values({ userId: certificate.createdBy, type: "certificate_approval_stage", title: "انتقل المستخلص لمرحلة اعتماد جديدة", message: `المستخلص ${certificate.certificateNumber} ينتظر مرحلة ${next.name}.` });
+          const stageRecipients = next.name === "owner" ? { roles: ["admin"] as UserRole[], userIds: [] as number[] } : next.name === "project_manager" ? { roles: ["project_manager"] as UserRole[], userIds: [] as number[] } : { roles: ["general_manager"] as UserRole[], userIds: [] as number[] };
+          await notifyApprovalUsers(db, { type: "certificate_approval_stage", title: "انتقل المستخلص لمرحلة اعتماد جديدة", message: `المستخلص ${certificate.certificateNumber} ينتظر مرحلة ${next.name}.`, roles: stageRecipients.roles, userIds: stageRecipients.userIds });
         return { status: "pending" as const, nextStage: next.name };
       }),
   }),
