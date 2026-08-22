@@ -61,7 +61,7 @@ export default function Approvals() {
   const { data: costItems = [] } = trpc.erp.costItems.list.useQuery();
   const { data: employees = [] } = trpc.erp.employees.list.useQuery();
   const { data: payrollRows = [] } = trpc.erp.payroll.list.useQuery();
-  const { data: materialRequisitions = [] } = trpc.erp.procurement.requisitions.list.useQuery();
+  const { data: materialRequisitions = [] } = trpc.erp.procurement.requisitions.list.useQuery(undefined, { enabled: Boolean(me), retry: 2, retryDelay: (attempt) => Math.min(500 * (attempt + 1), 1500) });
   const { data: stages = [] } = trpc.erp.stages.list.useQuery();
   const [inventoryCostItems, setInventoryCostItems] = useState<Record<number, string>>({});
   const [approvalSearch, setApprovalSearch] = useState("");
