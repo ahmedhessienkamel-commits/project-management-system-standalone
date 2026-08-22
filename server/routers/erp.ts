@@ -11,6 +11,7 @@ import { accountingTotals } from "../accountingCalculations";
 import { calculateStageTimeVariance } from "../../shared/stageTiming";
 import { allocateAdministrativeExpense, normalizeExpenseTaxRate, validateExpenseAllocation } from "../../shared/expenseAllocation";
 import { calculateInventoryBalance, canReceiveContractQuantity, canReviewInventoryStage, nextInventoryApprovalStage, remainingContractQuantity, selectPurchaseInvoiceForIssue, calculateServiceEntryTotal, remainingServiceContractAmount, calculateMaterialReceiptCost, materialReceiptExpenseReference, materialIssueExpenseReference, isMaterialContractType, resolveMaterialCostAccount, requiresSupplierInvoicePaymentApproval } from "../../shared/inventory";
+import { canReviewCertificateApproval, getCertificateInitialApproval, nextCertificateApproval } from "../../shared/approvalWorkflows";
 import { calculateWipBalance, buildWipClosingLines } from "../../shared/wip";
 import { canAssignTeamTasks } from "../../shared/taskPermissions";
 import { sendApprovalEmail, sendInvitationEmail, sendTaskReminderEmail } from "../email";
@@ -172,8 +173,8 @@ function canManagePartners(user: { role: string; id: number }) {
 }
 
 function canReviewApproval(user: { role: string; id: number }, request: { entityType: string; approvalStage?: string | null }) {
-  if (user.role === "admin") return !(request.entityType === "payroll" || request.entityType === "certificate") || request.approvalStage === "owner";
-  if (Number(user.id) === 13170001) return request.entityType === "certificate" && request.approvalStage === "mostafa";
+  if (request.entityType === "certificate") return canReviewCertificateApproval(request.approvalStage, user);
+  if (user.role === "admin") return request.entityType !== "payroll" || request.approvalStage === "owner";
   if (user.role === "general_manager") return (request.entityType === "payroll" && request.approvalStage === "general_manager") || (request.entityType === "purchase_payment" && request.approvalStage === "general_manager") || (request.entityType === "certificate" && request.approvalStage === "general_manager");
   if (user.role === "project_manager") return (request.entityType === "certificate" && request.approvalStage === "project_manager") || request.approvalStage === "project_manager";
   return false;
@@ -1602,10 +1603,10 @@ export const erpRouter = router({
         if (request.entityType === "certificate") {
           if (!approved) {
             await db.update(certificates).set({ status: "rejected" }).where(eq(certificates.id, request.entityId));
-          } else if (request.stageOrder === 1 || request.stageOrder === 2 || request.stageOrder === 3) {
-            const nextStage = request.stageOrder === 1 ? { name: "owner", order: 2 } : request.stageOrder === 2 ? { name: "project_manager", order: 3 } : { name: "general_manager", order: 4 };
+          } else if (nextCertificateApproval(request.stageOrder)) {
+            const nextStage = nextCertificateApproval(request.stageOrder)!;
             const certificate = (await db.select().from(certificates).where(eq(certificates.id, request.entityId)).limit(1))[0];
-            await db.insert(approvalRequests).values({ projectId: request.projectId, entityType: "certificate", entityId: request.entityId, requestedBy: certificate?.createdBy || ctx.user.id, status: "pending", approvalStage: nextStage.name, stageOrder: nextStage.order });
+            await db.insert(approvalRequests).values({ projectId: request.projectId, entityType: "certificate", entityId: request.entityId, requestedBy: certificate?.createdBy || ctx.user.id, status: "pending", approvalStage: nextStage.approvalStage, stageOrder: nextStage.stageOrder });
           } else {
             await db.update(certificates).set({ status: "approved" }).where(eq(certificates.id, request.entityId));
           }
@@ -1948,9 +1949,10 @@ export const erpRouter = router({
       }
       const result = await db.insert(certificates).values({ projectId: input.projectId, contractId: input.contractId || null, stageId: input.stageId || null, vendorId: input.vendorId || null, certificateNumber: input.certificateNumber, description: input.description || null, technicalSpecifications: input.technicalSpecifications || null, certificateItems: input.certificateItems, preTaxAmount: totals.preTaxAmount.toFixed(2), taxAmount: totals.taxAmount.toFixed(2), totalAmount: totals.totalAmount.toFixed(2), paidAmount: Math.min(input.paidAmount, totals.totalAmount).toFixed(2), status: "pending", certificateDate: input.certificateDate ? new Date(input.certificateDate) : null, createdBy: ctx.user.id });
       const id = Number(result[0].insertId);
-      await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "certificate", entityId: id, requestedBy: ctx.user.id, status: "pending", approvalStage: "mostafa", stageOrder: 1 });
-      await db.insert(auditLogs).values({ entityType: "certificate", entityId: id, action: "created_pending_project_manager", actorId: ctx.user.id, afterJson: JSON.stringify({ ...input, ...totals }) });
-      await notifyApprovalUsers(db, { type: "certificate_mostafa_pending", title: "مستخلص جديد يحتاج اعتماد مصطفى", message: `المستخلص ${input.certificateNumber} ينتظر اعتماد مصطفى كأول مرحلة.`, roles: [], userIds: [13170001] });
+      const initialApproval = getCertificateInitialApproval(Number(ctx.user.id));
+      await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "certificate", entityId: id, requestedBy: ctx.user.id, status: "pending", approvalStage: initialApproval.approvalStage, stageOrder: initialApproval.stageOrder });
+      await db.insert(auditLogs).values({ entityType: "certificate", entityId: id, action: `created_pending_${initialApproval.approvalStage}`, actorId: ctx.user.id, afterJson: JSON.stringify({ ...input, ...totals }) });
+      await notifyApprovalUsers(db, initialApproval.approvalStage === "mostafa" ? { type: "certificate_mostafa_pending", title: "مستخلص جديد يحتاج اعتماد مصطفى", message: `المستخلص ${input.certificateNumber} ينتظر اعتماد مصطفى كأول مرحلة.`, roles: [], userIds: [13170001] } : { type: "certificate_owner_pending", title: "مستخلص جديد يحتاج اعتماد المالك", message: `سجّل مصطفى المستخلص ${input.certificateNumber} وهو بانتظار اعتماد المالك.`, roles: ["admin"], userIds: [] });
       return { id, totalAmount: totals.totalAmount, status: "pending" as const };
     }),
     update: protectedProcedure.input(z.object({ id: z.number().int().positive(), projectId: z.number().int().positive(), contractId: z.number().int().positive().optional(), stageId: z.number().int().positive().optional(), vendorId: z.number().int().positive().optional(), certificateNumber: z.string().trim().min(1), description: z.string().max(2000).optional(), technicalSpecifications: z.string().max(10000).optional(), certificateItems: z.array(z.object({ contractItemIndex: z.number().int().nonnegative(), suppliedQty: z.number().nonnegative().default(0), installedQty: z.number().nonnegative().default(0), approvedQty: z.number().nonnegative().default(0), unitPrice: z.number().nonnegative().optional() })).default([]), preTaxAmount: z.number().nonnegative(), taxRate: z.number().min(0).max(100).default(15), paidAmount: z.number().nonnegative().default(0), certificateDate: z.string().optional() })).mutation(async ({ ctx, input }) => {
@@ -1974,7 +1976,8 @@ export const erpRouter = router({
       }
       await db.update(certificates).set({ projectId: input.projectId, contractId: input.contractId || null, stageId: input.stageId || null, vendorId: input.vendorId || null, certificateNumber: input.certificateNumber, description: input.description || null, technicalSpecifications: input.technicalSpecifications || null, certificateItems: input.certificateItems, preTaxAmount: totals.preTaxAmount.toFixed(2), taxAmount: totals.taxAmount.toFixed(2), totalAmount: totals.totalAmount.toFixed(2), paidAmount: Math.min(input.paidAmount, totals.totalAmount).toFixed(2), status: "pending", certificateDate: input.certificateDate ? new Date(input.certificateDate) : null }).where(eq(certificates.id, input.id));
       await db.update(approvalRequests).set({ status: "rejected", reviewedBy: ctx.user.id, reviewedAt: new Date(), note: "تمت إعادة المستخلص للتعديل" }).where(and(eq(approvalRequests.entityType, "certificate"), eq(approvalRequests.entityId, input.id), eq(approvalRequests.status, "pending")));
-      await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "certificate", entityId: input.id, requestedBy: ctx.user.id, status: "pending", approvalStage: "mostafa", stageOrder: 1 });
+      const initialApproval = getCertificateInitialApproval(Number(ctx.user.id));
+      await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "certificate", entityId: input.id, requestedBy: ctx.user.id, status: "pending", approvalStage: initialApproval.approvalStage, stageOrder: initialApproval.stageOrder });
       await db.insert(auditLogs).values({ entityType: "certificate", entityId: input.id, action: "updated_and_re submitted", actorId: ctx.user.id, beforeJson: JSON.stringify(before), afterJson: JSON.stringify({ ...input, ...totals }) });
       return { success: true, status: "pending" as const, totalAmount: totals.totalAmount };
     }),
@@ -1997,7 +2000,7 @@ export const erpRouter = router({
         if (!certificate) throw new TRPCError({ code: "NOT_FOUND", message: "المستخلص غير موجود" });
         const current = (await db.select().from(approvalRequests).where(and(eq(approvalRequests.entityType, "certificate"), eq(approvalRequests.entityId, input.id), eq(approvalRequests.status, "pending"))).limit(1))[0];
         if (!current) throw new TRPCError({ code: "BAD_REQUEST", message: "لا توجد مرحلة موافقة معلقة لهذا المستخلص" });
-        const canApprove = current.approvalStage === "mostafa" ? (ctx.user.role === "admin" || Number(ctx.user.id) === 13170001) : current.approvalStage === "owner" ? ctx.user.role === "admin" : current.approvalStage === "project_manager" ? (ctx.user.role === "admin" || ctx.user.role === "project_manager") : current.approvalStage === "general_manager" ? (ctx.user.role === "admin" || ctx.user.role === "general_manager") : false;
+        const canApprove = canReviewCertificateApproval(current.approvalStage, ctx.user);
         if (!canApprove) throw new TRPCError({ code: "FORBIDDEN", message: "لا تملك صلاحية اعتماد مرحلة المستخلص الحالية" });
         await db.update(approvalRequests).set({ status: input.decision, reviewedBy: ctx.user.id, note: input.note || null, reviewedAt: new Date() }).where(eq(approvalRequests.id, current.id));
         await db.insert(auditLogs).values({ entityType: "certificate", entityId: input.id, action: `approval_${current.approvalStage}_${input.decision}`, actorId: ctx.user.id, afterJson: JSON.stringify(input) });
@@ -2006,16 +2009,16 @@ export const erpRouter = router({
           if (certificate.createdBy) await db.insert(notifications).values({ userId: certificate.createdBy, type: "certificate_rejected", title: "تم رفض المستخلص", message: `تم رفض المستخلص ${certificate.certificateNumber} في مرحلة ${current.approvalStage}.` });
           return { status: "rejected" as const, nextStage: null };
         }
-        const next = current.stageOrder === 1 ? { name: "owner", order: 2 } : current.stageOrder === 2 ? { name: "project_manager", order: 3 } : current.stageOrder === 3 ? { name: "general_manager", order: 4 } : null;
+        const next = nextCertificateApproval(current.stageOrder);
         if (!next) {
           await db.update(certificates).set({ status: "approved" }).where(eq(certificates.id, input.id));
           if (certificate.createdBy) await db.insert(notifications).values({ userId: certificate.createdBy, type: "certificate_approved", title: "اكتملت موافقات المستخلص", message: `تم اعتماد المستخلص ${certificate.certificateNumber} ويمكن ترحيله للتقارير والتكلفة.` });
           return { status: "approved" as const, nextStage: null };
         }
-        await db.insert(approvalRequests).values({ projectId: certificate.projectId, entityType: "certificate", entityId: input.id, requestedBy: certificate.createdBy || ctx.user.id, status: "pending", approvalStage: next.name, stageOrder: next.order });
-          const stageRecipients = next.name === "owner" ? { roles: ["admin"] as UserRole[], userIds: [] as number[] } : next.name === "project_manager" ? { roles: ["project_manager"] as UserRole[], userIds: [] as number[] } : { roles: ["general_manager"] as UserRole[], userIds: [] as number[] };
-          await notifyApprovalUsers(db, { type: "certificate_approval_stage", title: "انتقل المستخلص لمرحلة اعتماد جديدة", message: `المستخلص ${certificate.certificateNumber} ينتظر مرحلة ${next.name}.`, roles: stageRecipients.roles, userIds: stageRecipients.userIds });
-        return { status: "pending" as const, nextStage: next.name };
+        await db.insert(approvalRequests).values({ projectId: certificate.projectId, entityType: "certificate", entityId: input.id, requestedBy: certificate.createdBy || ctx.user.id, status: "pending", approvalStage: next.approvalStage, stageOrder: next.stageOrder });
+          const stageRecipients = next.approvalStage === "owner" ? { roles: ["admin"] as UserRole[], userIds: [] as number[] } : next.approvalStage === "project_manager" ? { roles: ["project_manager"] as UserRole[], userIds: [] as number[] } : { roles: ["general_manager"] as UserRole[], userIds: [] as number[] };
+          await notifyApprovalUsers(db, { type: "certificate_approval_stage", title: "انتقل المستخلص لمرحلة اعتماد جديدة", message: `المستخلص ${certificate.certificateNumber} ينتظر مرحلة ${next.approvalStage}.`, roles: stageRecipients.roles, userIds: stageRecipients.userIds });
+        return { status: "pending" as const, nextStage: next.approvalStage };
       }),
   }),
 
