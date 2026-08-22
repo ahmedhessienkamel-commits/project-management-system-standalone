@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray, or } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, dailyTasks, leaveRequests, advanceRequests, employees, expenses, notifications, payroll, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, sales, stages, units, users, userInvitations, vendors, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems, inventoryItems, inventoryMovements, accounts, accountingDocuments, accountingDocumentLines, costItems, fixedAssets, fixedAssetDepreciation, companies, companyMembers, companyProfiles, cashAccounts, contractorContracts, serviceContractEntries, userOperationPermissions } from "../../drizzle/schema";
+import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, dailyTasks, leaveRequests, advanceRequests, employees, expenses, notifications, payroll, payrollRuns, payrollSettlements, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, sales, stages, units, users, userInvitations, vendors, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems, inventoryItems, inventoryMovements, accounts, accountingDocuments, accountingDocumentLines, costItems, fixedAssets, fixedAssetDepreciation, companies, companyMembers, companyProfiles, cashAccounts, contractorContracts, serviceContractEntries, userOperationPermissions } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
@@ -12,6 +12,7 @@ import { calculateStageTimeVariance } from "../../shared/stageTiming";
 import { allocateAdministrativeExpense, normalizeExpenseTaxRate, validateExpenseAllocation } from "../../shared/expenseAllocation";
 import { calculateInventoryBalance, canReceiveContractQuantity, canReviewInventoryStage, nextInventoryApprovalStage, remainingContractQuantity, selectPurchaseInvoiceForIssue, calculateServiceEntryTotal, remainingServiceContractAmount, calculateMaterialReceiptCost, materialReceiptExpenseReference, materialIssueExpenseReference, isMaterialContractType, resolveMaterialCostAccount, requiresSupplierInvoicePaymentApproval } from "../../shared/inventory";
 import { canReviewCertificateApproval, getCertificateInitialApproval, nextCertificateApproval, nextMaterialRequisitionApproval } from "../../shared/approvalWorkflows";
+import { payrollRunPaymentStatus } from "../../shared/payrollRun";
 import { calculateWipBalance, buildWipClosingLines } from "../../shared/wip";
 import { canAssignTeamTasks } from "../../shared/taskPermissions";
 import { sendApprovalEmail, sendInvitationEmail, sendTaskReminderEmail } from "../email";
@@ -174,8 +175,8 @@ function canManagePartners(user: { role: string; id: number }) {
 
 function canReviewApproval(user: { role: string; id: number }, request: { entityType: string; approvalStage?: string | null }) {
   if (request.entityType === "certificate") return canReviewCertificateApproval(request.approvalStage, user);
-  if (user.role === "admin") return request.entityType !== "payroll" || request.approvalStage === "owner";
-  if (user.role === "general_manager") return (request.entityType === "payroll" && request.approvalStage === "general_manager") || (request.entityType === "purchase_payment" && request.approvalStage === "general_manager") || (request.entityType === "certificate" && request.approvalStage === "general_manager");
+  if (user.role === "admin") return request.entityType !== "payroll" && request.entityType !== "payroll_run" || request.approvalStage === "owner";
+  if (user.role === "general_manager") return ((request.entityType === "payroll" || request.entityType === "payroll_run") && request.approvalStage === "general_manager") || (request.entityType === "purchase_payment" && request.approvalStage === "general_manager") || (request.entityType === "certificate" && request.approvalStage === "general_manager");
   if (user.role === "project_manager") return (request.entityType === "certificate" && request.approvalStage === "project_manager") || request.approvalStage === "project_manager";
   return false;
 }
@@ -1493,13 +1494,14 @@ export const erpRouter = router({
         const db = requireDb(await getDb());
         const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
         const companyId = await resolveActiveCompanyId(db, ctx);
-        const [requests, projectRows, userRows, memberRows, certificateRows, payrollRows, requisitionRows, documentRows, saleRows] = await Promise.all([
+        const [requests, projectRows, userRows, memberRows, certificateRows, payrollRows, payrollRunRows, requisitionRows, documentRows, saleRows] = await Promise.all([
           db.select().from(approvalRequests).where(eq(approvalRequests.status, "pending")).orderBy(approvalRequests.createdAt),
           companyId ? db.select({ id: projects.id, name: projects.name }).from(projects).where(eq(projects.companyId, companyId)) : db.select({ id: projects.id, name: projects.name }).from(projects),
           db.select({ id: users.id, name: users.name, email: users.email, role: users.role }).from(users),
           db.select({ projectId: projectMembers.projectId, userId: projectMembers.userId, projectRole: projectMembers.projectRole }).from(projectMembers),
           db.select({ id: certificates.id, certificateNumber: certificates.certificateNumber, projectId: certificates.projectId, description: certificates.description, totalAmount: certificates.totalAmount, certificateDate: certificates.certificateDate, createdBy: certificates.createdBy }).from(certificates),
           db.select({ id: payroll.id, month: payroll.month, year: payroll.year, employeeName: payroll.employeeName, totalAmount: payroll.totalAmount, createdAt: payroll.createdAt, createdBy: payroll.createdBy }).from(payroll),
+          db.select({ id: payrollRuns.id, runNumber: payrollRuns.runNumber, month: payrollRuns.month, year: payrollRuns.year, totalAmount: payrollRuns.totalAmount, createdAt: payrollRuns.createdAt, createdBy: payrollRuns.createdBy }).from(payrollRuns),
           db.select({ id: materialRequisitions.id, requestNumber: materialRequisitions.requestNumber, projectId: materialRequisitions.projectId, description: materialRequisitions.description, createdAt: materialRequisitions.createdAt, requestedBy: materialRequisitions.requestedBy }).from(materialRequisitions),
           db.select({ id: accountingDocuments.id, documentNumber: accountingDocuments.documentNumber, documentType: accountingDocuments.documentType, notes: accountingDocuments.notes, totalAmount: accountingDocuments.totalAmount, documentDate: accountingDocuments.documentDate, createdBy: accountingDocuments.createdBy }).from(accountingDocuments),
           db.select({ id: sales.id, projectId: sales.projectId, customerName: sales.customerName, totalAmount: sales.totalAmount, saleDate: sales.saleDate, createdBy: sales.createdBy }).from(sales),
@@ -1507,6 +1509,7 @@ export const erpRouter = router({
         const projectMap = new Map(projectRows.map((row) => [row.id, row]));
         const certificateMap = new Map(certificateRows.map((row) => [row.id, row]));
         const payrollMap = new Map(payrollRows.map((row) => [row.id, row]));
+        const payrollRunMap = new Map(payrollRunRows.map((row) => [row.id, row]));
         const requisitionMap = new Map(requisitionRows.map((row) => [row.id, row]));
         const documentMap = new Map(documentRows.map((row) => [row.id, row]));
         const saleMap = new Map(saleRows.map((row) => [row.id, row]));
@@ -1525,19 +1528,20 @@ export const erpRouter = router({
         return visible.map((request) => {
           const certificate = request.entityType === "certificate" ? certificateMap.get(request.entityId) : undefined;
           const payrollRow = request.entityType === "payroll" ? payrollMap.get(request.entityId) : undefined;
+          const payrollRun = request.entityType === "payroll_run" ? payrollRunMap.get(request.entityId) : undefined;
           const requisition = request.entityType === "materialRequisition" ? requisitionMap.get(request.entityId) : undefined;
           const document = ["purchase_payment", "payment_voucher"].includes(request.entityType) ? documentMap.get(request.entityId) : undefined;
           const sale = request.entityType === "sale" ? saleMap.get(request.entityId) : undefined;
-          const typeLabel = certificate ? "مستخلص مقاول" : payrollRow ? "مسير رواتب" : requisition ? "طلب شراء مواد" : document ? (document.documentType === "purchase_invoice" ? "فاتورة شراء" : document.documentType === "payment_voucher" ? "سند صرف" : "مستند محاسبي") : sale ? "مبيعات" : request.entityType;
-          const title = certificate?.certificateNumber || (payrollRow ? `مسير ${payrollRow.month}/${payrollRow.year}` : requisition?.requestNumber || document?.documentNumber || (sale ? `بيع الوحدة — ${sale.customerName}` : `${request.entityType} #${request.entityId}`));
-          const source = certificate || payrollRow || requisition || document || sale;
+          const typeLabel = certificate ? "مستخلص مقاول" : payrollRun ? "مسير رواتب جماعي" : payrollRow ? "راتب منفرد" : requisition ? "طلب شراء مواد" : document ? (document.documentType === "purchase_invoice" ? "فاتورة شراء" : document.documentType === "payment_voucher" ? "سند صرف" : "مستند محاسبي") : sale ? "مبيعات" : request.entityType;
+          const title = certificate?.certificateNumber || (payrollRun ? payrollRun.runNumber : payrollRow ? `مسير ${payrollRow.month}/${payrollRow.year}` : requisition?.requestNumber || document?.documentNumber || (sale ? `بيع الوحدة — ${sale.customerName}` : `${request.entityType} #${request.entityId}`));
+          const source = certificate || payrollRun || payrollRow || requisition || document || sale;
           const requestedBy = request.requestedBy || (source as { createdBy?: number | null } | undefined)?.createdBy || requisition?.requestedBy || null;
           const recipients = recipientsFor(request);
-          const description = certificate?.description || requisition?.description || document?.notes || (sale ? `بيع وحدة للعميل ${sale.customerName}` : payrollRow ? `مسير شهر ${payrollRow.month}/${payrollRow.year} — ${payrollRow.employeeName}` : "—");
-          const workflowLabel = request.entityType === "payroll" ? "مصطفى ← المالك ← المدير العام" : request.entityType === "certificate" ? "مصطفى ← المالك ← مدير المشاريع ← المدير العام" : request.entityType === "materialRequisition" ? "موظف الموقع ← مصطفى ← مدير المشاريع ← المدير العام" : "منشئ المستند ← المسؤول المعتمد";
+          const description = certificate?.description || requisition?.description || document?.notes || (sale ? `بيع وحدة للعميل ${sale.customerName}` : payrollRun ? `مسير ${payrollRun.month}/${payrollRun.year} بقيمة إجمالية ${Number(payrollRun.totalAmount || 0).toFixed(2)} ر.س` : payrollRow ? `راتب شهر ${payrollRow.month}/${payrollRow.year} — ${payrollRow.employeeName}` : "—");
+          const workflowLabel = request.entityType === "payroll_run" || request.entityType === "payroll" ? "المالك ← المدير العام" : request.entityType === "certificate" ? "مصطفى ← المالك ← مدير المشاريع ← المدير العام" : request.entityType === "materialRequisition" ? "موظف الموقع ← مصطفى ← المالك ← مدير المشاريع ← المدير العام" : "منشئ المستند ← المسؤول المعتمد";
           const recordLabel = `${title} ${description}`.includes("تجريبي") ? "سجل تجريبي" : "مستند فعلي";
           const sourceExists = Boolean(source);
-          return { ...request, title, typeLabel, description, amount: Number(certificate?.totalAmount || payrollRow?.totalAmount || document?.totalAmount || sale?.totalAmount || 0), documentDate: certificate?.certificateDate || payrollRow?.createdAt || requisition?.createdAt || document?.documentDate || sale?.saleDate || request.createdAt, requesterName: requestedBy ? userMap.get(requestedBy)?.name || `مستخدم #${requestedBy}` : "غير محدد", requestedBy, workflowLabel, recordLabel, sourceExists, projectName: request.projectId ? projectMap.get(request.projectId)?.name || `مشروع #${request.projectId}` : "بدون مشروع", stageLabel: stageLabel(request.approvalStage), responsibleUsers: recipients, isCurrentUserResponsible: recipients.some((user) => user.id === ctx.user.id), waitingDays: Math.max(0, Math.floor((Date.now() - new Date(request.createdAt).getTime()) / 86400000)) };
+          return { ...request, title, typeLabel, description, amount: Number(certificate?.totalAmount || payrollRun?.totalAmount || payrollRow?.totalAmount || document?.totalAmount || sale?.totalAmount || 0), documentDate: certificate?.certificateDate || payrollRun?.createdAt || payrollRow?.createdAt || requisition?.createdAt || document?.documentDate || sale?.saleDate || request.createdAt, requesterName: requestedBy ? userMap.get(requestedBy)?.name || `مستخدم #${requestedBy}` : "غير محدد", requestedBy, workflowLabel, recordLabel, sourceExists, projectName: request.projectId ? projectMap.get(request.projectId)?.name || `مشروع #${request.projectId}` : "مسير عام للشركة", stageLabel: stageLabel(request.approvalStage), responsibleUsers: recipients, isCurrentUserResponsible: recipients.some((user) => user.id === ctx.user.id), waitingDays: Math.max(0, Math.floor((Date.now() - new Date(request.createdAt).getTime()) / 86400000)) };
         }).filter((item) => item.sourceExists);
       }),
       sendReminder: protectedProcedure.input(z.object({ approvalId: z.number().int().positive(), message: z.string().trim().max(1000).optional() })).mutation(async ({ ctx, input }) => {
@@ -1596,6 +1600,39 @@ export const erpRouter = router({
             await db.update(payroll).set({ status: "approved" }).where(eq(payroll.id, request.entityId));
           }
         }
+        if (request.entityType === "payroll_run") {
+          const run = (await db.select().from(payrollRuns).where(eq(payrollRuns.id, request.entityId)).limit(1))[0];
+          if (!run) throw new TRPCError({ code: "NOT_FOUND", message: "مسير الرواتب غير موجود" });
+          if (!approved) {
+            await db.update(payrollRuns).set({ status: "rejected" }).where(eq(payrollRuns.id, run.id));
+            await db.update(payroll).set({ status: "draft" }).where(eq(payroll.payrollRunId, run.id));
+            await notifyApprovalUsers(db, { type: "payroll_run_returned", title: `مسير الرواتب ${run.runNumber} يحتاج تعديلًا`, message: `تم رفض مسير الرواتب وإعادته إلى منشئه للتعديل ثم إعادة الإرسال.`, userIds: [run.createdBy || request.requestedBy], roles: [] });
+          } else if (request.approvalStage === "owner") {
+            await db.insert(approvalRequests).values({ projectId: null, entityType: "payroll_run", entityId: run.id, requestedBy: request.requestedBy, status: "pending", approvalStage: "general_manager", stageOrder: 2 });
+            await db.insert(auditLogs).values({ entityType: "payroll_run", entityId: run.id, action: "owner_approved_general_manager_pending", actorId: ctx.user.id });
+            await notifyApprovalUsers(db, { type: "payroll_run_general_manager_pending", title: `مسير الرواتب ${run.runNumber} بانتظار اعتماد وتوقيع المدير العام`, message: `اعتمد المالك مسير رواتب ${run.month}/${run.year} وهو الآن بانتظار الاعتماد والتوقيع النهائي.`, roles: ["general_manager"] });
+          } else {
+            const rows = await db.select().from(payroll).where(eq(payroll.payrollRunId, run.id));
+            if (!rows.length) throw new TRPCError({ code: "BAD_REQUEST", message: "مسير الرواتب لا يحتوي على صفوف" });
+            let accrualDocumentId = run.accrualDocumentId;
+            if (!accrualDocumentId) {
+              const companyAccounts = (await db.select().from(accounts)).filter((account) => account.companyId === run.companyId && account.isActive === 1);
+              const payrollPayable = companyAccounts.find((account) => account.code === "2103");
+              const projectPayrollExpense = companyAccounts.find((account) => account.code === "5202");
+              const administrativePayrollExpense = companyAccounts.find((account) => account.code === "5305") || projectPayrollExpense;
+              if (!payrollPayable || !projectPayrollExpense || !administrativePayrollExpense) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "تأكد من وجود حسابات رواتب وأجور المشاريع (5202) ورواتب إدارية (5305) ورواتب وأجور مستحقة (2103) قبل اعتماد المسير" });
+              const totalAmount = rows.reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+              const documentNumber = `PA-${Date.now()}`;
+              const created = await db.insert(accountingDocuments).values({ companyId: run.companyId || null, documentType: "journal_entry", documentNumber, partyName: `مسير رواتب ${run.month}/${run.year}`, sourceDocumentId: run.id, documentDate: new Date(), amount: totalAmount.toFixed(2), taxAmount: "0.00", totalAmount: totalAmount.toFixed(2), paymentStatus: "unpaid", status: "posted", notes: `إثبات رواتب وأجور مستحقة لمسير ${run.runNumber}`, createdBy: ctx.user.id });
+              accrualDocumentId = Number(created[0].insertId);
+              const debitLines = rows.map((row) => ({ documentId: accrualDocumentId!, accountId: row.classification === "administrative" ? administrativePayrollExpense.id : projectPayrollExpense.id, projectId: row.projectId || null, stageId: row.stageId || null, description: `راتب مستحق — ${row.employeeName} — ${run.month}/${run.year}`, debit: Number(row.totalAmount || 0).toFixed(2), credit: "0.00" }));
+              await db.insert(accountingDocumentLines).values([...debitLines, { documentId: accrualDocumentId, accountId: payrollPayable.id, projectId: null, stageId: null, description: `إجمالي رواتب وأجور مستحقة — ${run.runNumber}`, debit: "0.00", credit: totalAmount.toFixed(2) }]);
+            }
+            await db.update(payrollRuns).set({ status: "approved", approvedAt: new Date(), approvedBy: ctx.user.id, accrualDocumentId }).where(eq(payrollRuns.id, run.id));
+            await db.update(payroll).set({ status: "approved" }).where(eq(payroll.payrollRunId, run.id));
+            await db.insert(auditLogs).values({ entityType: "payroll_run", entityId: run.id, action: "general_manager_approved_and_accrued", actorId: ctx.user.id, afterJson: JSON.stringify({ accrualDocumentId }) });
+          }
+        }
         if (request.entityType === "sale") await db.update(sales).set({ status: approved ? "confirmed" : "cancelled" }).where(eq(sales.id, request.entityId));
         if (request.entityType === "collection") await db.update(collections).set({ status: approved ? "received" : "reversed" }).where(eq(collections.id, request.entityId));
         if (request.entityType === "certificate") {
@@ -1641,6 +1678,119 @@ export const erpRouter = router({
       const visible = (allowed ? rows.filter((row) => allowed.has(row.id)) : rows).filter((row) => Number(row.contractValue || 0) > 0);
       const totalContractValue = visible.reduce((sum, row) => sum + Number(row.contractValue || 0), 0);
       return visible.map((project) => { const ratio = totalContractValue ? Number(project.contractValue || 0) / totalContractValue : 0; return { projectId: project.id, projectName: project.name, contractValue: Number(project.contractValue || 0), ratio, allocatedAmount: input.amount * ratio }; });
+    }),
+    runs: router({
+      list: protectedProcedure.query(async ({ ctx }) => {
+        const db = requireDb(await getDb());
+        const companyId = await resolveActiveCompanyId(db, ctx);
+        const runs = companyId ? await db.select().from(payrollRuns).where(eq(payrollRuns.companyId, companyId)) : [];
+        const rows = await db.select().from(payroll);
+        const settlements = await db.select().from(payrollSettlements);
+        return runs.map((run) => {
+          const runRows = rows.filter((row) => row.payrollRunId === run.id);
+          const total = runRows.reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+          const paid = runRows.reduce((sum, row) => sum + Number(row.paidAmount || 0), 0);
+          return { ...run, totalAmount: total, paidAmount: paid, outstandingAmount: Math.max(total - paid, 0), rows: runRows, settlementCount: settlements.filter((settlement) => settlement.payrollRunId === run.id).length };
+        }).sort((a, b) => Number(b.id) - Number(a.id));
+      }),
+      createDraft: protectedProcedure.input(z.object({ month: z.number().int().min(1).max(12), year: z.number().int().min(2000).max(2100), rows: z.array(z.object({ projectId: z.number().int().positive().optional(), stageId: z.number().int().positive().optional(), employeeId: z.number().int().positive().optional(), employeeName: z.string().trim().min(2), employeeCode: z.string().trim().max(64).optional(), classification: z.enum(["project", "administrative"]), allocationRatio: z.number().min(0).max(100).default(100), amount: z.number().positive(), absenceDays: z.number().int().nonnegative().default(0), deductionAmount: z.number().nonnegative().default(0) })).min(1) })).mutation(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        await assertOperationPermission(db, ctx, "payroll");
+        const companyId = await resolveActiveCompanyId(db, ctx);
+        if (!companyId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "لا توجد شركة نشطة" });
+        const prepared = [] as { row: typeof input.rows[number]; total: ReturnType<typeof calculatePayrollTotalsWithDeduction> }[];
+        for (const row of input.rows) {
+          if (row.classification === "project" && !row.projectId) throw new TRPCError({ code: "BAD_REQUEST", message: "اختر مشروعًا لكل راتب مشروع" });
+          if (row.projectId) { await assertProjectAccess(db, ctx, row.projectId); await assertProjectWrite(db, ctx, row.projectId); await assertPeriodOpen(db, ctx, row.projectId, new Date(input.year, input.month - 1, 1)); }
+          prepared.push({ row, total: calculatePayrollTotalsWithDeduction(row.amount, row.deductionAmount) });
+        }
+        const totalAmount = prepared.reduce((sum, item) => sum + item.total.totalAmount, 0);
+        const createdRun = await db.insert(payrollRuns).values({ companyId, runNumber: `PR-${input.year}${String(input.month).padStart(2, "0")}-${Date.now()}`, month: input.month, year: input.year, totalAmount: totalAmount.toFixed(2), paidAmount: "0.00", status: "draft", createdBy: ctx.user.id });
+        const payrollRunId = Number(createdRun[0].insertId);
+        const ids: number[] = [];
+        for (const item of prepared) {
+          const result = await db.insert(payroll).values({ payrollRunId, projectId: item.row.projectId || null, stageId: item.row.stageId || null, employeeId: item.row.employeeId || null, employeeName: item.row.employeeName, employeeCode: item.row.employeeCode || null, month: input.month, year: input.year, classification: item.row.classification, allocationRatio: (item.row.allocationRatio / 100).toFixed(6), preTaxAmount: item.total.preTaxAmount.toFixed(2), taxAmount: "0.00", totalAmount: item.total.totalAmount.toFixed(2), paidAmount: "0.00", absenceDays: item.row.absenceDays, deductionAmount: item.total.deductionAmount.toFixed(2), createdBy: ctx.user.id, status: "draft" });
+          ids.push(Number(result[0].insertId));
+        }
+        await db.insert(auditLogs).values({ entityType: "payroll_run", entityId: payrollRunId, action: "saved_draft", actorId: ctx.user.id, afterJson: JSON.stringify({ month: input.month, year: input.year, totalAmount, payrollIds: ids }) });
+        return { id: payrollRunId, payrollIds: ids, totalAmount };
+      }),
+      addManual: protectedProcedure.input(z.object({ payrollRunId: z.number().int().positive().optional(), month: z.number().int().min(1).max(12), year: z.number().int().min(2000).max(2100), projectId: z.number().int().positive().optional(), stageId: z.number().int().positive().optional(), employeeId: z.number().int().positive().optional(), employeeName: z.string().trim().min(2), employeeCode: z.string().trim().max(64).optional(), classification: z.enum(["project", "administrative"]), allocationRatio: z.number().min(0).max(100).default(100), amount: z.number().positive(), absenceDays: z.number().int().nonnegative().default(0), deductionAmount: z.number().nonnegative().default(0) })).mutation(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        await assertOperationPermission(db, ctx, "payroll");
+        if (input.classification === "project" && !input.projectId) throw new TRPCError({ code: "BAD_REQUEST", message: "اختر المشروع لراتب الأجير المرتبط بمشروع" });
+        if (input.projectId) { await assertProjectAccess(db, ctx, input.projectId); await assertProjectWrite(db, ctx, input.projectId); }
+        const companyId = await resolveActiveCompanyId(db, ctx);
+        if (!companyId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "لا توجد شركة نشطة" });
+        let run = input.payrollRunId ? (await db.select().from(payrollRuns).where(eq(payrollRuns.id, input.payrollRunId)).limit(1))[0] : undefined;
+        if (!run) {
+          const created = await db.insert(payrollRuns).values({ companyId, runNumber: `PR-${input.year}${String(input.month).padStart(2, "0")}-${Date.now()}`, month: input.month, year: input.year, totalAmount: "0.00", paidAmount: "0.00", status: "draft", createdBy: ctx.user.id });
+          run = (await db.select().from(payrollRuns).where(eq(payrollRuns.id, Number(created[0].insertId))).limit(1))[0];
+        }
+        if (!run || run.companyId !== companyId || run.status !== "draft") throw new TRPCError({ code: "BAD_REQUEST", message: "يمكن إضافة الأجير إلى مسير مسودة للشركة النشطة فقط" });
+        if (run.month !== input.month || run.year !== input.year) throw new TRPCError({ code: "BAD_REQUEST", message: "شهر وسنة الأجير يجب أن تطابق المسير المحدد" });
+        const totals = calculatePayrollTotalsWithDeduction(input.amount, input.deductionAmount);
+        const created = await db.insert(payroll).values({ payrollRunId: run.id, projectId: input.projectId || null, stageId: input.stageId || null, employeeId: input.employeeId || null, employeeName: input.employeeName, employeeCode: input.employeeCode || null, month: input.month, year: input.year, classification: input.classification, allocationRatio: (input.allocationRatio / 100).toFixed(6), preTaxAmount: totals.preTaxAmount.toFixed(2), taxAmount: "0.00", totalAmount: totals.totalAmount.toFixed(2), paidAmount: "0.00", absenceDays: input.absenceDays, deductionAmount: totals.deductionAmount.toFixed(2), createdBy: ctx.user.id, status: "draft" });
+        const payrollId = Number(created[0].insertId);
+        const currentRows = await db.select().from(payroll).where(eq(payroll.payrollRunId, run.id));
+        const runTotal = currentRows.reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+        await db.update(payrollRuns).set({ totalAmount: runTotal.toFixed(2) }).where(eq(payrollRuns.id, run.id));
+        return { payrollRunId: run.id, payrollId, totalAmount: runTotal };
+      }),
+      submit: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        await assertOperationPermission(db, ctx, "payroll");
+        const run = (await db.select().from(payrollRuns).where(eq(payrollRuns.id, input.id)).limit(1))[0];
+        if (!run || run.createdBy !== ctx.user.id) throw new TRPCError({ code: "NOT_FOUND", message: "مسير الرواتب المسودة غير موجود" });
+        if (run.status !== "draft" && run.status !== "rejected") throw new TRPCError({ code: "BAD_REQUEST", message: "يمكن إرسال المسودة أو المسير المعاد فقط" });
+        const rows = await db.select().from(payroll).where(eq(payroll.payrollRunId, run.id));
+        if (!rows.length) throw new TRPCError({ code: "BAD_REQUEST", message: "أضف موظفًا أو أجيرًا واحدًا على الأقل قبل الإرسال" });
+        const totalAmount = rows.reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+        await db.update(payrollRuns).set({ status: "pending", totalAmount: totalAmount.toFixed(2), submittedAt: new Date() }).where(eq(payrollRuns.id, run.id));
+        await db.update(payroll).set({ status: "pending" }).where(eq(payroll.payrollRunId, run.id));
+        await db.insert(approvalRequests).values({ projectId: null, entityType: "payroll_run", entityId: run.id, requestedBy: ctx.user.id, status: "pending", approvalStage: "owner", stageOrder: 1 });
+        await notifyApprovalUsers(db, { type: "payroll_run_owner_pending", title: `مسير رواتب ${run.runNumber} بانتظار اعتماد المالك`, message: `تم إرسال مسير رواتب ${run.month}/${run.year} بقيمة ${totalAmount.toFixed(2)} ر.س للاعتماد.`, roles: ["admin"] });
+        return { id: run.id, status: "pending", totalAmount };
+      }),
+      settle: protectedProcedure.input(z.object({ payrollRunId: z.number().int().positive(), payrollIds: z.array(z.number().int().positive()).optional(), cashAccountId: z.number().int().positive(), paymentDate: z.string().min(10), notes: z.string().max(1000).optional() })).mutation(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        await assertOperationPermission(db, ctx, "payment_voucher");
+        const companyId = await resolveActiveCompanyId(db, ctx);
+        const run = (await db.select().from(payrollRuns).where(eq(payrollRuns.id, input.payrollRunId)).limit(1))[0];
+        if (!run || run.companyId !== companyId || !["approved", "partially_paid"].includes(run.status)) throw new TRPCError({ code: "BAD_REQUEST", message: "اختر مسير رواتب معتمدًا وفيه رصيد مستحق" });
+        const cashAccount = (await db.select().from(cashAccounts).where(eq(cashAccounts.id, input.cashAccountId)).limit(1))[0];
+        if (!cashAccount?.accountId || cashAccount.companyId !== companyId || cashAccount.isActive !== 1) throw new TRPCError({ code: "BAD_REQUEST", message: "اختر بنكًا أو خزينة نشطة من الشركة الحالية" });
+        const runRows = await db.select().from(payroll).where(eq(payroll.payrollRunId, run.id));
+        const selectedRows = runRows.filter((row) => (!input.payrollIds?.length || input.payrollIds.includes(row.id)) && Number(row.totalAmount || 0) - Number(row.paidAmount || 0) > 0.005);
+        if (!selectedRows.length) throw new TRPCError({ code: "BAD_REQUEST", message: "لا توجد رواتب مستحقة للموظفين المحددين" });
+        const payable = (await db.select().from(accounts)).find((account) => account.companyId === companyId && account.code === "2103" && account.isActive === 1);
+        if (!payable) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "حساب رواتب وأجور مستحقة (2103) غير متوفر" });
+        const amount = selectedRows.reduce((sum, row) => sum + Math.max(Number(row.totalAmount || 0) - Number(row.paidAmount || 0), 0), 0);
+        const documentNumber = `PV-${Date.now()}`;
+        const created = await db.insert(accountingDocuments).values({ companyId: companyId || null, documentType: "payment_voucher", documentNumber, partyName: input.payrollIds?.length === 1 ? selectedRows[0].employeeName : `موظفو مسير ${run.month}/${run.year}`, voucherCategory: "payroll", sourceDocumentId: run.id, documentDate: new Date(input.paymentDate), sourceAccountId: cashAccount.accountId, amount: amount.toFixed(2), taxAmount: "0.00", totalAmount: amount.toFixed(2), paidAmount: amount.toFixed(2), paymentStatus: "paid", paymentMethod: cashAccount.accountType === "bank" ? "bank" : "cash", status: "posted", notes: input.notes || `تسديد رواتب مستحقة من المسير ${run.runNumber}`, createdBy: ctx.user.id });
+        const documentId = Number(created[0].insertId);
+        await db.insert(accountingDocumentLines).values([{ documentId, accountId: payable.id, projectId: null, stageId: null, description: `تسديد رواتب مستحقة — ${run.runNumber}`, debit: amount.toFixed(2), credit: "0.00" }, { documentId, accountId: cashAccount.accountId, projectId: null, stageId: null, description: `صرف من ${cashAccount.name} — رواتب ${run.month}/${run.year}`, debit: "0.00", credit: amount.toFixed(2) }]);
+        for (const row of selectedRows) {
+          const rowAmount = Math.max(Number(row.totalAmount || 0) - Number(row.paidAmount || 0), 0);
+          await db.update(payroll).set({ paidAmount: Number(row.totalAmount || 0).toFixed(2), status: "paid" }).where(eq(payroll.id, row.id));
+          await db.insert(payrollSettlements).values({ payrollRunId: run.id, payrollId: row.id, accountingDocumentId: documentId, amount: rowAmount.toFixed(2), createdBy: ctx.user.id });
+        }
+        const refreshedRows = await db.select().from(payroll).where(eq(payroll.payrollRunId, run.id));
+        const paidAmount = refreshedRows.reduce((sum, row) => sum + Number(row.paidAmount || 0), 0);
+        const totalAmount = refreshedRows.reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+        const status = payrollRunPaymentStatus(totalAmount, paidAmount);
+        await db.update(payrollRuns).set({ paidAmount: paidAmount.toFixed(2), status }).where(eq(payrollRuns.id, run.id));
+        await db.insert(auditLogs).values({ entityType: "payroll_run", entityId: run.id, action: "settled_by_payment_voucher", actorId: ctx.user.id, afterJson: JSON.stringify({ documentId, payrollIds: selectedRows.map((row) => row.id), amount }) });
+        return { documentId, documentNumber, amount, status, settledPayrollIds: selectedRows.map((row) => row.id) };
+      }),
+      outstanding: protectedProcedure.query(async ({ ctx }) => {
+        const db = requireDb(await getDb());
+        const companyId = await resolveActiveCompanyId(db, ctx);
+        if (!companyId) return [];
+        const runs = (await db.select().from(payrollRuns).where(eq(payrollRuns.companyId, companyId))).filter((run) => ["approved", "partially_paid"].includes(run.status));
+        const rows = await db.select().from(payroll);
+        return runs.map((run) => ({ ...run, rows: rows.filter((row) => row.payrollRunId === run.id).map((row) => ({ ...row, outstandingAmount: Math.max(Number(row.totalAmount || 0) - Number(row.paidAmount || 0), 0) })).filter((row) => row.outstandingAmount > 0.005) })).filter((run) => run.rows.length > 0);
+      }),
     }),
     list: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());

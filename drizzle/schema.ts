@@ -354,6 +354,7 @@ export const employees = mysqlTable("employees", {
 
 export const payroll = mysqlTable("payroll", {
   id: int("id").autoincrement().primaryKey(),
+  payrollRunId: int("payrollRunId"),
   projectId: int("projectId"),
   stageId: int("stageId"),
   employeeId: int("employeeId"),
@@ -370,6 +371,34 @@ export const payroll = mysqlTable("payroll", {
   absenceDays: int("absenceDays").default(0).notNull(),
   deductionAmount: decimal("deductionAmount", { precision: 14, scale: 2 }).default("0").notNull(),
   status: mysqlEnum("status", ["draft", "pending", "approved", "paid"]).default("draft").notNull(),
+  createdBy: int("createdBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const payrollRuns = mysqlTable("payrollRuns", {
+  id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId"),
+  runNumber: varchar("runNumber", { length: 128 }).notNull().unique(),
+  month: int("month").notNull(),
+  year: int("year").notNull(),
+  totalAmount: decimal("totalAmount", { precision: 14, scale: 2 }).default("0").notNull(),
+  paidAmount: decimal("paidAmount", { precision: 14, scale: 2 }).default("0").notNull(),
+  status: mysqlEnum("status", ["draft", "pending", "approved", "rejected", "partially_paid", "paid"]).default("draft").notNull(),
+  submittedAt: timestamp("submittedAt"),
+  approvedAt: timestamp("approvedAt"),
+  approvedBy: int("approvedBy"),
+  accrualDocumentId: int("accrualDocumentId"),
+  createdBy: int("createdBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const payrollSettlements = mysqlTable("payrollSettlements", {
+  id: int("id").autoincrement().primaryKey(),
+  payrollRunId: int("payrollRunId").notNull(),
+  payrollId: int("payrollId").notNull(),
+  accountingDocumentId: int("accountingDocumentId").notNull(),
+  amount: decimal("amount", { precision: 14, scale: 2 }).notNull().default("0"),
   createdBy: int("createdBy"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
