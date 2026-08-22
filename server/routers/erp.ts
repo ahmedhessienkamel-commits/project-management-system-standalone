@@ -2117,7 +2117,10 @@ export const erpRouter = router({
         db.select({ id: advanceRequests.id }).from(advanceRequests).where(eq(advanceRequests.status, "pending")),
       ]);
       const pendingTypes = new Set(pendingApprovals.map((row) => row.entityType));
-      const hasPendingProjectMatch = (notification: (typeof notificationRows)[number], entityType?: string) => pendingApprovals.some((row) => (!entityType || row.entityType === entityType) && (!row.projectName || notification.title.includes(row.projectName)));
+      const hasPendingProjectMatch = (notification: (typeof notificationRows)[number], entityType?: string) => {
+        const projectLabel = notification.title.split("—").pop()?.trim();
+        return pendingApprovals.some((row) => (!entityType || row.entityType === entityType) && Boolean(row.projectName) && projectLabel === row.projectName);
+      };
       const hasRealSource = (notification: (typeof notificationRows)[number]) => {
         if (notification.type === "approval") return hasPendingProjectMatch(notification);
         if (["certificate_approval", "certificate_approval_stage"].includes(notification.type)) return hasPendingProjectMatch(notification, "certificate");
