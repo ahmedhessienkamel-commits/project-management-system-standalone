@@ -32,6 +32,9 @@ export default function Home() {
   const sendProjectAlert = trpc.erp.dashboard.sendProjectAlert.useMutation({ onSuccess: (result) => window.alert(`تم إرسال التنبيه إلى ${result.recipientCount} مدير مشروع.`), onError: (error) => window.alert(error.message) });
   const shortcutTotals = summaries.reduce((totals, item) => ({
     plannedBudget: totals.plannedBudget + item.plannedBudget,
+    plannedRevenue: totals.plannedRevenue + (item.plannedRevenue ?? 0),
+    plannedZakat: totals.plannedZakat + (item.plannedZakat ?? 0),
+    plannedProfit: totals.plannedProfit + (item.plannedProfit ?? 0),
     actualCost: totals.actualCost + item.actualCost,
     outstandingCost: totals.outstandingCost + item.outstandingCost,
     recognizedRevenue: totals.recognizedRevenue + item.recognizedRevenue,
@@ -45,8 +48,11 @@ export default function Home() {
     totalExpenses: totals.totalExpenses + item.totalExpenses,
     cashGap: totals.cashGap + item.cashGap,
     pendingApprovals: totals.pendingApprovals + item.pendingApprovals,
-  }), { plannedBudget: 0, actualCost: 0, outstandingCost: 0, recognizedRevenue: 0, collectionsReceived: 0, payrollOutstanding: 0, materialsExpenses: 0, operationalExpenses: 0, administrativeExpenses: 0, payrollTotal: 0, subcontractorCostsTotal: 0, totalExpenses: 0, cashGap: 0, pendingApprovals: 0 });
+  }), { plannedBudget: 0, plannedRevenue: 0, plannedZakat: 0, plannedProfit: 0, actualCost: 0, outstandingCost: 0, recognizedRevenue: 0, collectionsReceived: 0, payrollOutstanding: 0, materialsExpenses: 0, operationalExpenses: 0, administrativeExpenses: 0, payrollTotal: 0, subcontractorCostsTotal: 0, totalExpenses: 0, cashGap: 0, pendingApprovals: 0 });
   const totalBudget = shortcutTotals.plannedBudget;
+  const totalPlannedRevenue = shortcutTotals.plannedRevenue;
+  const totalPlannedZakat = shortcutTotals.plannedZakat;
+  const totalPlannedProfit = shortcutTotals.plannedProfit;
   const totalActual = shortcutTotals.actualCost;
   const totalOutstanding = shortcutTotals.outstandingCost;
   const criticalCount = summaries.filter((item) => item.status === "critical").length;
@@ -76,6 +82,8 @@ export default function Home() {
           </header>
 
           {selectedSummary && <ExecutionBoard summary={selectedSummary} rows={selectedDetailReport?.rows.filter((row) => row.rowType === "stage") ?? []} />}
+
+          {selectedSummary && <BudgetOverview summary={selectedSummary} />}
 
           {selectedSummary && <section className="grid gap-4 rounded-3xl bg-[#18324b] p-5 text-white shadow-sm lg:grid-cols-[1.3fr_1fr_1fr]"><TimeGauge title="عداد المرحلة النشطة" subtitle={selectedSummary.activeStage?.name ?? "لا توجد مرحلة نشطة"} start={selectedSummary.activeStage?.plannedStart ?? null} end={selectedSummary.activeStage?.plannedEnd ?? null} /><TimeGauge title="عداد المشروع" start={selectedSummary.project.plannedStart} end={selectedSummary.project.plannedEnd} /><div className="grid grid-cols-2 gap-3"><Indicator label="إنجاز المشروع" value={`${selectedSummary.progress}%`} /><Indicator label="إنجاز المرحلة" value={`${selectedSummary.activeStage?.actualProgress ?? 0}%`} /><Indicator label="الميزانية" value={`${money.format(selectedSummary.plannedBudget)} ر.س`} /><Indicator label="المنصرف" value={`${money.format(selectedSummary.actualCost)} ر.س`} /></div></section>}
 
@@ -149,6 +157,15 @@ export default function Home() {
       </div>
     </DashboardLayout>
   );
+}
+
+type BudgetOverviewView = { project: { name: string }; plannedBudget: number; plannedRevenue?: number; plannedZakat?: number; plannedProfit?: number; actualCost: number; paidCost: number; outstandingCost: number };
+function BudgetOverview({ summary }: { summary: BudgetOverviewView }) {
+  const plannedCost = Number(summary.plannedBudget || 0);
+  const actual = Number(summary.actualCost || 0);
+  const variance = plannedCost - actual;
+  const metrics = [{ label: "الإيراد المخطط", value: Number(summary.plannedRevenue || 0), tone: "text-blue-700" }, { label: "التكلفة المخططة", value: plannedCost, tone: "text-[#18324b]" }, { label: "التكلفة الفعلية", value: actual, tone: "text-rose-700" }, { label: "المدفوع فعليًا", value: Number(summary.paidCost || 0), tone: "text-emerald-700" }, { label: "المستحق", value: Number(summary.outstandingCost || 0), tone: "text-amber-700" }, { label: "الربح المخطط", value: Number(summary.plannedProfit || 0), tone: "text-violet-700" }];
+  return <Card className="border-0 bg-white shadow-sm"><CardHeader className="border-b border-slate-100"><div className="flex flex-wrap items-center justify-between gap-3"><div><CardTitle className="text-xl text-[#18324b]">الموازنة الشاملة للمشروع</CardTitle><p className="mt-1 text-xs leading-6 text-slate-500">{summary.project.name} · المخطط محفوظ مستقلًا عن الفواتير وسندات الصرف والمستخلصات. الإدخالات الفعلية التي تنشئونها لاحقًا ستظهر هنا فقط بعد ربطها بالمشروع وبند التكلفة.</p></div><Badge className="bg-[#f5f0e5] text-[#8a6825]">مخطط مقابل فعلي</Badge></div></CardHeader><CardContent className="space-y-5"><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">{metrics.map((metric) => <div key={metric.label} className="rounded-xl border border-slate-100 bg-slate-50 p-3"><p className="text-xs text-slate-500">{metric.label}</p><p className={`mt-2 text-lg font-bold ${metric.tone}`}>{money.format(metric.value)} <span className="text-xs font-normal">ر.س</span></p></div>)}</div><div className="grid gap-4 lg:grid-cols-[1fr_280px]"><div><div className="mb-2 flex justify-between text-xs text-slate-500"><span>استهلاك التكلفة المخططة</span><span>{plannedCost ? `${((actual / plannedCost) * 100).toFixed(1)}%` : "—"}</span></div><Progress value={plannedCost ? Math.min((actual / plannedCost) * 100, 100) : 0} className="h-3" /><div className="mt-3 flex flex-wrap gap-2 text-xs"><span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600">الزكاة المخططة: {money.format(Number(summary.plannedZakat || 0))} ر.س</span><span className={`rounded-full px-3 py-1 ${variance < 0 ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"}`}>{variance < 0 ? "تجاوز المخطط" : "الرصيد المتبقي من المخطط"}: {money.format(Math.abs(variance))} ر.س</span></div></div><div className="rounded-2xl bg-[#18324b] p-4 text-white"><p className="text-xs text-slate-300">قراءة الإدارة</p><p className="mt-2 text-sm font-semibold">{actual === 0 ? "لا توجد حركات فعلية مسجلة حتى الآن" : variance < 0 ? "التكلفة الفعلية تجاوزت المخطط" : "التكلفة الفعلية داخل حدود المخطط"}</p><p className="mt-2 text-xs leading-5 text-slate-300">يتم إدخال الحركات من صفحاتها المعتادة، ولا تُنشأ أي حركات تلقائيًا من الموازنة.</p></div></div></CardContent></Card>;
 }
 
 function DashboardStageDetail({ rows, total, onOpenReport }: { rows: Array<{ rowType: "stage" | "costItem"; id: number; code: string; name: string; stageName: string; plannedBudget: number; actual: number; paidAmount: number; outstanding: number; variance: number; consumptionPct: number; timeVarianceDays: number; status: string }>; total: { plannedBudget: number; actual: number; paidAmount: number; outstanding: number; variance: number; consumptionPct: number } | null; onOpenReport: () => void }) {
