@@ -663,10 +663,16 @@ export const materialRequisitions = mysqlTable("materialRequisitions", {
 export const materialRequisitionItems = mysqlTable("materialRequisitionItems", {
   id: int("id").autoincrement().primaryKey(),
   requisitionId: int("requisitionId").notNull(),
+  inventoryItemId: int("inventoryItemId"),
+  costItemId: int("costItemId"),
+  contractId: int("contractId"),
+  contractItemIndex: int("contractItemIndex"),
   description: varchar("description", { length: 255 }).notNull(),
   unit: varchar("unit", { length: 64 }),
   quantity: decimal("quantity", { precision: 14, scale: 3 }).notNull().default("1"),
   estimatedUnitCost: decimal("estimatedUnitCost", { precision: 14, scale: 2 }).notNull().default("0"),
+  planningStatus: mysqlEnum("planningStatus", ["within_plan", "over_plan", "unplanned"]).notNull().default("unplanned"),
+  plannedQuantity: decimal("plannedQuantity", { precision: 14, scale: 3 }).notNull().default("0"),
   notes: text("notes"),
 });
 
