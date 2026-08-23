@@ -10,7 +10,7 @@ if (!process.env.DATABASE_URL) {
   process.exit(1);
 }
 
-const excludedTables = new Set(["passwordResetTokens"]);
+const excludedTables = new Set(["passwordResetTokens", "userInvitations", "__drizzle_migrations"]);
 const excludedColumns = new Set(["passwordHash", "tokenHash", "token"]);
 const connection = await mysql.createConnection(process.env.DATABASE_URL);
 
@@ -39,7 +39,7 @@ try {
     format: "erp-portable-data",
     version: 1,
     generatedAt: new Date().toISOString(),
-    note: "Portable data snapshot. Password hashes, reset tokens, invitation tokens and other secret tokens are not included.",
+    note: "Portable data snapshot. Password hashes, reset tokens, invitation records, migration history and other secret tokens are not included.",
     omitted,
     tables,
   };

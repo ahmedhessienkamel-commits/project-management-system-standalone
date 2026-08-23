@@ -14,7 +14,8 @@
     "db:push": "drizzle-kit generate && drizzle-kit migrate",
     "db:migrate": "drizzle-kit migrate",
     "local:bootstrap-admin": "node scripts/bootstrap-local-admin.mjs",
-    "export:data": "node scripts/export-portable-data.mjs"
+    "export:data": "node scripts/export-portable-data.mjs",
+    "import:data": "node scripts/import-portable-data.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",
