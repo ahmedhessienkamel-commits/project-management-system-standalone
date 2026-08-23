@@ -15,6 +15,8 @@ import Accounting from "@/pages/Accounting";
 import Users from "@/pages/Users";
 import DataQuality from "@/pages/DataQuality";
 import Employees from "@/pages/Employees";
+import EmployeeAdvances from "@/pages/EmployeeAdvances";
+import ComplianceDocuments from "@/pages/ComplianceDocuments";
 import Operations from "@/pages/Operations";
 import LegacyImport from "./pages/LegacyImport";
 import Tasks from "./pages/Tasks";
@@ -87,6 +89,8 @@ function Router() {
       <Route path={"/users"} component={Users} />
       <Route path={"/data-quality"} component={DataQuality} />
       <Route path={"/employees"} component={Employees} />
+      <Route path={"/employee-advances"} component={EmployeeAdvances} />
+      <Route path={"/compliance-documents"} component={ComplianceDocuments} />
       <Route path={"/settings"} component={LegacyImport} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}

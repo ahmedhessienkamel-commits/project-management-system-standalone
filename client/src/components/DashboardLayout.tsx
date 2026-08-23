@@ -43,6 +43,8 @@ const menuItems = [
   { icon: FileText, label: "العقود والمستخلصات", path: "/operations?tab=certificates" },
   { icon: FileText, label: "كشوف حساب الموردين", path: "/supplier-statements" },
   { icon: UserRound, label: "دليل الموظفين", path: "/employees" },
+  { icon: WalletCards, label: "سلف الموظفين", path: "/employee-advances" },
+  { icon: FileText, label: "سجل الوثائق والرخص", path: "/compliance-documents" },
   { icon: WalletCards, label: "مسير الرواتب", path: "/payroll" },
   { icon: WalletCards, label: "تسجيل / صرف عهدة", path: "/custody" },
   { icon: FileText, label: "كشوف حساب العهد", path: "/custody?tab=custodyStatement" },

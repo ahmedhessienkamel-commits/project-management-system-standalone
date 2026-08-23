@@ -156,6 +156,8 @@ export const inventoryItems = mysqlTable("inventoryItems", {
   id: int("id").autoincrement().primaryKey(),
   companyId: int("companyId"),
   projectId: int("projectId"),
+  parentItemId: int("parentItemId"),
+  defaultCostItemId: int("defaultCostItemId"),
   code: varchar("code", { length: 64 }).notNull().unique(),
   name: varchar("name", { length: 255 }).notNull(),
   category: varchar("category", { length: 128 }).default("materials").notNull(),
@@ -588,6 +590,28 @@ export const notifications = mysqlTable("notifications", {
   message: text("message").notNull(),
   readAt: timestamp("readAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const complianceDocuments = mysqlTable("complianceDocuments", {
+  id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId"),
+  employeeId: int("employeeId"),
+  documentScope: mysqlEnum("documentScope", ["company", "employee"]).notNull(),
+  documentType: varchar("documentType", { length: 128 }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  referenceNumber: varchar("referenceNumber", { length: 128 }),
+  issuingAuthority: varchar("issuingAuthority", { length: 255 }),
+  issuedDate: date("issuedDate"),
+  expiryDate: date("expiryDate").notNull(),
+  reminderDays: int("reminderDays").notNull().default(30),
+  attachmentUrl: text("attachmentUrl"),
+  attachmentName: varchar("attachmentName", { length: 255 }),
+  status: mysqlEnum("status", ["active", "archived"]).notNull().default("active"),
+  lastAlertKey: varchar("lastAlertKey", { length: 128 }),
+  lastAlertAt: timestamp("lastAlertAt"),
+  createdBy: int("createdBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 export const dailyTasks = mysqlTable("dailyTasks", {

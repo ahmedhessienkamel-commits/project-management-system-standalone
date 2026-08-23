@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
 import { EmployeeDocumentArchive } from "@/components/EmployeeDocumentArchive";
-import { EmployeeAdvanceLedger } from "@/components/EmployeeAdvanceLedger";
 import { ArrowRight, BriefcaseBusiness, Check, Pencil, Plus, UserRound, X } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
@@ -59,6 +58,5 @@ export default function Employees() {
       <Card className="border-0 shadow-sm"><CardHeader><CardTitle className="text-lg text-[#18324b]">الموظفون المسجلون</CardTitle><p className="mt-1 text-xs text-slate-500">يمكن تعديل الملف الكامل أو تغيير الحالة مع الاحتفاظ بسجل الموظف.</p></CardHeader><CardContent>{isLoading ? <div className="py-10 text-center text-sm text-slate-500">جارٍ التحميل...</div> : employees.length === 0 ? <div className="rounded-xl border border-dashed border-slate-200 py-12 text-center text-sm text-slate-400"><UserRound className="mx-auto mb-3 h-8 w-8 text-[#b28a3b]" />لا يوجد موظفون بعد.</div> : <div className="space-y-3">{employees.map((employee) => <div key={employee.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-white p-4"><div className="flex items-center gap-3"><div className="rounded-xl bg-blue-50 p-3 text-blue-700"><UserRound className="h-5 w-5" /></div><div><p className="font-bold text-[#18324b]">{employee.fullName}</p><p className="mt-1 text-xs text-slate-500">{employee.employeeCode}{employee.jobTitle ? ` · ${employee.jobTitle}` : ""}{employee.phone ? ` · ${employee.phone}` : ""}</p><p className="mt-1 text-xs text-slate-500">الراتب الأساسي: {Number(employee.basicSalary || 0).toLocaleString("en-US")} ر.س</p></div></div><div className="flex items-center gap-2"><Badge variant="outline" className={employee.status === "active" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-50 text-slate-500"}>{employee.status === "active" ? "نشط" : "غير نشط"}</Badge>{canManage && <><Button variant="outline" size="sm" onClick={() => startEdit(employee)}><Pencil className="ml-1 h-3.5 w-3.5" /> تعديل</Button><Button variant="outline" size="sm" onClick={() => updateStatus.mutate({ id: employee.id, status: employee.status === "active" ? "inactive" : "active" })}>{employee.status === "active" ? "تعطيل" : "تفعيل"}</Button></>}</div></div>)}</div>}</CardContent></Card>
     </section>
     <EmployeeDocumentArchive employees={employees} projects={projects} me={me} />
-    <EmployeeAdvanceLedger employees={employees} me={me} />
   </div></div></DashboardLayout>;
 }

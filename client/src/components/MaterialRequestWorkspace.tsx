@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MaterialQuickCreators } from "@/components/MaterialQuickCreators";
 
 const planningLabel = { within_plan: "ضمن المخطط", over_plan: "يتجاوز المخطط", unplanned: "غير مرتبط بمخطط" } as const;
 const planningClass = { within_plan: "bg-emerald-50 text-emerald-800", over_plan: "bg-rose-50 text-rose-800", unplanned: "bg-amber-50 text-amber-800" } as const;
@@ -61,6 +62,7 @@ export function MaterialRequestWorkspace() {
       .filter((contract) => contract.projectId === selectedProjectId && ["supply", "supply_installation"].includes(contract.contractType))
       .flatMap((contract) => contract.contractItems || [])
       .find((line) => Number(line.inventoryItemId || 0) === material?.id)?.costItemId
+      || material?.defaultCostItemId
       || availableCostItems.find((item) => item.code === material?.code)?.id;
     setDraft({ ...draft, inventoryItemId: materialId, costItemId: linkedCost ? String(linkedCost) : "" });
   };
@@ -84,6 +86,7 @@ export function MaterialRequestWorkspace() {
       <QuickMovementCard title="كارت صرف خامات" description="صرف الخامة إلى موقع العمل بعد مراجعة الرصيد والمرحلة." icon={ArrowUpFromLine} className="border-orange-200 bg-orange-50" actionClass="bg-orange-700 hover:bg-orange-800" onClick={() => setLocation("/inventory?mode=issue")} />
     </div>
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,.65fr)]">
+      <MaterialQuickCreators projectId={selectedProjectId} inventoryItems={inventoryItems} costItems={availableCostItems} onMaterialCreated={(itemId, costItemId) => { setDraft((current) => ({ ...current, inventoryItemId: String(itemId), costItemId: costItemId ? String(costItemId) : current.costItemId })); setMaterialSearch(""); }} onCostItemCreated={(costItemId) => setDraft((current) => ({ ...current, costItemId: String(costItemId) }))} />
       <Card className="border-0 shadow-sm"><CardHeader><CardTitle className="flex items-center gap-2 text-[#18324b]"><Plus className="h-5 w-5" /> {editingId ? "تعديل طلب مادة" : "طلب مادة جديد"}</CardTitle></CardHeader><CardContent><form className="grid gap-4 md:grid-cols-2" onSubmit={save}>
         <Field label="المشروع"><select required className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm" value={draft.projectId} onChange={(event) => { setMaterialSearch(""); setDraft({ ...draft, projectId: event.target.value, stageId: "", inventoryItemId: "", costItemId: "" }); }}><option value="">اختر المشروع</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></Field>
         <Field label="المرحلة"><select required disabled={!selectedProjectId} className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm" value={draft.stageId} onChange={(event) => setDraft({ ...draft, stageId: event.target.value, costItemId: "" })}><option value="">اختر المرحلة</option>{projectStages.map((stage) => <option key={stage.id} value={stage.id}>{stage.name}</option>)}</select></Field>

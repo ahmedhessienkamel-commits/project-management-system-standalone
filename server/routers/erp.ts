@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray, or } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, dailyTasks, leaveRequests, advanceRequests, advanceRepayments, employees, employeeWorkStarts, expenses, notifications, payroll, payrollRuns, payrollSettlements, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, sales, stages, units, users, userInvitations, vendors, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems, inventoryItems, inventoryMovements, accounts, accountingDocuments, accountingDocumentLines, costItems, fixedAssets, fixedAssetDepreciation, companies, companyMembers, companyProfiles, cashAccounts, contractorContracts, serviceContractEntries, userOperationPermissions } from "../../drizzle/schema";
+import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, dailyTasks, leaveRequests, advanceRequests, advanceRepayments, employees, employeeWorkStarts, expenses, notifications, complianceDocuments, payroll, payrollRuns, payrollSettlements, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, sales, stages, units, users, userInvitations, vendors, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems, inventoryItems, inventoryMovements, accounts, accountingDocuments, accountingDocumentLines, costItems, fixedAssets, fixedAssetDepreciation, companies, companyMembers, companyProfiles, cashAccounts, contractorContracts, serviceContractEntries, userOperationPermissions } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
@@ -20,6 +20,7 @@ import { calculateMaterialPlanning } from "../../shared/materialPlanning";
 import { sendApprovalEmail, sendInvitationEmail, sendTaskReminderEmail } from "../email";
 import { buildExecutiveSnapshot } from "../executiveDigest";
 import { getAppUrl } from "../appUrl";
+import { documentExpiryLabel, documentExpiryStage, daysUntilExpiry } from "../../shared/documentExpiry";
 
 const projectStatus = z.enum(["planning", "active", "paused", "completed", "archived"]);
 const operationKey = z.enum(["payment_voucher", "receipt_voucher", "expense", "certificate", "payroll", "custody", "purchase_invoice", "sales_invoice", "purchase_request", "inventory_item", "inventory_receipt", "inventory_issue", "task_assignment", "edit", "delete", "approve"]);
@@ -1139,12 +1140,20 @@ export const erpRouter = router({
       const db = requireDb(await getDb());
       return db.select().from(costItems).where(eq(costItems.isActive, 1)).orderBy(costItems.code);
     }),
-    create: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional(), parentId: z.number().int().positive().optional(), code: z.string().trim().min(1).max(32), name: z.string().trim().min(2).max(255), category: z.string().trim().min(2).max(64) })).mutation(async ({ ctx, input }) => {
+    create: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional(), parentId: z.number().int().positive().optional(), accountId: z.number().int().positive().optional(), code: z.string().trim().min(1).max(32), name: z.string().trim().min(2).max(255), category: z.string().trim().min(2).max(64) })).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
       if (input.projectId) await assertProjectWrite(db, ctx, input.projectId);
       const duplicate = await db.select({ id: costItems.id }).from(costItems).where(eq(costItems.code, input.code)).limit(1);
       if (duplicate.length) throw new TRPCError({ code: "CONFLICT", message: "كود بند التكلفة مستخدم بالفعل، اختر كودًا مختلفًا" });
-      const result = await db.insert(costItems).values({ projectId: input.projectId || null, parentId: input.parentId || null, code: input.code, name: input.name, category: input.category, createdBy: ctx.user.id });
+      if (input.parentId) {
+        const parent = (await db.select().from(costItems).where(eq(costItems.id, input.parentId)).limit(1))[0];
+        if (!parent || !parent.isActive || (input.projectId && parent.projectId && parent.projectId !== input.projectId)) throw new TRPCError({ code: "BAD_REQUEST", message: "اختر بطاقة تكلفة رئيسية متاحة للمشروع" });
+      }
+      if (input.accountId) {
+        const account = (await db.select().from(accounts).where(eq(accounts.id, input.accountId)).limit(1))[0];
+        if (!account || !account.isActive || account.accountType !== "expense") throw new TRPCError({ code: "BAD_REQUEST", message: "اختر حساب مصروف نشطًا من الشجرة المحاسبية" });
+      }
+      const result = await db.insert(costItems).values({ projectId: input.projectId || null, parentId: input.parentId || null, accountId: input.accountId || null, code: input.code, name: input.name, category: input.category, createdBy: ctx.user.id });
       const id = Number(result[0].insertId);
       await db.insert(auditLogs).values({ entityType: "costItem", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
       return { id };
@@ -1153,7 +1162,8 @@ export const erpRouter = router({
       const db = requireDb(await getDb());
       const existing = (await db.select().from(costItems).where(eq(costItems.id, input.id)).limit(1))[0];
       if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "بطاقة التكلفة غير موجودة" });
-      if (input.parentId) await assertProjectWrite(db, ctx, input.parentId);
+      if (existing.projectId) await assertProjectWrite(db, ctx, existing.projectId);
+      if (input.parentId === input.id) throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن أن يكون بند التكلفة أبًا لنفسه" });
       await db.update(costItems).set({ code: input.code, name: input.name, category: input.category, parentId: input.parentId ?? null }).where(eq(costItems.id, input.id));
       await db.insert(auditLogs).values({ entityType: "costItem", entityId: input.id, action: "updated", actorId: ctx.user.id, beforeJson: JSON.stringify(existing), afterJson: JSON.stringify(input) });
       return { id: input.id };
@@ -1166,6 +1176,43 @@ export const erpRouter = router({
       }
       await db.update(costItems).set({ isActive: input.active ? 1 : 0 }).where(eq(costItems.id, input.id));
       await db.insert(auditLogs).values({ entityType: "costItem", entityId: input.id, action: input.active ? "activated" : "deactivated", actorId: ctx.user.id });
+      return { id: input.id };
+    }),
+  }),
+  complianceDocuments: router({
+    list: protectedProcedure.input(z.object({ search: z.string().max(255).optional(), scope: z.enum(["all", "company", "employee"]).optional(), status: z.enum(["all", "active", "archived"]).optional(), employeeId: z.number().int().positive().optional(), from: z.string().optional(), to: z.string().optional() }).optional()).query(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      const companyId = await resolveActiveCompanyId(db, ctx);
+      const [rows, employeeRows] = await Promise.all([db.select().from(complianceDocuments), db.select({ id: employees.id, fullName: employees.fullName, employeeCode: employees.employeeCode }).from(employees)]);
+      const employeeMap = new Map(employeeRows.map((employee) => [employee.id, employee]));
+      const query = input?.search?.trim().toLowerCase() || "";
+      return rows.filter((row) => (!companyId || row.companyId === companyId) && (!input?.scope || input.scope === "all" || row.documentScope === input.scope) && (!input?.status || input.status === "all" || row.status === input.status) && (!input?.employeeId || row.employeeId === input.employeeId) && (!input?.from || String(row.expiryDate).slice(0, 10) >= input.from) && (!input?.to || String(row.expiryDate).slice(0, 10) <= input.to) && (!query || `${row.title} ${row.documentType} ${row.referenceNumber || ""} ${employeeMap.get(row.employeeId || 0)?.fullName || ""}`.toLowerCase().includes(query))).map((row) => {
+        const remainingDays = daysUntilExpiry(row.expiryDate);
+        const expiryStage = documentExpiryStage(row.expiryDate, row.reminderDays);
+        return { ...row, employee: row.employeeId ? employeeMap.get(row.employeeId) || null : null, remainingDays, expiryStage, expiryLabel: documentExpiryLabel(expiryStage, remainingDays) };
+      }).sort((left, right) => new Date(left.expiryDate).getTime() - new Date(right.expiryDate).getTime());
+    }),
+    create: adminProcedure.input(z.object({ documentScope: z.enum(["company", "employee"]), employeeId: z.number().int().positive().nullable().optional(), documentType: z.string().trim().min(2).max(128), title: z.string().trim().min(2).max(255), referenceNumber: z.string().trim().max(128).optional(), issuingAuthority: z.string().trim().max(255).optional(), issuedDate: z.string().optional(), expiryDate: z.string().min(10), reminderDays: z.number().int().min(1).max(365).default(30), attachmentUrl: z.string().url().optional().or(z.literal("")), attachmentName: z.string().trim().max(255).optional() })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      const companyId = await resolveActiveCompanyId(db, ctx);
+      if (!companyId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "اختر شركة نشطة قبل حفظ الوثيقة" });
+      if (input.documentScope === "employee" && !input.employeeId) throw new TRPCError({ code: "BAD_REQUEST", message: "اختر الموظف لربط وثيقته" });
+      if (input.documentScope === "company" && input.employeeId) throw new TRPCError({ code: "BAD_REQUEST", message: "وثيقة الشركة لا ترتبط بموظف" });
+      if (input.employeeId) {
+        const employee = (await db.select({ id: employees.id }).from(employees).where(eq(employees.id, input.employeeId)).limit(1))[0];
+        if (!employee) throw new TRPCError({ code: "NOT_FOUND", message: "الموظف المحدد غير موجود" });
+      }
+      const result = await db.insert(complianceDocuments).values({ companyId, employeeId: input.documentScope === "employee" ? input.employeeId || null : null, documentScope: input.documentScope, documentType: input.documentType, title: input.title, referenceNumber: input.referenceNumber || null, issuingAuthority: input.issuingAuthority || null, issuedDate: input.issuedDate ? new Date(`${input.issuedDate}T00:00:00Z`) : null, expiryDate: new Date(`${input.expiryDate}T00:00:00Z`), reminderDays: input.reminderDays, attachmentUrl: input.attachmentUrl || null, attachmentName: input.attachmentName || null, createdBy: ctx.user.id });
+      const id = Number(result[0].insertId);
+      await db.insert(auditLogs).values({ entityType: "complianceDocument", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
+      return { id };
+    }),
+    update: adminProcedure.input(z.object({ id: z.number().int().positive(), documentType: z.string().trim().min(2).max(128), title: z.string().trim().min(2).max(255), referenceNumber: z.string().trim().max(128).optional(), issuingAuthority: z.string().trim().max(255).optional(), issuedDate: z.string().optional(), expiryDate: z.string().min(10), reminderDays: z.number().int().min(1).max(365), attachmentUrl: z.string().url().optional().or(z.literal("")), attachmentName: z.string().trim().max(255).optional(), status: z.enum(["active", "archived"]) })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      const existing = (await db.select().from(complianceDocuments).where(eq(complianceDocuments.id, input.id)).limit(1))[0];
+      if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "سجل الوثيقة غير موجود" });
+      await db.update(complianceDocuments).set({ documentType: input.documentType, title: input.title, referenceNumber: input.referenceNumber || null, issuingAuthority: input.issuingAuthority || null, issuedDate: input.issuedDate ? new Date(`${input.issuedDate}T00:00:00Z`) : null, expiryDate: new Date(`${input.expiryDate}T00:00:00Z`), reminderDays: input.reminderDays, attachmentUrl: input.attachmentUrl || null, attachmentName: input.attachmentName || null, status: input.status, lastAlertKey: existing.expiryDate.getTime() === new Date(`${input.expiryDate}T00:00:00Z`).getTime() ? existing.lastAlertKey : null, lastAlertAt: existing.expiryDate.getTime() === new Date(`${input.expiryDate}T00:00:00Z`).getTime() ? existing.lastAlertAt : null }).where(eq(complianceDocuments.id, input.id));
+      await db.insert(auditLogs).values({ entityType: "complianceDocument", entityId: input.id, action: "updated", actorId: ctx.user.id, beforeJson: JSON.stringify(existing), afterJson: JSON.stringify(input) });
       return { id: input.id };
     }),
   }),
@@ -3151,13 +3198,21 @@ export const erpRouter = router({
         const rows = await db.select().from(inventoryItems);
         return rows.filter((item) => (!input?.projectId || item.projectId === input.projectId || item.projectId === null) && (!allowed || item.projectId === null || allowed.has(item.projectId)) && item.isActive === 1);
       }),
-      create: protectedProcedure.input(z.object({ projectId: z.number().int().positive().nullable().optional(), code: z.string().trim().min(1).max(64), name: z.string().trim().min(1).max(255), category: z.string().trim().min(1).max(128).default("materials"), unit: z.string().trim().min(1).max(64), minimumStock: z.number().nonnegative().default(0) })).mutation(async ({ ctx, input }) => {
+      create: protectedProcedure.input(z.object({ projectId: z.number().int().positive().nullable().optional(), parentItemId: z.number().int().positive().nullable().optional(), defaultCostItemId: z.number().int().positive().nullable().optional(), code: z.string().trim().min(1).max(64), name: z.string().trim().min(1).max(255), category: z.string().trim().min(1).max(128).default("materials"), unit: z.string().trim().min(1).max(64), minimumStock: z.number().nonnegative().default(0) })).mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
         await assertOperationPermission(db, ctx, "inventory_item");
         if (input.projectId) await assertProjectWrite(db, ctx, input.projectId);
         const duplicate = await db.select({ id: inventoryItems.id }).from(inventoryItems).where(eq(inventoryItems.code, input.code)).limit(1);
         if (duplicate.length) throw new TRPCError({ code: "CONFLICT", message: "كود بطاقة الخامة مستخدم بالفعل" });
-        const result = await db.insert(inventoryItems).values({ projectId: input.projectId ?? null, code: input.code, name: input.name, category: input.category, unit: input.unit, minimumStock: input.minimumStock.toFixed(3), createdBy: ctx.user.id });
+        if (input.parentItemId) {
+          const parent = (await db.select().from(inventoryItems).where(eq(inventoryItems.id, input.parentItemId)).limit(1))[0];
+          if (!parent || !parent.isActive || (input.projectId && parent.projectId && parent.projectId !== input.projectId)) throw new TRPCError({ code: "BAD_REQUEST", message: "اختر خامة رئيسية متاحة للمشروع" });
+        }
+        if (input.defaultCostItemId) {
+          const linkedCost = (await db.select().from(costItems).where(eq(costItems.id, input.defaultCostItemId)).limit(1))[0];
+          if (!linkedCost || !linkedCost.isActive || (input.projectId && linkedCost.projectId && linkedCost.projectId !== input.projectId)) throw new TRPCError({ code: "BAD_REQUEST", message: "اختر بند تكلفة نشطًا ومتوافقًا مع المشروع" });
+        }
+        const result = await db.insert(inventoryItems).values({ projectId: input.projectId ?? null, parentItemId: input.parentItemId ?? null, defaultCostItemId: input.defaultCostItemId ?? null, code: input.code, name: input.name, category: input.category, unit: input.unit, minimumStock: input.minimumStock.toFixed(3), createdBy: ctx.user.id });
         const id = Number(result[0].insertId);
         await db.insert(auditLogs).values({ entityType: "inventoryItem", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
         return { id };

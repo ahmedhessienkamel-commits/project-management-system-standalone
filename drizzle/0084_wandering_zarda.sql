@@ -1,0 +1,22 @@
+CREATE TABLE `complianceDocuments` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`companyId` int,
+	`employeeId` int,
+	`documentScope` enum('company','employee') NOT NULL,
+	`documentType` varchar(128) NOT NULL,
+	`title` varchar(255) NOT NULL,
+	`referenceNumber` varchar(128),
+	`issuingAuthority` varchar(255),
+	`issuedDate` date,
+	`expiryDate` date NOT NULL,
+	`reminderDays` int NOT NULL DEFAULT 30,
+	`attachmentUrl` text,
+	`attachmentName` varchar(255),
+	`status` enum('active','archived') NOT NULL DEFAULT 'active',
+	`lastAlertKey` varchar(128),
+	`lastAlertAt` timestamp,
+	`createdBy` int NOT NULL,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `complianceDocuments_id` PRIMARY KEY(`id`)
+);
