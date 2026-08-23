@@ -1,9 +1,9 @@
 import type { Request, Response } from "express";
 import { and, eq, gte } from "drizzle-orm";
 import { getDb } from "./db";
-import { sdk } from "./_core/sdk";
 import { sendExecutiveDigestEmail, sendOverdueTaskEmail } from "./email";
 import { approvalRequests, auditLogs, advanceRequests, dailyTasks, employees, leaveRequests, notifications, users } from "../drizzle/schema";
+import { authorizeScheduledRequest } from "./_core/schedulerAuth";
 
 type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
@@ -66,9 +66,9 @@ export async function alertOverdueTasks() {
 
 export async function executiveDigestHandler(req: Request, res: Response) {
   try {
-    const user = await sdk.authenticateRequest(req);
-    if (!user.isCron || !user.taskUid) return res.status(403).json({ error: "cron-only" });
-    return res.json({ ok: true, taskUid: user.taskUid, ...(await sendExecutiveDigest()) });
+    const schedule = await authorizeScheduledRequest(req);
+    if (!schedule.allowed) return res.status(403).json({ error: "cron-only" });
+    return res.json({ ok: true, taskUid: schedule.taskId, ...(await sendExecutiveDigest()) });
   } catch (error) {
     console.error("[ExecutiveDigest] failed", error);
     return res.status(500).json({ error: String(error), context: { url: req.originalUrl, timestamp: new Date().toISOString() } });
@@ -77,9 +77,9 @@ export async function executiveDigestHandler(req: Request, res: Response) {
 
 export async function overdueTaskAlertHandler(req: Request, res: Response) {
   try {
-    const user = await sdk.authenticateRequest(req);
-    if (!user.isCron || !user.taskUid) return res.status(403).json({ error: "cron-only" });
-    return res.json({ ok: true, taskUid: user.taskUid, ...(await alertOverdueTasks()) });
+    const schedule = await authorizeScheduledRequest(req);
+    if (!schedule.allowed) return res.status(403).json({ error: "cron-only" });
+    return res.json({ ok: true, taskUid: schedule.taskId, ...(await alertOverdueTasks()) });
   } catch (error) {
     console.error("[OverdueTaskAlert] failed", error);
     return res.status(500).json({ error: String(error), context: { url: req.originalUrl, timestamp: new Date().toISOString() } });

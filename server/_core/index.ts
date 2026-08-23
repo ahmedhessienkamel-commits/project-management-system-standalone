@@ -3,8 +3,6 @@ import express from "express";
 import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { registerOAuthRoutes } from "./oauth";
-import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { scheduledBackupHandler } from "../scheduledBackup";
@@ -36,8 +34,10 @@ async function startServer() {
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
-  registerStorageProxy(app);
-  registerOAuthRoutes(app);
+  console.log("[Auth] Local authentication enabled; OAuth and managed storage routes are not registered.");
+  app.get("/health", (_req, res) => {
+    res.status(200).json({ ok: true, authMode: "local" });
+  });
   app.post("/api/scheduled/dailyBackup", scheduledBackupHandler);
   app.post("/api/scheduled/executiveDigest", executiveDigestHandler);
   app.post("/api/scheduled/overdueTaskAlerts", overdueTaskAlertHandler);

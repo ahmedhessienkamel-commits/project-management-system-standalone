@@ -17,6 +17,7 @@ import { calculateWipBalance, buildWipClosingLines } from "../../shared/wip";
 import { canAssignTeamTasks } from "../../shared/taskPermissions";
 import { sendApprovalEmail, sendInvitationEmail, sendTaskReminderEmail } from "../email";
 import { buildExecutiveSnapshot } from "../executiveDigest";
+import { getAppUrl } from "../appUrl";
 
 const projectStatus = z.enum(["planning", "active", "paused", "completed", "archived"]);
 const operationKey = z.enum(["payment_voucher", "receipt_voucher", "expense", "certificate", "payroll", "custody", "purchase_invoice", "sales_invoice", "purchase_request", "inventory_item", "inventory_receipt", "inventory_issue", "task_assignment", "edit", "delete", "approve"]);
@@ -44,7 +45,7 @@ async function notifyTaskAssignee(db: ErpDb, input: { employeeId?: number | null
   const employee = (await db.select({ email: employees.email, fullName: employees.fullName }).from(employees).where(eq(employees.id, input.employeeId)).limit(1))[0];
   if (!employee?.email) return;
   try {
-    await sendApprovalEmail({ to: employee.email, recipientName: employee.fullName, title: input.title, message: input.message, approvalUrl: `${process.env.APP_URL || process.env.VITE_APP_URL || "https://metaadscntr-8ymftbnn.manus.space"}/tasks` });
+    await sendApprovalEmail({ to: employee.email, recipientName: employee.fullName, title: input.title, message: input.message, approvalUrl: `${getAppUrl()}/tasks` });
   } catch (error) {
     console.warn("[TaskEmail] delivery failed", { taskId: input.taskId, error: error instanceof Error ? error.message : "unknown" });
   }
@@ -54,7 +55,7 @@ async function notifyApprovalUsers(db: ErpDb, input: { type: string; title: stri
   const roles: UserRole[] = input.roles ?? ["admin", "general_manager"];
   const recipients = await db.select({ id: users.id, name: users.name, email: users.email, role: users.role }).from(users);
   const selectedRecipients = recipients.filter((recipient) => (input.userIds || []).includes(recipient.id) || roles.includes(recipient.role as UserRole));
-  const approvalUrl = input.approvalUrl || `${process.env.APP_URL || process.env.VITE_APP_URL || "https://metaadscntr-8ymftbnn.manus.space"}/approvals`;
+  const approvalUrl = input.approvalUrl || `${getAppUrl()}/approvals`;
   await Promise.all(selectedRecipients.map(async (recipient) => {
     await db.insert(notifications).values({ userId: recipient.id, type: input.type, title: input.title, message: input.message });
     if (!recipient.email) return;
@@ -418,7 +419,7 @@ export const erpRouter = router({
       const result = await db.insert(leaveRequests).values({ requestedBy: ctx.user.id, employeeId: input.employeeId ?? null, leaveType: input.leaveType, startDate: start, endDate: end, days: days.toFixed(2), reason: input.reason || null });
       const requestId = Number(result[0].insertId);
       await db.insert(auditLogs).values({ entityType: "leaveRequest", entityId: requestId, action: "created_pending", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
-      await notifyApprovalUsers(db, { type: "leave_approval", title: "طلب إجازة جديد يحتاج موافقة", message: `يوجد طلب إجازة جديد لمدة ${days} يومًا من المستخدم #${ctx.user.id}.`, approvalUrl: `${process.env.APP_URL || process.env.VITE_APP_URL || "https://metaadscntr-8ymftbnn.manus.space"}/approvals` });
+      await notifyApprovalUsers(db, { type: "leave_approval", title: "طلب إجازة جديد يحتاج موافقة", message: `يوجد طلب إجازة جديد لمدة ${days} يومًا من المستخدم #${ctx.user.id}.`, approvalUrl: `${getAppUrl(ctx.req)}/approvals` });
       return { id: requestId };
     }),
     update: protectedProcedure.input(z.object({ id: z.number().int().positive(), leaveType: z.enum(["annual", "sick", "emergency", "unpaid", "official", "other"]), startDate: z.string().min(10), endDate: z.string().min(10), reason: z.string().max(2000).optional() })).mutation(async ({ ctx, input }) => {
@@ -455,7 +456,7 @@ export const erpRouter = router({
       const result = await db.insert(advanceRequests).values({ requestedBy: ctx.user.id, employeeId: input.employeeId ?? null, amount: input.amount.toFixed(2), reason: input.reason, repaymentDate: input.repaymentDate ? new Date(input.repaymentDate) : null });
       const requestId = Number(result[0].insertId);
       await db.insert(auditLogs).values({ entityType: "advanceRequest", entityId: requestId, action: "created_pending", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
-      await notifyApprovalUsers(db, { type: "advance_approval", title: "طلب سلفة جديد يحتاج موافقة", message: `يوجد طلب سلفة بقيمة ${input.amount.toFixed(2)} ر.س من المستخدم #${ctx.user.id}.`, approvalUrl: `${process.env.APP_URL || process.env.VITE_APP_URL || "https://metaadscntr-8ymftbnn.manus.space"}/approvals` });
+      await notifyApprovalUsers(db, { type: "advance_approval", title: "طلب سلفة جديد يحتاج موافقة", message: `يوجد طلب سلفة بقيمة ${input.amount.toFixed(2)} ر.س من المستخدم #${ctx.user.id}.`, approvalUrl: `${getAppUrl(ctx.req)}/approvals` });
       return { id: requestId };
     }),
     update: protectedProcedure.input(z.object({ id: z.number().int().positive(), amount: z.number().positive(), reason: z.string().trim().min(2).max(2000), repaymentDate: z.string().optional() })).mutation(async ({ ctx, input }) => {
@@ -549,11 +550,7 @@ export const erpRouter = router({
       const result = await db.insert(userInvitations).values({ email: input.email, name: input.name || null, jobTitle: input.jobTitle, role: input.role, projectId: input.projectId || null, token, invitedBy: ctx.user.id, expiresAt });
       const id = Number(result[0].insertId);
       await db.insert(auditLogs).values({ entityType: "userInvitation", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
-      const forwardedHost = ctx.req.headers["x-forwarded-host"] || ctx.req.headers.host || "metaadscntr-8ymftbnn.manus.space";
-      const forwardedProto = ctx.req.headers["x-forwarded-proto"] || "https";
-      const host = Array.isArray(forwardedHost) ? forwardedHost[0] : forwardedHost;
-      const protocol = Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto;
-      const invitationUrl = `${protocol}://${host}/accept-invitation?token=${encodeURIComponent(token)}`;
+      const invitationUrl = `${getAppUrl(ctx.req)}/accept-invitation?token=${encodeURIComponent(token)}`;
       let emailSent = false;
       let emailError: string | null = null;
       try {
@@ -999,7 +996,7 @@ export const erpRouter = router({
       await Promise.all(recipients.map(async (recipient) => {
         await db.insert(notifications).values({ userId: recipient.id, type: "project_manager_alert", title, message: input.message });
         if (recipient.email) {
-          try { await sendApprovalEmail({ to: recipient.email, recipientName: recipient.name, title, message: input.message, approvalUrl: `${process.env.APP_URL || process.env.VITE_APP_URL || "https://metaadscntr-8ymftbnn.manus.space"}/projects/${project.id}` }); } catch (error) { console.warn("[ProjectAlert] email failed", error); }
+          try { await sendApprovalEmail({ to: recipient.email, recipientName: recipient.name, title, message: input.message, approvalUrl: `${getAppUrl()}/projects/${project.id}` }); } catch (error) { console.warn("[ProjectAlert] email failed", error); }
         }
       }));
       await db.insert(auditLogs).values({ entityType: "project", entityId: project.id, action: "manager_alert_sent", actorId: ctx.user.id, afterJson: JSON.stringify({ recipients: recipients.map((recipient) => recipient.id), message: input.message }) });
@@ -1640,7 +1637,7 @@ export const erpRouter = router({
         const withEmail = recipients.filter((user) => user.email);
         if (!withEmail.length) throw new TRPCError({ code: "BAD_REQUEST", message: "لا يوجد بريد إلكتروني للمسؤول الحالي" });
         const message = input.message || `يوجد مستند بانتظار ${request.approvalStage === "mostafa" ? "مراجعتك" : "اعتمادك"}. يرجى فتح صفحة الموافقات واتخاذ القرار أو الرفض بسبب واضح.`;
-        await Promise.all(withEmail.map((user) => sendApprovalEmail({ to: user.email!, recipientName: user.name, title: "تذكير بموافقة معلقة", message, approvalUrl: `${process.env.APP_URL || process.env.VITE_APP_URL || "https://metaadscntr-8ymftbnn.manus.space"}/approvals` })));
+        await Promise.all(withEmail.map((user) => sendApprovalEmail({ to: user.email!, recipientName: user.name, title: "تذكير بموافقة معلقة", message, approvalUrl: `${getAppUrl()}/approvals` })));
         await Promise.all(withEmail.map((user) => db.insert(notifications).values({ userId: user.id, type: "approval_reminder", title: "تذكير بموافقة معلقة", message })));
         await db.insert(auditLogs).values({ entityType: "approval", entityId: request.id, action: "reminder_sent", actorId: ctx.user.id, afterJson: JSON.stringify({ recipients: withEmail.map((user) => user.id), message }) });
         return { success: true, recipients: withEmail.map((user) => user.name) } as const;

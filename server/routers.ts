@@ -14,6 +14,7 @@ import { erpRouter } from "./routers/erp";
 import { backupRouter } from "./routers/backup";
 import { passwordResetTokens } from "../drizzle/schema";
 import { sendPasswordResetEmail } from "./email";
+import { getAppUrl } from "./appUrl";
 
 const passwordSecret = () => new TextEncoder().encode(process.env.JWT_SECRET || "development-password-secret");
 const hashPassword = (password: string) => { const salt = randomBytes(16).toString("hex"); return `${salt}:${scryptSync(password, salt, 64).toString("hex")}`; };
@@ -45,11 +46,7 @@ export const appRouter = router({
         const tokenHash = createHash("sha256").update(rawToken).digest("hex");
         const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
         await db.insert(passwordResetTokens).values({ userId: user.id, tokenHash, expiresAt });
-        const forwardedHost = ctx.req.headers["x-forwarded-host"] || ctx.req.headers.host || "metaadscntr-8ymftbnn.manus.space";
-        const forwardedProto = ctx.req.headers["x-forwarded-proto"] || "https";
-        const host = Array.isArray(forwardedHost) ? forwardedHost[0] : forwardedHost;
-        const protocol = Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto;
-        const resetUrl = `${protocol}://${host}/reset-password?token=${rawToken}`;
+        const resetUrl = `${getAppUrl(ctx.req)}/reset-password?token=${rawToken}`;
         try { await sendPasswordResetEmail({ to: user.email, recipientName: user.name, resetUrl, expiresAt }); } catch (error) { console.error("[PasswordReset] Email delivery failed", error); }
       }
       return { success: true } as const;

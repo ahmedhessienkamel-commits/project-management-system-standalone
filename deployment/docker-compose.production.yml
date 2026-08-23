@@ -1,0 +1,21 @@
+services:
+  proxy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      DOMAIN: ${DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+volumes:
+  caddy_data:
+  caddy_config:

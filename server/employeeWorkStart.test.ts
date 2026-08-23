@@ -19,7 +19,7 @@ import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
 
 function context(role: "admin" | "general_manager"): TrpcContext {
-  return { user: { id: role === "admin" ? 1 : 2, openId: `employee-${role}`, email: `${role}@example.com`, name: role === "admin" ? "المالك" : "المدير العام", loginMethod: "manus", role, createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() }, req: { protocol: "https", headers: {} } as TrpcContext["req"], res: {} as TrpcContext["res"] };
+  return { user: { id: role === "admin" ? 1 : 2, openId: `employee-${role}`, email: `${role}@example.com`, name: role === "admin" ? "المالك" : "المدير العام", loginMethod: "password", role, createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() }, req: { protocol: "https", headers: {} } as TrpcContext["req"], res: {} as TrpcContext["res"] };
 }
 
 describe("employee work-start workflow", () => {

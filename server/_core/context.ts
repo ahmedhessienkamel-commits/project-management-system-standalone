@@ -1,6 +1,5 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import type { User } from "../../drizzle/schema";
-import { sdk } from "./sdk";
 import { jwtVerify } from "jose";
 import { PASSWORD_SESSION_COOKIE } from "@shared/const";
 import { getDb } from "../db";
@@ -31,15 +30,6 @@ export async function createContext(
       user = null;
     }
   }
-  if (!user) {
-    try {
-      user = await sdk.authenticateRequest(opts.req);
-    } catch (error) {
-      // Authentication is optional for public procedures.
-      user = null;
-    }
-  }
-
   return {
     req: opts.req,
     res: opts.res,

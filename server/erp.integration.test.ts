@@ -76,7 +76,7 @@ import type { TrpcContext } from "./_core/context";
 
 function context(userId = 1, role: "admin" | "user" = "user"): TrpcContext {
   return {
-    user: { id: userId, openId: `integration-user-${userId}`, email: `integration-${userId}@example.com`, name: "Integration User", loginMethod: "manus", role, createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() },
+    user: { id: userId, openId: `integration-user-${userId}`, email: `integration-${userId}@example.com`, name: "Integration User", loginMethod: "password", role, createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() },
     req: { protocol: "https", headers: {} } as TrpcContext["req"],
     res: {} as TrpcContext["res"],
   };

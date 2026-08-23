@@ -1,43 +1,43 @@
 import { describe, expect, it } from "vitest";
-import tls from "node:tls";
+import { formatMailFrom, getSmtpConfiguration } from "./emailTransport";
 
-function smtpCommand(socket: tls.TLSSocket, command: string) {
-  return new Promise<string>((resolve, reject) => {
-    const onData = (chunk: Buffer) => {
-      const text = chunk.toString("utf8");
-      if (/^\d{3} /.test(text.trim())) {
-        socket.off("data", onData);
-        resolve(text);
-      }
-    };
-    socket.on("data", onData);
-    socket.once("error", reject);
-    socket.write(`${command}\r\n`);
+describe("SMTP configuration", () => {
+  it("uses portable SMTP variables without an outbound connection", () => {
+    const config = getSmtpConfiguration({
+      SMTP_HOST: "mail.example.test",
+      SMTP_PORT: "2525",
+      SMTP_SECURE: "false",
+      SMTP_USER: "erp@example.test",
+      SMTP_PASSWORD: "safe test password",
+      SMTP_FROM: "ERP Notifications <erp@example.test>",
+    });
+
+    expect(config).toMatchObject({
+      host: "mail.example.test",
+      port: 2525,
+      secure: false,
+      auth: { user: "erp@example.test", pass: "safe test password" },
+      from: "ERP Notifications <erp@example.test>",
+    });
+    expect(formatMailFrom("نظام إدارة المشاريع", { SMTP_HOST: "mail.example.test", SMTP_USER: "erp@example.test", SMTP_PASSWORD: "x", SMTP_FROM: "ERP Notifications <erp@example.test>" })).toBe("ERP Notifications <erp@example.test>");
   });
-}
 
-describe("Gmail SMTP configuration", () => {
-  it("authenticates without sending an email", async () => {
-    const username = process.env.GMAIL_USERNAME;
-    const password = process.env.GMAIL_APP_PASSWORD;
-    if (!username || !password) throw new Error("Gmail SMTP secrets are not configured");
+  it("keeps Gmail application-password settings as a compatibility fallback", () => {
+    const config = getSmtpConfiguration({
+      GMAIL_USERNAME: "erp@example.test",
+      GMAIL_APP_PASSWORD: "abcd efgh ijkl mnop",
+    });
 
-    const socket = tls.connect({ host: "smtp.gmail.com", port: 465, servername: "smtp.gmail.com" });
-    try {
-      await new Promise<void>((resolve, reject) => {
-        socket.once("secureConnect", resolve);
-        socket.once("error", reject);
-      });
-      await smtpCommand(socket, "EHLO erp-backup.local");
-      const auth = await smtpCommand(socket, "AUTH LOGIN");
-      expect(auth.startsWith("334")).toBe(true);
-      const userReply = await smtpCommand(socket, Buffer.from(username).toString("base64"));
-      expect(userReply.startsWith("334")).toBe(true);
-      const passwordReply = await smtpCommand(socket, Buffer.from(password.replace(/\s/g, "")).toString("base64"));
-      expect(passwordReply.startsWith("235")).toBe(true);
-      await smtpCommand(socket, "QUIT");
-    } finally {
-      socket.end();
-    }
-  }, 20000);
+    expect(config).toMatchObject({
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
+      auth: { user: "erp@example.test", pass: "abcdefghijklmnop" },
+      from: "erp@example.test",
+    });
+  });
+
+  it("rejects incomplete SMTP settings", () => {
+    expect(() => getSmtpConfiguration({ SMTP_HOST: "mail.example.test" })).toThrow(/SMTP/);
+  });
 });

@@ -3,18 +3,44 @@
 # قاعدة البيانات الخارجية (MySQL 8 أو TiDB)
 DATABASE_URL=mysql://USER:PASSWORD@HOST:3306/DATABASE
 
-# سر توقيع الجلسات: أنشئ قيمة عشوائية قوية جديدة
+# وضع التشغيل المستقل: يعطّل OAuth والتخزين والإشعارات المدمجة
+AUTH_MODE=local
+
+# النطاق النهائي للتطبيق، ويُستخدم في الدعوات ورسائل استعادة كلمة المرور
+APP_URL=https://erp.example.com
+
+# النطاق المستخدم مع ملف الإنتاج Caddy
+DOMAIN=erp.example.com
+
+# سر توقيع الجلسات: أنشئ قيمة عشوائية قوية جديدة بطول 32 بايت على الأقل
 JWT_SECRET=replace-with-a-long-random-secret
+
+# سر استدعاء المهام المجدولة من cron خارجي
+SCHEDULE_SECRET=replace-with-a-separate-long-random-secret
 
 # هوية التطبيق
 VITE_APP_TITLE=نظام إدارة المشاريع
 VITE_APP_LOGO=
 
-# بريد SMTP (اختياري حتى يتم إعداد مزود البريد)
-GMAIL_USERNAME=
-GMAIL_APP_PASSWORD=
+# بريد SMTP القياسي: مطلوب فقط للدعوات واستعادة كلمة المرور والتنبيهات البريدية.
+# استخدم منفذ 587 عادةً مع SMTP_SECURE=false، أو 465 مع SMTP_SECURE=true.
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=
+SMTP_PASSWORD=
+SMTP_FROM=نظام إدارة المشاريع <no-reply@example.com>
 
-# عند النقل خارج المنصة يجب استبدال تسجيل الدخول المدمج
-# AUTH_PROVIDER_URL=https://your-auth-provider.example
-# AUTH_CLIENT_ID=
-# AUTH_CLIENT_SECRET=
+# مستلم النسخة الاحتياطية البريدية الاختيارية؛ لا يُرسل شيء عند عدم استدعاء مهمة النسخ.
+BACKUP_EMAIL_RECIPIENT=
+
+# توافق اختياري مع Gmail فقط للتثبيتات القديمة؛ لا تضبطه عند استخدام SMTP أعلاه.
+# GMAIL_USERNAME=
+# GMAIL_APP_PASSWORD=
+
+# التخزين الخارجي اختياري: لا تفعّل مفاتيحه إلا بعد ربط S3 أو خدمة متوافقة.
+# S3_ENDPOINT=
+# S3_REGION=
+# S3_BUCKET=
+# S3_ACCESS_KEY_ID=
+# S3_SECRET_ACCESS_KEY=

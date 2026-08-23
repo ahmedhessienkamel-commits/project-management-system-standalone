@@ -1,22 +1,10 @@
-import nodemailer from "nodemailer";
-
-function getMailer() {
-  const username = process.env.GMAIL_USERNAME;
-  const password = process.env.GMAIL_APP_PASSWORD;
-  if (!username || !password) throw new Error("إعدادات Gmail غير مكتملة");
-  return nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
-    auth: { user: username, pass: password.replace(/\s/g, "") },
-  });
-}
+import { formatMailFrom, getMailer } from "./emailTransport";
 
 export async function sendApprovalEmail(input: { to: string; recipientName?: string | null; title: string; message: string; approvalUrl: string }) {
-  const from = process.env.GMAIL_USERNAME;
+  const from = formatMailFrom("نظام إدارة المشاريع");
   const transporter = getMailer();
   return transporter.sendMail({
-    from: `نظام إدارة المشاريع <${from}>`,
+    from,
     to: input.to,
     subject: `طلب موافقة جديد — ${input.title}`,
     text: `مرحبًا ${input.recipientName || ""}\n\n${input.message}\n\nفتح شاشة الموافقات:\n${input.approvalUrl}`,
@@ -25,11 +13,11 @@ export async function sendApprovalEmail(input: { to: string; recipientName?: str
 }
 
 export async function sendInvitationEmail(input: { to: string; recipientName?: string | null; jobTitle: string; role: string; invitationUrl: string; expiresAt: Date }) {
-  const from = process.env.GMAIL_USERNAME;
+  const from = formatMailFrom("نظام إدارة المشاريع");
   const roleLabel = input.role === "general_manager" ? "مدير عام" : input.role === "project_manager" ? "مدير مشاريع" : input.role === "procurement_manager" ? "مدير مشتريات" : "مستخدم";
   const transporter = getMailer();
   return transporter.sendMail({
-    from: `نظام إدارة المشاريع <${from}>`,
+    from,
     to: input.to,
     subject: "دعوة الدخول إلى نظام إدارة المشاريع",
     text: `مرحبًا ${input.recipientName || ""}\n\nتمت دعوتك للدخول إلى نظام إدارة المشاريع بصفتك ${roleLabel} (${input.jobTitle}).\n\nرابط الدعوة:\n${input.invitationUrl}\n\nصلاحية الرابط حتى: ${input.expiresAt.toLocaleString("ar-SA")}\n\nإذا لم تطلب هذه الدعوة فتجاهل الرسالة.`,
@@ -38,10 +26,10 @@ export async function sendInvitationEmail(input: { to: string; recipientName?: s
 }
 
 export async function sendPasswordResetEmail(input: { to: string; recipientName?: string | null; resetUrl: string; expiresAt: Date }) {
-  const from = process.env.GMAIL_USERNAME;
+  const from = formatMailFrom("نظام إدارة المشاريع");
   const transporter = getMailer();
   return transporter.sendMail({
-    from: `نظام إدارة المشاريع <${from}>`,
+    from,
     to: input.to,
     subject: "استعادة كلمة المرور — نظام إدارة المشاريع",
     text: `مرحبًا ${input.recipientName || ""}\n\nتم طلب استعادة كلمة المرور لحسابك. افتح الرابط التالي لإنشاء كلمة مرور جديدة:\n${input.resetUrl}\n\nالرابط صالح حتى: ${input.expiresAt.toLocaleString("ar-SA")}، وإذا لم تطلب ذلك فتجاهل الرسالة.`,
@@ -50,10 +38,10 @@ export async function sendPasswordResetEmail(input: { to: string; recipientName?
 }
 
 export async function sendOverdueTaskEmail(input: { to: string; recipientName?: string | null; taskTitle: string; dueDate: string }) {
-  const from = process.env.GMAIL_USERNAME;
+  const from = formatMailFrom("نظام إدارة المشاريع");
   const transporter = getMailer();
   return transporter.sendMail({
-    from: `نظام إدارة المشاريع <${from}>`,
+    from,
     to: input.to,
     subject: `تنبيه: مهمة متأخرة — ${input.taskTitle}`,
     text: `مرحبًا ${input.recipientName || ""}\n\nالمهمة «${input.taskTitle}» متأخرة عن موعدها المحدد في ${input.dueDate}. يرجى تحديث حالتها من النظام.`,
@@ -62,13 +50,13 @@ export async function sendOverdueTaskEmail(input: { to: string; recipientName?: 
 }
 
 export async function sendExecutiveDigestEmail(input: { to: string; recipientName?: string | null; subject: string; snapshot: any }) {
-  const from = process.env.GMAIL_USERNAME;
+  const from = formatMailFrom("نظام إدارة المشاريع");
   const transporter = getMailer();
   const { workload = [], overdueTasks = [], pendingApprovals = [], overdueApprovals = [], pendingLeaves = [], pendingAdvances = [], averageApprovalHours = 0 } = input.snapshot || {};
   const workloadRows = workload.map((item: any) => `<tr><td style="padding:8px;border-bottom:1px solid #e2e8f0">${item.fullName}</td><td style="padding:8px;border-bottom:1px solid #e2e8f0">${item.open + item.inProgress}</td><td style="padding:8px;border-bottom:1px solid #e2e8f0;color:#b45309">${item.overdue}</td><td style="padding:8px;border-bottom:1px solid #e2e8f0">${item.done}</td></tr>`).join("");
   const summary = `مهام متأخرة: ${overdueTasks.length} · موافقات معلقة: ${pendingApprovals.length} · موافقات متأخرة: ${overdueApprovals.length} · إجازات معلقة: ${pendingLeaves.length} · سلف معلقة: ${pendingAdvances.length} · متوسط عمر الموافقة المعلقة: ${Number(averageApprovalHours).toFixed(1)} ساعة`;
   return transporter.sendMail({
-    from: `نظام إدارة المشاريع <${from}>`,
+    from,
     to: input.to,
     subject: input.subject,
     text: `مرحبًا ${input.recipientName || ""}\n\n${summary}\n\nهذا ملخص تنفيذي يومي من نظام إدارة المشاريع.`,
@@ -77,11 +65,11 @@ export async function sendExecutiveDigestEmail(input: { to: string; recipientNam
 }
 
 export async function sendTaskReminderEmail(input: { to: string; recipientName?: string | null; ownerName?: string | null; taskTitle: string; description?: string | null; startDate?: string | null; endDate?: string | null; progress?: number; priority?: string | null }) {
-  const from = process.env.GMAIL_USERNAME;
+  const from = formatMailFrom(`${input.ownerName || "صاحب العمل"} — نظام إدارة المشاريع`);
   const transporter = getMailer();
   const priority = input.priority === "high" ? "عالية" : input.priority === "low" ? "منخفضة" : "عادية";
   return transporter.sendMail({
-    from: `${input.ownerName || "صاحب العمل"} — نظام إدارة المشاريع <${from}>`,
+    from,
     to: input.to,
     subject: `تذكير من ${input.ownerName || "صاحب العمل"}: ${input.taskTitle}`,
     text: `مرحبًا ${input.recipientName || ""}\n\nيرجى متابعة المهمة «${input.taskTitle}».\n${input.description || ""}\nالبداية: ${input.startDate || "غير محددة"}\nالنهاية: ${input.endDate || "غير محددة"}\nنسبة الإنجاز الحالية: ${input.progress || 0}%\nالأولوية: ${priority}\n\nهذه رسالة تذكير من ${input.ownerName || "صاحب العمل"}.`,
