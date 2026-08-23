@@ -14,7 +14,15 @@ export function isPortableDataDocument(value) {
 
 export function normalizeMysqlValue(value, columnType = "") {
   if (value === undefined) return null;
-  if (value !== null && typeof value === "object" && columnType.toLowerCase().startsWith("json")) {
+  const normalizedType = columnType.toLowerCase();
+  if (value !== null && normalizedType.startsWith("date") && !normalizedType.startsWith("datetime")) {
+    return String(value).slice(0, 10);
+  }
+  if (value !== null && (normalizedType.startsWith("datetime") || normalizedType.startsWith("timestamp"))) {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? value : parsed.toISOString().slice(0, 19).replace("T", " ");
+  }
+  if (value !== null && typeof value === "object" && normalizedType.startsWith("json")) {
     return JSON.stringify(value);
   }
   return value;
