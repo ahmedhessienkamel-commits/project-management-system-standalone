@@ -7,6 +7,8 @@ describe("قيود مسؤول المشتريات", () => {
     expect(defaultRouteForRole("site_worker")).toBe("/inventory");
     expect(canAccessRoute("procurement_manager", "/")).toBe(false);
     expect(canAccessRoute("procurement_manager", "/expenses")).toBe(false);
+    expect(canAccessRoute("procurement_manager", "/accounting")).toBe(false);
+    expect(canAccessRoute("procurement_manager", "/reports")).toBe(false);
   });
 
   it("يسمح لمسؤول المشتريات فقط بمسارات الكميات وطلبات المواد وطلباته", () => {
