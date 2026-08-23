@@ -10,7 +10,7 @@ import { calculateCertificateProgress, calculateDocumentCompleteness, calculateE
 import { accountingTotals } from "../accountingCalculations";
 import { calculateStageTimeVariance } from "../../shared/stageTiming";
 import { allocateAdministrativeExpense, normalizeExpenseTaxRate, validateExpenseAllocation } from "../../shared/expenseAllocation";
-import { calculateInventoryBalance, canReceiveContractQuantity, canReviewInventoryStage, nextInventoryApprovalStage, remainingContractQuantity, selectPurchaseInvoiceForIssue, calculateServiceEntryTotal, remainingServiceContractAmount, calculateMaterialReceiptCost, materialReceiptExpenseReference, materialIssueExpenseReference, isMaterialContractType, resolveMaterialCostAccount, requiresSupplierInvoicePaymentApproval } from "../../shared/inventory";
+import { calculateInventoryBalance, canReceiveContractQuantity, canReviewInventoryStage, nextInventoryApprovalStage, remainingContractQuantity, selectPurchaseInvoiceForIssue, calculateServiceEntryTotal, remainingServiceContractAmount, calculateMaterialReceiptCost, materialReceiptExpenseReference, materialIssueExpenseReference, isMaterialContractType, isInventoryBelowMinimum, resolveMaterialCostAccount, requiresSupplierInvoicePaymentApproval } from "../../shared/inventory";
 import { canReviewCertificateApproval, getCertificateInitialApproval, nextCertificateApproval, nextMaterialRequisitionApproval } from "../../shared/approvalWorkflows";
 import { payrollRunPaymentStatus } from "../../shared/payrollRun";
 import { calculateWipBalance, buildWipClosingLines } from "../../shared/wip";
@@ -3092,7 +3092,7 @@ export const erpRouter = router({
         const balances = new Map<number, { received: number; issued: number; quantity: number; value: number }>();
         for (const item of items) balances.set(item.id, calculateInventoryBalance(visible.filter((row) => row.itemId === item.id)));
 
-        return items.filter((item) => item.isActive === 1 && (!item.projectId || !input?.projectId || item.projectId === input.projectId)).map((item) => ({ item, ...(balances.get(item.id) ?? { received: 0, issued: 0, quantity: 0, value: 0 }), lowStock: (balances.get(item.id)?.quantity ?? 0) <= Number(item.minimumStock || 0) }));
+        return items.filter((item) => item.isActive === 1 && (!item.projectId || !input?.projectId || item.projectId === input.projectId)).map((item) => ({ item, ...(balances.get(item.id) ?? { received: 0, issued: 0, quantity: 0, value: 0 }), lowStock: isInventoryBelowMinimum(balances.get(item.id)?.quantity, item.minimumStock) }));
       }),
       create: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), stageId: z.number().int().positive().nullable().optional(), itemId: z.number().int().positive(), vendorId: z.number().int().positive().nullable().optional(), movementType: z.enum(["receipt", "issue", "adjustment_in", "adjustment_out"]), quantity: z.number().positive(), unitCost: z.number().nonnegative().default(0), movementDate: z.string().optional(), reference: z.string().max(128).optional(), description: z.string().max(4000).optional(), contractId: z.number().int().positive().nullable().optional(), contractItemIndex: z.number().int().nonnegative().nullable().optional() })).mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
@@ -3108,7 +3108,21 @@ export const erpRouter = router({
         if (input.stageId) { const stage = (await db.select({ id: stages.id }).from(stages).where(and(eq(stages.id, input.stageId), eq(stages.projectId, input.projectId))).limit(1))[0]; if (!stage) throw new TRPCError({ code: "BAD_REQUEST", message: "المرحلة لا تتبع المشروع المحدد" }); }
         if (input.vendorId) { const vendor = (await db.select({ id: vendors.id }).from(vendors).where(eq(vendors.id, input.vendorId)).limit(1))[0]; if (!vendor) throw new TRPCError({ code: "NOT_FOUND", message: "المورد غير موجود" }); }
         let linkedContract: typeof contractorContracts.$inferSelect | undefined;
-        if (input.contractId) { linkedContract = (await db.select().from(contractorContracts).where(eq(contractorContracts.id, input.contractId)).limit(1))[0]; if (!linkedContract || linkedContract.projectId !== input.projectId || linkedContract.vendorId !== input.vendorId) throw new TRPCError({ code: "BAD_REQUEST", message: "العقد لا يتطابق مع المشروع أو المورد المحدد" }); if (!["supply", "supply_installation"].includes(linkedContract.contractType) || input.movementType !== "receipt") throw new TRPCError({ code: "BAD_REQUEST", message: "ربط العقد بحركة المخزون متاح لعقود التوريد أو التوريد والتركيب عند الاستلام فقط" }); if (input.contractItemIndex === null || input.contractItemIndex === undefined) throw new TRPCError({ code: "BAD_REQUEST", message: "اختر بند العقد المرتبط بالاستلام" }); const contractItem = (linkedContract.contractItems ?? [])[input.contractItemIndex]; if (!contractItem) throw new TRPCError({ code: "BAD_REQUEST", message: "بند العقد غير موجود" }); const priorRows = await db.select().from(inventoryMovements).where(and(eq(inventoryMovements.contractId, input.contractId), eq(inventoryMovements.contractItemIndex, input.contractItemIndex))); const receivedBefore = priorRows.filter((row) => row.status !== "cancelled").reduce((sum, row) => sum + Number(row.quantity || 0), 0); if (!canReceiveContractQuantity({ contractedQty: contractItem.contractedQty, receivedQty: receivedBefore }, input.quantity)) throw new TRPCError({ code: "BAD_REQUEST", message: `الكمية تتجاوز المتبقي من بند العقد. المتبقي ${remainingContractQuantity({ contractedQty: contractItem.contractedQty, receivedQty: receivedBefore }).toFixed(3)} ${contractItem.unit}` }); }
+        let linkedContractCostItemId: number | null = null;
+        if (input.contractId) {
+          linkedContract = (await db.select().from(contractorContracts).where(eq(contractorContracts.id, input.contractId)).limit(1))[0];
+          if (!linkedContract || linkedContract.projectId !== input.projectId || linkedContract.vendorId !== input.vendorId) throw new TRPCError({ code: "BAD_REQUEST", message: "العقد لا يتطابق مع المشروع أو المورد المحدد" });
+          if (!["supply", "supply_installation"].includes(linkedContract.contractType) || input.movementType !== "receipt") throw new TRPCError({ code: "BAD_REQUEST", message: "ربط العقد بحركة المخزون متاح لعقود التوريد أو التوريد والتركيب عند الاستلام فقط" });
+          if (input.contractItemIndex === null || input.contractItemIndex === undefined) throw new TRPCError({ code: "BAD_REQUEST", message: "اختر بند العقد المرتبط بالاستلام" });
+          const contractItem = (linkedContract.contractItems ?? [])[input.contractItemIndex];
+          if (!contractItem) throw new TRPCError({ code: "BAD_REQUEST", message: "بند العقد غير موجود" });
+          if (!contractItem.inventoryItemId || Number(contractItem.inventoryItemId) !== input.itemId) throw new TRPCError({ code: "BAD_REQUEST", message: "بطاقة الخامة لا تطابق بند عقد التوريد المختار" });
+          if (!contractItem.costItemId) throw new TRPCError({ code: "BAD_REQUEST", message: "بند العقد المختار غير مربوط ببند تكلفة؛ عدّل العقد أولًا" });
+          linkedContractCostItemId = Number(contractItem.costItemId);
+          const priorRows = await db.select().from(inventoryMovements).where(and(eq(inventoryMovements.contractId, input.contractId), eq(inventoryMovements.contractItemIndex, input.contractItemIndex)));
+          const receivedBefore = priorRows.filter((row) => row.status !== "cancelled").reduce((sum, row) => sum + Number(row.quantity || 0), 0);
+          if (!canReceiveContractQuantity({ contractedQty: contractItem.contractedQty, receivedQty: receivedBefore }, input.quantity)) throw new TRPCError({ code: "BAD_REQUEST", message: `الكمية تتجاوز المتبقي من بند العقد. المتبقي ${remainingContractQuantity({ contractedQty: contractItem.contractedQty, receivedQty: receivedBefore }).toFixed(3)} ${contractItem.unit}` });
+        }
         const incoming = input.movementType === "receipt" || input.movementType === "adjustment_in";
         if (input.movementType === "receipt" && !isSiteWorkerMovement && !operationalInput.vendorId) throw new TRPCError({ code: "BAD_REQUEST", message: "اختر المورد لإنشاء سند الاستلام وفاتورة الشراء تلقائيًا" });
         const existing = await db.select().from(inventoryMovements).where(and(eq(inventoryMovements.projectId, input.projectId), eq(inventoryMovements.itemId, input.itemId), eq(inventoryMovements.status, "posted")));
@@ -3122,7 +3136,7 @@ export const erpRouter = router({
           linkedPurchaseInvoiceId = selectPurchaseInvoiceForIssue(sourceReceipts);
           if (linkedPurchaseInvoiceId) linkedReference = `فاتورة شراء #${linkedPurchaseInvoiceId}`;
         }
-        const result = await db.insert(inventoryMovements).values({ projectId: operationalInput.projectId, stageId: operationalInput.stageId ?? null, costItemId: null, itemId: operationalInput.itemId, vendorId: operationalInput.vendorId ?? null, movementType: operationalInput.movementType, quantity: operationalInput.quantity.toFixed(3), unitCost: operationalInput.unitCost.toFixed(4), totalAmount: totalAmount.toFixed(2), movementDate: operationalInput.movementDate ? new Date(operationalInput.movementDate) : new Date(), reference: linkedReference, description: operationalInput.description || null, sourceDocumentId: linkedPurchaseInvoiceId, purchaseInvoiceId: linkedPurchaseInvoiceId, contractId: operationalInput.contractId ?? null, contractItemIndex: operationalInput.contractItemIndex ?? null, status: "pending_approval", createdBy: ctx.user.id });
+        const result = await db.insert(inventoryMovements).values({ projectId: operationalInput.projectId, stageId: operationalInput.stageId ?? null, costItemId: linkedContractCostItemId, itemId: operationalInput.itemId, vendorId: operationalInput.vendorId ?? null, movementType: operationalInput.movementType, quantity: operationalInput.quantity.toFixed(3), unitCost: operationalInput.unitCost.toFixed(4), totalAmount: totalAmount.toFixed(2), movementDate: operationalInput.movementDate ? new Date(operationalInput.movementDate) : new Date(), reference: linkedReference, description: operationalInput.description || null, sourceDocumentId: linkedPurchaseInvoiceId, purchaseInvoiceId: linkedPurchaseInvoiceId, contractId: operationalInput.contractId ?? null, contractItemIndex: operationalInput.contractItemIndex ?? null, status: "pending_approval", createdBy: ctx.user.id });
         const id = Number(result[0].insertId);
         let autoDocuments: { receiptId: number; receiptNumber: string; purchaseInvoiceId: number; invoiceNumber: string } | null = null;
         if (incoming && input.movementType === "receipt" && !isSiteWorkerMovement) {
@@ -3158,10 +3172,18 @@ export const erpRouter = router({
           const costItem = (await db.select({ id: costItems.id }).from(costItems).where(and(eq(costItems.id, input.costItemId), eq(costItems.isActive, 1))).limit(1))[0];
           if (!costItem) throw new TRPCError({ code: "BAD_REQUEST", message: "بند التكلفة غير موجود أو غير نشط" });
         }
-        await db.update(inventoryMovements).set({ status: "posted", costItemId: input.costItemId ?? movement.costItemId ?? null }).where(eq(inventoryMovements.id, input.id));
-        const postedMovement = { ...movement, costItemId: input.costItemId ?? movement.costItemId ?? null };
+        let approvedCostItemId = input.costItemId ?? movement.costItemId ?? null;
+        if (movement.contractId !== null && movement.contractId !== undefined && movement.contractItemIndex !== null && movement.contractItemIndex !== undefined) {
+          const contract = (await db.select().from(contractorContracts).where(eq(contractorContracts.id, movement.contractId)).limit(1))[0];
+          const contractLine = contract?.contractItems?.[movement.contractItemIndex];
+          if (!contractLine?.costItemId) throw new TRPCError({ code: "BAD_REQUEST", message: "بند العقد المرتبط بالحركة لا يحمل بند تكلفة" });
+          if (input.costItemId && Number(input.costItemId) !== Number(contractLine.costItemId)) throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن تغيير بند تكلفة حركة مرتبطة بعقد توريد؛ استخدم بند التكلفة المحدد في العقد" });
+          approvedCostItemId = Number(contractLine.costItemId);
+        }
+        await db.update(inventoryMovements).set({ status: "posted", costItemId: approvedCostItemId }).where(eq(inventoryMovements.id, input.id));
+        const postedMovement = { ...movement, costItemId: approvedCostItemId };
         await postInventoryLinkedDocuments(db, postedMovement);
-        await db.insert(auditLogs).values({ entityType: "inventoryMovement", entityId: input.id, action: "owner_approved_posted", actorId: ctx.user.id, afterJson: JSON.stringify({ note: input.note || null, sourceDocumentId: movement.sourceDocumentId ?? null, purchaseInvoiceId: movement.purchaseInvoiceId ?? null, costItemId: input.costItemId ?? movement.costItemId ?? null }) });
+        await db.insert(auditLogs).values({ entityType: "inventoryMovement", entityId: input.id, action: "owner_approved_posted", actorId: ctx.user.id, afterJson: JSON.stringify({ note: input.note || null, sourceDocumentId: movement.sourceDocumentId ?? null, purchaseInvoiceId: movement.purchaseInvoiceId ?? null, costItemId: approvedCostItemId }) });
         await notifyApprovalUsers(db, { type: "inventory_movement_posted", title: `تم ترحيل حركة الخامات #${input.id}`, message: `تم اعتماد وترحيل حركة الخامات #${input.id} إلى السجلات المرتبطة.`, userIds: [movement.createdBy || 0, 13170001], roles: [] });
         return { success: true, status: "posted" as const, approvalStage: "complete" as const };
       }),

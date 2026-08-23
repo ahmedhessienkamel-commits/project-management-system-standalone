@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateInventoryBalance, calculateMaterialReceiptCost, calculateServiceEntryTotal, canReceiveContractQuantity, isMaterialContractType, materialReceiptExpenseReference, materialIssueExpenseReference, remainingContractQuantity, remainingServiceContractAmount, selectPurchaseInvoiceForIssue } from "../shared/inventory";
+import { calculateInventoryBalance, calculateMaterialReceiptCost, calculateServiceEntryTotal, canReceiveContractQuantity, isInventoryBelowMinimum, isMaterialContractType, materialReceiptExpenseReference, materialIssueExpenseReference, remainingContractQuantity, remainingServiceContractAmount, selectPurchaseInvoiceForIssue } from "../shared/inventory";
 
 describe("inventory balance calculations", () => {
   it("calculates received, issued, available quantity, and value", () => {
@@ -31,6 +31,13 @@ describe("inventory balance calculations", () => {
     expect(calculateInventoryBalance([])).toEqual({ received: 0, issued: 0, quantity: 0, value: 0 });
   });
 
+  it("does not flag materials without a configured minimum stock as low", () => {
+    expect(isInventoryBelowMinimum(0, 0)).toBe(false);
+    expect(isInventoryBelowMinimum(5, 0)).toBe(false);
+    expect(isInventoryBelowMinimum(0, 3)).toBe(true);
+    expect(isInventoryBelowMinimum(3, 3)).toBe(true);
+  });
+
   it("links an issue to the first available purchase invoice for the material", () => {
     expect(selectPurchaseInvoiceForIssue([{ purchaseInvoiceId: null }, { purchaseInvoiceId: 42, reference: "GRN-42" }])).toBe(42);
     expect(selectPurchaseInvoiceForIssue([{ purchaseInvoiceId: null }])).toBeNull();
@@ -49,5 +56,7 @@ describe("contract-linked material cost posting rules", () => {
     expect(isMaterialContractType("supply")).toBe(true);
     expect(isMaterialContractType("supply_installation")).toBe(true);
     expect(isMaterialContractType("building_stage")).toBe(false);
+    expect(isMaterialContractType("equipment_rental")).toBe(false);
+    expect(isMaterialContractType("labor_supply")).toBe(false);
   });
 });

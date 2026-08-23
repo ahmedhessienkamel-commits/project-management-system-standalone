@@ -21,6 +21,11 @@ export function calculateInventoryBalance(movements: InventoryMovementLike[]) {
   );
 }
 
+export function isInventoryBelowMinimum(quantity: string | number | null | undefined, minimumStock: string | number | null | undefined) {
+  const minimum = Number(minimumStock || 0);
+  return minimum > 0 && Number(quantity || 0) <= minimum;
+}
+
 export type InventoryReceiptLink = { purchaseInvoiceId: number | null; reference?: string | null };
 
 export type ContractQuantityLine = { contractedQty: string | number | null; receivedQty: string | number | null };
