@@ -15,6 +15,7 @@ import { canReviewCertificateApproval, getCertificateInitialApproval, nextCertif
 import { payrollRunPaymentStatus } from "../../shared/payrollRun";
 import { calculateWipBalance, buildWipClosingLines } from "../../shared/wip";
 import { canAssignTeamTasks } from "../../shared/taskPermissions";
+import { calculateMaterialPlanning } from "../../shared/materialPlanning";
 import { sendApprovalEmail, sendInvitationEmail, sendTaskReminderEmail } from "../email";
 import { buildExecutiveSnapshot } from "../executiveDigest";
 
@@ -32,6 +33,7 @@ const projectType = z.enum(["real_estate_developer", "real_estate_development", 
 const employeeProfileSchema = z.object({
   employeeCode: z.string().trim().min(1).max(64), fullName: z.string().trim().min(1).max(255), jobTitle: z.string().max(255).optional(), department: z.string().max(255).optional(), managerName: z.string().max(255).optional(), managerUserId: z.number().int().positive().nullable().optional(), generalManagerUserId: z.number().int().positive().nullable().optional(), phone: z.string().max(64).optional(), email: z.string().email().optional().or(z.literal("")), nationalId: z.string().max(64).optional(), nationality: z.string().max(128).optional(), birthDate: z.string().optional(), hireDate: z.string().optional(), workLocation: z.string().max(255).optional(), address: z.string().max(2000).optional(), nationalAddress: z.string().max(2000).optional(), bankName: z.string().max(255).optional(), iban: z.string().max(128).optional(), insuranceNumber: z.string().max(128).optional(), basicSalary: z.number().nonnegative().default(0), housingAllowance: z.number().nonnegative().default(0), transportAllowance: z.number().nonnegative().default(0), otherAllowances: z.number().nonnegative().default(0), standardDeduction: z.number().nonnegative().default(0), notes: z.string().max(4000).optional(), defaultProjectId: z.number().int().positive().nullable().optional(),
 });
+const materialRequisitionLineSchema = z.object({ inventoryItemId: z.number().int().positive().optional(), costItemId: z.number().int().positive().optional(), description: z.string().min(1).max(255), unit: z.string().max(64).optional(), quantity: z.number().positive(), estimatedUnitCost: z.number().nonnegative(), notes: z.string().max(500).optional() });
 
 function requireDb(db: Awaited<ReturnType<typeof getDb>>) {
   if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة حاليًا" });
@@ -203,6 +205,23 @@ async function assertProjectWrite(db: NonNullable<Awaited<ReturnType<typeof getD
   if (ctx.user.role === "admin") return;
   const member = (await db.select({ projectRole: projectMembers.projectRole }).from(projectMembers).where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, ctx.user.id))).limit(1))[0];
   if (!member || !canWriteProject(ctx.user.role, member.projectRole)) throw new TRPCError({ code: "FORBIDDEN", message: "دور المستخدم لا يسمح بتسجيل حركة جديدة في هذا المشروع" });
+}
+
+async function resolveMaterialPlanning(db: ErpDb, input: { projectId: number; stageId?: number; inventoryItemId: number; costItemId?: number; quantity: number; excludingRequisitionId?: number }) {
+  const material = (await db.select().from(inventoryItems).where(eq(inventoryItems.id, input.inventoryItemId)).limit(1))[0];
+  if (!material || !material.isActive || (material.projectId && material.projectId !== input.projectId)) throw new TRPCError({ code: "BAD_REQUEST", message: "بطاقة الخامة غير متاحة للمشروع المحدد" });
+  if (input.costItemId) {
+    const costItem = (await db.select().from(costItems).where(eq(costItems.id, input.costItemId)).limit(1))[0];
+    if (!costItem || (costItem.projectId && costItem.projectId !== input.projectId)) throw new TRPCError({ code: "BAD_REQUEST", message: "بند التكلفة غير متاح للمشروع المحدد" });
+  }
+  const contracts = await db.select().from(contractorContracts).where(eq(contractorContracts.projectId, input.projectId));
+  const candidate = contracts.filter((contract) => contract.status === "active" && (!input.stageId || !contract.stageId || contract.stageId === input.stageId)).flatMap((contract) => (contract.contractItems || []).map((line, index) => ({ contract, line, index }))).find(({ line }) => Number(line.inventoryItemId || 0) === input.inventoryItemId && (!input.costItemId || Number(line.costItemId || 0) === input.costItemId));
+  const requisitions = await db.select().from(materialRequisitions).where(eq(materialRequisitions.projectId, input.projectId));
+  const liveRequestIds = new Set(requisitions.filter((request) => request.id !== input.excludingRequisitionId && request.status !== "cancelled" && request.status !== "rejected" && (!input.stageId || request.stageId === input.stageId)).map((request) => request.id));
+  const existingLines = await db.select().from(materialRequisitionItems);
+  const requestedBeforeQuantity = existingLines.filter((line) => liveRequestIds.has(line.requisitionId) && line.inventoryItemId === input.inventoryItemId && (!input.costItemId || line.costItemId === input.costItemId)).reduce((sum, line) => sum + Number(line.quantity || 0), 0);
+  const plan = calculateMaterialPlanning({ plannedQuantity: candidate?.line.contractedQty, suppliedQuantity: candidate?.line.suppliedQty, requestedBeforeQuantity, requestedQuantity: input.quantity });
+  return { material, contractId: candidate?.contract.id ?? null, contractItemIndex: candidate?.index ?? null, costItemId: input.costItemId || candidate?.line.costItemId || null, ...plan };
 }
 
 async function assertOperationPermission(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, ctx: { user: { id: number; role: string } }, key: z.infer<typeof operationKey>) {
@@ -1397,20 +1416,25 @@ export const erpRouter = router({
         const filtered = rows.filter((row) => companyProjectIds.has(row.projectId) && (!input?.projectId || row.projectId === input.projectId) && (!allowed || allowed.has(row.projectId)));
         return Promise.all(filtered.map(async (row) => ({ ...row, items: await db.select().from(materialRequisitionItems).where(eq(materialRequisitionItems.requisitionId, row.id)) })));
       }),
-      create: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), stageId: z.number().int().positive().optional(), description: z.string().max(2000).optional(), requiredBy: z.string().optional(), items: z.array(z.object({ description: z.string().min(1).max(255), unit: z.string().max(64).optional(), quantity: z.number().positive(), estimatedUnitCost: z.number().nonnegative(), notes: z.string().max(500).optional() })).min(1) })).mutation(async ({ ctx, input }) => {
+      planning: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), stageId: z.number().int().positive().optional(), inventoryItemId: z.number().int().positive(), costItemId: z.number().int().positive().optional(), quantity: z.number().positive() })).query(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
         await assertProjectAccess(db, ctx, input.projectId);
-        if (ctx.user.role !== "site_worker") await assertProjectWrite(db, ctx, input.projectId);
+        return resolveMaterialPlanning(db, input);
+      }),
+      create: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), stageId: z.number().int().positive().optional(), description: z.string().max(2000).optional(), requiredBy: z.string().optional(), items: z.array(materialRequisitionLineSchema).min(1) })).mutation(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        await assertProjectAccess(db, ctx, input.projectId);
+        if (!["site_worker", "procurement_manager"].includes(ctx.user.role)) await assertProjectWrite(db, ctx, input.projectId);
         const requestNumber = `MR-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
         const result = await db.insert(materialRequisitions).values({ projectId: input.projectId, stageId: input.stageId || null, requestedBy: ctx.user.id, requestNumber, description: input.description || null, status: "pending_approval", requiredBy: input.requiredBy ? new Date(input.requiredBy) : null });
         const id = Number(result[0].insertId);
-        for (const item of input.items) await db.insert(materialRequisitionItems).values({ requisitionId: id, description: item.description, unit: item.unit || null, quantity: item.quantity.toFixed(3), estimatedUnitCost: item.estimatedUnitCost.toFixed(2), notes: item.notes || null });
+        for (const item of input.items) { if (!item.inventoryItemId) { await db.insert(materialRequisitionItems).values({ requisitionId: id, description: item.description, unit: item.unit || null, quantity: item.quantity.toFixed(3), estimatedUnitCost: item.estimatedUnitCost.toFixed(2), notes: item.notes || null }); continue; } const plan = await resolveMaterialPlanning(db, { projectId: input.projectId, stageId: input.stageId, inventoryItemId: item.inventoryItemId, costItemId: item.costItemId, quantity: item.quantity }); await db.insert(materialRequisitionItems).values({ requisitionId: id, inventoryItemId: item.inventoryItemId, costItemId: plan.costItemId, contractId: plan.contractId, contractItemIndex: plan.contractItemIndex, description: plan.material.name, unit: plan.material.unit, quantity: item.quantity.toFixed(3), estimatedUnitCost: item.estimatedUnitCost.toFixed(2), planningStatus: plan.status, plannedQuantity: plan.plannedQuantity.toFixed(3), notes: item.notes || null }); }
         await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "materialRequisition", entityId: id, requestedBy: ctx.user.id, status: "pending", approvalStage: "mostafa", stageOrder: 1 });
         await db.insert(auditLogs).values({ entityType: "materialRequisition", entityId: id, action: "submitted", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
         await notifyApprovalUsers(db, { type: "material_requisition_pending", title: `طلب مواد جديد ${requestNumber}`, message: `طلب مواد جديد لمشروع #${input.projectId} أرسله موظف الموقع ويحتاج اعتماد مصطفى أولًا.`, userIds: [13170001], roles: [] });
         return { id, requestNumber };
       }),
-      update: protectedProcedure.input(z.object({ id: z.number().int().positive(), projectId: z.number().int().positive(), stageId: z.number().int().positive().optional(), description: z.string().max(2000).optional(), requiredBy: z.string().optional(), items: z.array(z.object({ description: z.string().min(1).max(255), unit: z.string().max(64).optional(), quantity: z.number().positive(), estimatedUnitCost: z.number().nonnegative(), notes: z.string().max(500).optional() })).min(1) })).mutation(async ({ ctx, input }) => {
+      update: protectedProcedure.input(z.object({ id: z.number().int().positive(), projectId: z.number().int().positive(), stageId: z.number().int().positive().optional(), description: z.string().max(2000).optional(), requiredBy: z.string().optional(), items: z.array(materialRequisitionLineSchema).min(1) })).mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
         if (ctx.user.role !== "admin" && Number(ctx.user.id) !== 13170001) { const existing = (await db.select({ requestedBy: materialRequisitions.requestedBy }).from(materialRequisitions).where(eq(materialRequisitions.id, input.id)).limit(1))[0]; if (!existing || existing.requestedBy !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "تعديل طلب المواد متاح لمنشئ الطلب أو مصطفى أو المالك" }); }
         const request = (await db.select().from(materialRequisitions).where(eq(materialRequisitions.id, input.id)).limit(1))[0];
@@ -1418,7 +1442,7 @@ export const erpRouter = router({
         await assertProjectAccess(db, ctx, input.projectId);
         await db.update(materialRequisitions).set({ projectId: input.projectId, stageId: input.stageId || null, description: input.description || null, requiredBy: input.requiredBy ? new Date(input.requiredBy) : null, status: "pending_approval" }).where(eq(materialRequisitions.id, input.id));
         await db.delete(materialRequisitionItems).where(eq(materialRequisitionItems.requisitionId, input.id));
-        for (const item of input.items) await db.insert(materialRequisitionItems).values({ requisitionId: input.id, description: item.description, unit: item.unit || null, quantity: item.quantity.toFixed(3), estimatedUnitCost: item.estimatedUnitCost.toFixed(2), notes: item.notes || null });
+        for (const item of input.items) { if (!item.inventoryItemId) { await db.insert(materialRequisitionItems).values({ requisitionId: input.id, description: item.description, unit: item.unit || null, quantity: item.quantity.toFixed(3), estimatedUnitCost: item.estimatedUnitCost.toFixed(2), notes: item.notes || null }); continue; } const plan = await resolveMaterialPlanning(db, { projectId: input.projectId, stageId: input.stageId, inventoryItemId: item.inventoryItemId, costItemId: item.costItemId, quantity: item.quantity, excludingRequisitionId: input.id }); await db.insert(materialRequisitionItems).values({ requisitionId: input.id, inventoryItemId: item.inventoryItemId, costItemId: plan.costItemId, contractId: plan.contractId, contractItemIndex: plan.contractItemIndex, description: plan.material.name, unit: plan.material.unit, quantity: item.quantity.toFixed(3), estimatedUnitCost: item.estimatedUnitCost.toFixed(2), planningStatus: plan.status, plannedQuantity: plan.plannedQuantity.toFixed(3), notes: item.notes || null }); }
         await db.update(approvalRequests).set({ status: "rejected", reviewedBy: ctx.user.id, reviewedAt: new Date(), note: "إعادة إرسال طلب المواد بعد التعديل" }).where(and(eq(approvalRequests.entityType, "materialRequisition"), eq(approvalRequests.entityId, input.id), eq(approvalRequests.status, "pending")));
         await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "materialRequisition", entityId: input.id, requestedBy: ctx.user.id, status: "pending", approvalStage: "mostafa", stageOrder: 1 });
         await db.insert(auditLogs).values({ entityType: "materialRequisition", entityId: input.id, action: "updated_and_resubmitted_to_mostafa", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
