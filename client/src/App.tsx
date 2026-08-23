@@ -54,7 +54,8 @@ function Router() {
     <RestrictedRoleGate><Switch>
       <Route path={"/login"} component={() => <PasswordAuth />} />
       <Route path={"/accept-invitation"} component={() => <PasswordAuth invitation />} />
-      <Route path={"/account-security"} component={AccountSecurity} />
+      <Route path={"/account-security"} component={() => <AccountSecurity />} />
+      <Route path={"/change-password"} component={() => <AccountSecurity required />} />
       <Route path={"/reset-password"} component={ResetPassword} />
       <Route path={"/"} component={Landing} />
       <Route path={"/company-settings"} component={CompanySettings} />

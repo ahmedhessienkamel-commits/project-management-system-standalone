@@ -35,6 +35,12 @@
 | `SMTP_*` | اختياري؛ مطلوب فقط لرسائل الدعوات والاستعادة والتنبيهات |
 | `BACKUP_EMAIL_RECIPIENT` | اختياري؛ مستلم النسخ التي تُرسل عبر المهمة المجدولة فقط |
 
+## النطاق والرابط العام
+
+يوفّر Railway نطاقًا تلقائيًا بصيغة `.up.railway.app` للخدمة المنشورة. لا يمكن إنشاء اسم عشوائي تحت نطاق لا تملكه، مثل `erp.advanced-building.railway`. إذا كان المطلوب رابطًا مهنيًا ثابتًا، فالأفضل استخدام نطاق مملوك مثل `erp.advanced-building.com` أو نطاق فرعي لنطاق قائم، ثم إضافته من **Settings → Networking → Custom Domain** وإدخال سجلي `CNAME` و`TXT` اللذين تعرضهما Railway. بعد التحقق، غيّر `APP_URL` إلى النطاق الجديد لتعمل روابط الدعوات والاستعادة عليه.
+
+توفر Railway أيضًا شراء وإدارة النطاقات من داخل المنصة في الحسابات التي تتاح لها هذه الميزة، مع شهادة SSL تلقائية. [4] [5]
+
 ## تهيئة قاعدة البيانات والحساب الأول
 
 بعد أن تصبح خدمة التطبيق متاحة في Railway Shell، شغّل الترحيلات أولًا:
@@ -86,3 +92,5 @@ pnpm local:bootstrap-admin owner@example.com 'كلمة-مرور-قوية-لا-ت
 [1]: https://docs.railway.com/databases/mysql "Railway MySQL"
 [2]: https://docs.railway.com/variables/reference "Railway Variables Reference"
 [3]: https://docs.railway.com/builds/dockerfiles "Railway Dockerfiles"
+[4]: https://docs.railway.com/networking/public-networking "Railway Public Networking"
+[5]: https://docs.railway.com/networking/domains "Railway Domains"

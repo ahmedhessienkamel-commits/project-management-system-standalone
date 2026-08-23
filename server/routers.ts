@@ -7,7 +7,7 @@ import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from
 import { SignJWT } from "jose";
 import { PASSWORD_SESSION_COOKIE } from "@shared/const";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { adminProcedure, publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { erpRouter } from "./routers/erp";
@@ -61,14 +61,22 @@ export const appRouter = router({
       const tokenHash = createHash("sha256").update(input.token).digest("hex");
       const reset = (await db.select().from(passwordResetTokens).where(eq(passwordResetTokens.tokenHash, tokenHash)).limit(1))[0];
       if (!reset || reset.usedAt || reset.expiresAt.getTime() < Date.now()) throw new TRPCError({ code: "BAD_REQUEST", message: "رابط الاستعادة غير صالح أو منتهي" });
-      await db.update(users).set({ passwordHash: hashPassword(input.password) }).where(eq(users.id, reset.userId));
+      await db.update(users).set({ passwordHash: hashPassword(input.password), mustChangePassword: 0 }).where(eq(users.id, reset.userId));
       await db.update(passwordResetTokens).set({ usedAt: new Date() }).where(eq(passwordResetTokens.id, reset.id));
       return { success: true } as const;
     }),
     setPassword: protectedProcedure.input(z.object({ password: z.string().min(8) })).mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db || !ctx.user) throw new TRPCError({ code: "UNAUTHORIZED" });
-      await db.update(users).set({ passwordHash: hashPassword(input.password), loginMethod: ctx.user.loginMethod || "password" }).where(eq(users.id, ctx.user.id));
+      await db.update(users).set({ passwordHash: hashPassword(input.password), loginMethod: "password", mustChangePassword: 0 }).where(eq(users.id, ctx.user.id));
+      return { success: true } as const;
+    }),
+    setTemporaryPassword: adminProcedure.input(z.object({ userId: z.number().int().positive(), password: z.string().min(8) })).mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة" });
+      const target = (await db.select({ id: users.id, email: users.email }).from(users).where(eq(users.id, input.userId)).limit(1))[0];
+      if (!target?.email) throw new TRPCError({ code: "BAD_REQUEST", message: "يلزم أن يكون للحساب بريد إلكتروني صالح قبل تعيين كلمة مرور مؤقتة" });
+      await db.update(users).set({ passwordHash: hashPassword(input.password), loginMethod: "password", mustChangePassword: 1 }).where(eq(users.id, target.id));
       return { success: true } as const;
     }),
     passwordLogin: publicProcedure.input(z.object({ email: z.string().email(), password: z.string().min(8) })).mutation(async ({ ctx, input }) => {
@@ -79,7 +87,7 @@ export const appRouter = router({
       await db.update(users).set({ lastSignedIn: new Date() }).where(eq(users.id, user.id));
       const token = await createPasswordSession(user.id);
       ctx.res.cookie(PASSWORD_SESSION_COOKIE, token, { ...getSessionCookieOptions(ctx.req), sameSite: "lax", maxAge: 30 * 24 * 60 * 60 * 1000 });
-      return { success: true, sessionToken: token } as const;
+      return { success: true, sessionToken: token, mustChangePassword: user.mustChangePassword === 1 } as const;
     }),
     invitationDetails: publicProcedure.input(z.object({ token: z.string().min(20) })).query(async ({ input }) => {
       const db = await getDb();

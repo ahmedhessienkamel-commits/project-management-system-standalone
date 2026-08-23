@@ -51,6 +51,7 @@ export const users = mysqlTable("users", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
   passwordHash: varchar("passwordHash", { length: 255 }),
+  mustChangePassword: int("mustChangePassword").notNull().default(0),
 });
 
 export const userInvitations = mysqlTable("userInvitations", {

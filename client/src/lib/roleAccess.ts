@@ -7,7 +7,7 @@ export function defaultRouteForRole(role?: string | null) {
 export function canAccessRoute(role: string | null | undefined, location: string) {
   if (!operationalRoles.has(role || "")) return true;
   const url = new URL(location, "https://erp.local");
-  const sharedPaths = new Set(["/login", "/accept-invitation", "/reset-password", "/account-security"]);
+  const sharedPaths = new Set(["/login", "/accept-invitation", "/reset-password", "/account-security", "/change-password"]);
   if (sharedPaths.has(url.pathname)) return true;
   if (url.pathname === "/inventory" || url.pathname === "/my-requests") return true;
   return url.pathname === "/operations" && url.searchParams.get("tab") === "procurement";

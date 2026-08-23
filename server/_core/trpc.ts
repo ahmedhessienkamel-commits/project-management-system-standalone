@@ -17,6 +17,10 @@ const requireUser = t.middleware(async opts => {
     throw new TRPCError({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
   }
 
+  if (ctx.user.mustChangePassword === 1 && opts.path !== "auth.setPassword") {
+    throw new TRPCError({ code: "PRECONDITION_FAILED", message: "يجب تغيير كلمة المرور المؤقتة قبل متابعة العمل في النظام" });
+  }
+
   return next({
     ctx: {
       ...ctx,

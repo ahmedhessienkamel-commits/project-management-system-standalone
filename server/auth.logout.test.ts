@@ -24,6 +24,7 @@ function createAuthContext(): { ctx: TrpcContext; clearedCookies: CookieCall[] }
     createdAt: new Date(),
     updatedAt: new Date(),
     lastSignedIn: new Date(),
+    mustChangePassword: 0,
   };
 
   const ctx: TrpcContext = {
@@ -51,6 +52,7 @@ describe("auth.logout", () => {
 
     expect(result).toMatchObject({ id: 1, email: "sample@example.com" });
     expect(result).not.toHaveProperty("passwordHash");
+    expect(result).toHaveProperty("mustChangePassword", 0);
   });
 
   it("clears the session cookie and reports success", async () => {

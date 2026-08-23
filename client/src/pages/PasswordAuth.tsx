@@ -27,7 +27,7 @@ export default function PasswordAuth({ invitation = false }: { invitation?: bool
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const rememberSession = (sessionToken?: string) => { if (!sessionToken) return; try { sessionStorage.setItem(PASSWORD_SESSION_STORAGE_KEY, sessionToken); } catch {} };
-  const login = trpc.auth.passwordLogin.useMutation({ onSuccess: (result) => { rememberSession(result.sessionToken); setLocation("/"); } });
+  const login = trpc.auth.passwordLogin.useMutation({ onSuccess: (result) => { rememberSession(result.sessionToken); setLocation(result.mustChangePassword ? "/change-password" : "/"); } });
   const accept = trpc.auth.acceptInvitation.useMutation({ onSuccess: (result) => { rememberSession(result.sessionToken); setActivationComplete(true); } });
   const requestReset = trpc.auth.requestPasswordReset.useMutation({ onSuccess: () => setNotice("إذا كان البريد مسجلًا وله كلمة مرور، فستصل رسالة الاستعادة خلال دقائق. راجع البريد الوارد والرسائل غير المرغوب فيها.") });
   useEffect(() => { if (invitationDetails.data?.email) setEmail(invitationDetails.data.email); }, [invitationDetails.data?.email]);
