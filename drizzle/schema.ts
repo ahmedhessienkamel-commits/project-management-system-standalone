@@ -325,6 +325,7 @@ export const collections = mysqlTable("collections", {
 export const employees = mysqlTable("employees", {
   id: int("id").autoincrement().primaryKey(),
   employeeCode: varchar("employeeCode", { length: 64 }).notNull().unique(),
+  employmentType: mysqlEnum("employmentType", ["employee", "worker"]).default("employee").notNull(),
   fullName: varchar("fullName", { length: 255 }).notNull(),
   jobTitle: varchar("jobTitle", { length: 255 }),
   department: varchar("department", { length: 255 }),

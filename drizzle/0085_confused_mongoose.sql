@@ -1,0 +1,1 @@
+ALTER TABLE `employees` ADD `employmentType` enum('employee','worker') DEFAULT 'employee' NOT NULL;
