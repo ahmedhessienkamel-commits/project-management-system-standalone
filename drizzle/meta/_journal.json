@@ -547,13 +547,6 @@
       "when": 1787441221023,
       "tag": "0077_public_killraven",
       "breakpoints": true
-    },
-    {
-      "idx": 78,
-      "version": "5",
-      "when": 1787443128602,
-      "tag": "0078_red_captain_america",
-      "breakpoints": true
     }
   ]
 }
