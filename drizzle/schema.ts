@@ -2,6 +2,7 @@ import {
   date,
   decimal,
   int,
+  index,
   json,
   mysqlEnum,
   mysqlTable,
@@ -132,6 +133,46 @@ export const stages = mysqlTable("stages", {
   plannedEnd: date("plannedEnd"),
   actualProgress: decimal("actualProgress", { precision: 5, scale: 2 }).default("0").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const projectBudgets = mysqlTable("projectBudgets", {
+
+  id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId"),
+  projectId: int("projectId").notNull(),
+  budgetCode: varchar("budgetCode", { length: 64 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  currency: varchar("currency", { length: 8 }).notNull().default("SAR"),
+  status: mysqlEnum("status", ["draft", "approved", "locked"]).default("approved").notNull(),
+  plannedRevenue: decimal("plannedRevenue", { precision: 14, scale: 2 }).notNull().default("0"),
+  plannedCost: decimal("plannedCost", { precision: 14, scale: 2 }).notNull().default("0"),
+  plannedTax: decimal("plannedTax", { precision: 14, scale: 2 }).notNull().default("0"),
+  plannedZakat: decimal("plannedZakat", { precision: 14, scale: 2 }).notNull().default("0"),
+  plannedProfit: decimal("plannedProfit", { precision: 14, scale: 2 }).notNull().default("0"),
+  notes: text("notes"),
+  createdBy: int("createdBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({ projectIdIdx: index("projectBudgets_projectId_idx").on(table.projectId), companyIdIdx: index("projectBudgets_companyId_idx").on(table.companyId) }));
+
+export const projectBudgetLines = mysqlTable("projectBudgetLines", {
+  id: int("id").autoincrement().primaryKey(),
+  budgetId: int("budgetId").notNull(),
+  projectId: int("projectId").notNull(),
+  stageId: int("stageId"),
+  costItemId: int("costItemId"),
+  accountId: int("accountId"),
+  lineType: mysqlEnum("lineType", ["revenue", "cost", "tax", "zakat", "profit"]).notNull(),
+  code: varchar("code", { length: 64 }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  amount: decimal("amount", { precision: 14, scale: 2 }).notNull().default("0"),
+  taxBasis: mysqlEnum("taxBasis", ["pre_tax", "inclusive", "not_applicable"]).default("pre_tax").notNull(),
+  source: varchar("source", { length: 64 }).default("user_import").notNull(),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  notes: text("notes"),
+  createdBy: int("createdBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 export const vendors = mysqlTable("vendors", {
@@ -292,6 +333,7 @@ export const sales = mysqlTable("sales", {
   projectId: int("projectId").notNull(),
   unitId: int("unitId").notNull(),
   stageId: int("stageId"),
+  costItemId: int("costItemId"),
   customerName: varchar("customerName", { length: 255 }).notNull(),
   customerPhone: varchar("customerPhone", { length: 64 }),
   saleDate: date("saleDate"),
@@ -749,6 +791,8 @@ export const purchaseOrders = mysqlTable("purchaseOrders", {
 export const purchaseOrderItems = mysqlTable("purchaseOrderItems", {
   id: int("id").autoincrement().primaryKey(),
   purchaseOrderId: int("purchaseOrderId").notNull(),
+  inventoryItemId: int("inventoryItemId"),
+  costItemId: int("costItemId"),
   description: varchar("description", { length: 255 }).notNull(),
   unit: varchar("unit", { length: 64 }),
   quantity: decimal("quantity", { precision: 14, scale: 3 }).notNull().default("1"),
