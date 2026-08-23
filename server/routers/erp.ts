@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray, or } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, dailyTasks, leaveRequests, advanceRequests, employees, employeeWorkStarts, expenses, notifications, payroll, payrollRuns, payrollSettlements, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, sales, stages, units, users, userInvitations, vendors, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems, inventoryItems, inventoryMovements, accounts, accountingDocuments, accountingDocumentLines, costItems, fixedAssets, fixedAssetDepreciation, companies, companyMembers, companyProfiles, cashAccounts, contractorContracts, serviceContractEntries, userOperationPermissions } from "../../drizzle/schema";
+import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, dailyTasks, leaveRequests, advanceRequests, advanceRepayments, employees, employeeWorkStarts, expenses, notifications, payroll, payrollRuns, payrollSettlements, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, sales, stages, units, users, userInvitations, vendors, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems, inventoryItems, inventoryMovements, accounts, accountingDocuments, accountingDocumentLines, costItems, fixedAssets, fixedAssetDepreciation, companies, companyMembers, companyProfiles, cashAccounts, contractorContracts, serviceContractEntries, userOperationPermissions } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
@@ -13,6 +13,7 @@ import { allocateAdministrativeExpense, normalizeExpenseTaxRate, validateExpense
 import { calculateInventoryBalance, canReceiveContractQuantity, canReviewInventoryStage, nextInventoryApprovalStage, remainingContractQuantity, selectPurchaseInvoiceForIssue, calculateServiceEntryTotal, remainingServiceContractAmount, calculateMaterialReceiptCost, materialReceiptExpenseReference, materialIssueExpenseReference, isMaterialContractType, isInventoryBelowMinimum, resolveMaterialCostAccount, requiresSupplierInvoicePaymentApproval } from "../../shared/inventory";
 import { canReviewCertificateApproval, getCertificateInitialApproval, nextCertificateApproval, nextMaterialRequisitionApproval } from "../../shared/approvalWorkflows";
 import { payrollRunPaymentStatus } from "../../shared/payrollRun";
+import { advanceOutstandingAmount, buildAdvanceSchedule, calculateAdvanceDeduction, calculatePayrollAdvanceAccrualAmounts, isRepaymentDue } from "../../shared/advanceRepayment";
 import { calculateWipBalance, buildWipClosingLines } from "../../shared/wip";
 import { canAssignTeamTasks } from "../../shared/taskPermissions";
 import { calculateMaterialPlanning } from "../../shared/materialPlanning";
@@ -93,6 +94,31 @@ async function ensureProjectWipAccount(db: ErpDb, project: { id: number; code: s
   await db.update(projects).set({ wipAccountId: accountId }).where(eq(projects.id, project.id));
   await db.insert(auditLogs).values({ entityType: "project", entityId: project.id, action: "wip_account_linked", actorId, afterJson: JSON.stringify({ wipAccountId: accountId, accountCode: code }) });
   return accountId;
+}
+
+async function ensureEmployeeAdvanceAccount(db: ErpDb, companyId: number, actorId: number) {
+  const candidates = await db.select().from(accounts).where(and(eq(accounts.companyId, companyId), or(eq(accounts.code, "1203"), eq(accounts.name, "سلف الموظفين"))));
+  const existing = candidates.find((account) => account.accountType === "asset" && account.isActive === 1 && account.isPostable === 1);
+  if (existing) return existing.id;
+  if (candidates.length) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "راجع إعداد حساب سلف الموظفين في شجرة الحسابات قبل اعتماد المسير" });
+  const parent = (await db.select().from(accounts).where(and(eq(accounts.companyId, companyId), eq(accounts.code, "1200"), eq(accounts.accountType, "asset"), eq(accounts.isActive, 1))).limit(1))[0];
+  if (!parent) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "حساب العملاء والذمم المدينة (1200) غير موجود لإنشاء حساب سلف الموظفين" });
+  const result = await db.insert(accounts).values({ companyId, code: "1203", name: "سلف الموظفين", accountType: "asset", parentId: parent.id, isPostable: 1, isActive: 1 });
+  const id = Number(result[0].insertId);
+  await db.insert(auditLogs).values({ entityType: "account", entityId: id, action: "employee_advance_account_created", actorId, afterJson: JSON.stringify({ code: "1203", name: "سلف الموظفين", parentId: parent.id }) });
+  return id;
+}
+
+async function releaseAdvanceRepaymentReservationsForRun(db: ErpDb, run: { id: number; month: number; year: number }) {
+  const linked = await db.select().from(advanceRepayments).where(eq(advanceRepayments.payrollRunId, run.id));
+  for (const repayment of linked) {
+    if (repayment.status === "reserved") {
+      await db.update(advanceRepayments).set({ status: "scheduled", appliedAmount: "0.00", payrollRunId: null, payrollId: null }).where(eq(advanceRepayments.id, repayment.id));
+    }
+    if (repayment.status === "deferred") {
+      await db.update(advanceRepayments).set({ status: "scheduled", scheduledMonth: run.month, scheduledYear: run.year, deferredAt: null, payrollRunId: null, payrollId: null }).where(eq(advanceRepayments.id, repayment.id));
+    }
+  }
 }
 
 async function createInventoryPurchaseDocuments(db: ErpDb, ctx: { user: { id: number } }, input: { movementId: number; projectId: number; stageId?: number | null; itemId: number; vendorId?: number | null; quantity: number; unitCost: number; movementDate?: string; description?: string | null; contractId?: number | null; contractItemIndex?: number | null }) {
@@ -206,6 +232,20 @@ async function assertProjectWrite(db: NonNullable<Awaited<ReturnType<typeof getD
   if (ctx.user.role === "admin") return;
   const member = (await db.select({ projectRole: projectMembers.projectRole }).from(projectMembers).where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, ctx.user.id))).limit(1))[0];
   if (!member || !canWriteProject(ctx.user.role, member.projectRole)) throw new TRPCError({ code: "FORBIDDEN", message: "دور المستخدم لا يسمح بتسجيل حركة جديدة في هذا المشروع" });
+}
+
+function resolveAdvancePlan(input: { repaymentMode?: "single" | "installments"; repaymentStartMonth?: number; repaymentStartYear?: number; installmentCount?: number; repaymentDate?: string }) {
+  const repaymentDate = input.repaymentDate ? new Date(`${input.repaymentDate}T00:00:00Z`) : null;
+  const now = new Date();
+  const repaymentStartMonth = input.repaymentStartMonth ?? (repaymentDate ? repaymentDate.getUTCMonth() + 1 : now.getUTCMonth() + 1);
+  const repaymentStartYear = input.repaymentStartYear ?? (repaymentDate ? repaymentDate.getUTCFullYear() : now.getUTCFullYear());
+  const installmentCount = input.repaymentMode === "installments" ? Math.max(2, input.installmentCount || 2) : 1;
+  if (repaymentStartMonth < 1 || repaymentStartMonth > 12 || repaymentStartYear < 2000 || repaymentStartYear > 2100) throw new TRPCError({ code: "BAD_REQUEST", message: "حدد شهر وسنة بدء خصم السلفة بصورة صحيحة" });
+  return { repaymentMode: input.repaymentMode ?? "single", repaymentStartMonth, repaymentStartYear, installmentCount } as const;
+}
+
+function nextPayrollPeriod(month: number, year: number) {
+  return month === 12 ? { month: 1, year: year + 1 } : { month: month + 1, year };
 }
 
 async function resolveMaterialPlanning(db: ErpDb, input: { projectId: number; stageId?: number; inventoryItemId: number; costItemId?: number; quantity: number; excludingRequisitionId?: number }) {
@@ -468,33 +508,78 @@ export const erpRouter = router({
     list: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
       const rows = await db.select().from(advanceRequests).orderBy(desc(advanceRequests.createdAt));
-      return ctx.user.role === "admin" || ctx.user.role === "general_manager" ? rows : rows.filter((row) => row.requestedBy === ctx.user.id);
+      const repayments = await db.select().from(advanceRepayments);
+      const visible = ctx.user.role === "admin" || ctx.user.role === "general_manager" ? rows : rows.filter((row) => row.requestedBy === ctx.user.id);
+      return visible.map((row) => {
+        const schedule = repayments.filter((repayment) => repayment.advanceRequestId === row.id);
+        const applied = schedule.filter((repayment) => repayment.status === "applied");
+        const appliedAmount = applied.reduce((total, repayment) => total + Number(repayment.appliedAmount || 0), 0);
+        return { ...row, repayments: schedule, appliedAmount, outstandingAmount: advanceOutstandingAmount(Number(row.amount || 0), applied.map((repayment) => repayment.appliedAmount)) };
+      });
     }),
-    create: protectedProcedure.input(z.object({ employeeId: z.number().int().positive().nullable().optional(), amount: z.number().positive(), reason: z.string().trim().min(2).max(2000), repaymentDate: z.string().optional() })).mutation(async ({ ctx, input }) => {
+    statement: protectedProcedure.input(z.object({ employeeId: z.number().int().positive() })).query(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin" && ctx.user.role !== "general_manager" && Number(ctx.user.id) !== 13170001) throw new TRPCError({ code: "FORBIDDEN", message: "كشف حساب السلف متاح للمسؤولين المخولين فقط" });
       const db = requireDb(await getDb());
-      const result = await db.insert(advanceRequests).values({ requestedBy: ctx.user.id, employeeId: input.employeeId ?? null, amount: input.amount.toFixed(2), reason: input.reason, repaymentDate: input.repaymentDate ? new Date(input.repaymentDate) : null });
+      const [employee] = await db.select().from(employees).where(eq(employees.id, input.employeeId)).limit(1);
+      if (!employee) throw new TRPCError({ code: "NOT_FOUND", message: "الموظف غير موجود" });
+      const advances = await db.select().from(advanceRequests).where(eq(advanceRequests.employeeId, input.employeeId)).orderBy(desc(advanceRequests.createdAt));
+      const repayments = await db.select().from(advanceRepayments).where(eq(advanceRepayments.employeeId, input.employeeId));
+      const enriched = advances.map((advance) => {
+        const schedule = repayments.filter((repayment) => repayment.advanceRequestId === advance.id);
+        const applied = schedule.filter((repayment) => repayment.status === "applied");
+        const appliedAmount = applied.reduce((total, repayment) => total + Number(repayment.appliedAmount || 0), 0);
+        return { ...advance, repayments: schedule, appliedAmount, outstandingAmount: advanceOutstandingAmount(Number(advance.amount || 0), applied.map((repayment) => repayment.appliedAmount)) };
+      });
+      const approved = enriched.filter((advance) => advance.status === "approved");
+      const grantedAmount = approved.reduce((total, advance) => total + Number(advance.amount || 0), 0);
+      const appliedAmount = approved.reduce((total, advance) => total + advance.appliedAmount, 0);
+      return { employee, advances: enriched, totals: { grantedAmount, appliedAmount, outstandingAmount: Math.max(grantedAmount - appliedAmount, 0) } };
+    }),
+    create: protectedProcedure.input(z.object({ employeeId: z.number().int().positive().nullable().optional(), amount: z.number().positive(), reason: z.string().trim().min(2).max(2000), repaymentDate: z.string().optional(), repaymentMode: z.enum(["single", "installments"]).default("single"), repaymentStartMonth: z.number().int().min(1).max(12).optional(), repaymentStartYear: z.number().int().min(2000).max(2100).optional(), installmentCount: z.number().int().min(1).max(120).default(1) })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      if (input.employeeId && ctx.user.role !== "admin" && ctx.user.role !== "general_manager" && Number(ctx.user.id) !== 13170001) throw new TRPCError({ code: "FORBIDDEN", message: "لا يمكن إنشاء سلفة لموظف آخر إلا من قبل مسؤول مخول" });
+      const linkedEmployee = input.employeeId ? null : (ctx.user.email ? (await db.select({ id: employees.id }).from(employees).where(eq(employees.email, ctx.user.email)).limit(1))[0] : null);
+      const plan = resolveAdvancePlan(input);
+      const result = await db.insert(advanceRequests).values({ requestedBy: ctx.user.id, employeeId: input.employeeId ?? linkedEmployee?.id ?? null, amount: input.amount.toFixed(2), reason: input.reason, repaymentDate: input.repaymentDate ? new Date(input.repaymentDate) : null, ...plan });
       const requestId = Number(result[0].insertId);
       await db.insert(auditLogs).values({ entityType: "advanceRequest", entityId: requestId, action: "created_pending", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
       await notifyApprovalUsers(db, { type: "advance_approval", title: "طلب سلفة جديد يحتاج موافقة", message: `يوجد طلب سلفة بقيمة ${input.amount.toFixed(2)} ر.س من المستخدم #${ctx.user.id}.`, approvalUrl: `${getAppUrl(ctx.req)}/approvals` });
       return { id: requestId };
     }),
-    update: protectedProcedure.input(z.object({ id: z.number().int().positive(), amount: z.number().positive(), reason: z.string().trim().min(2).max(2000), repaymentDate: z.string().optional() })).mutation(async ({ ctx, input }) => {
+    update: protectedProcedure.input(z.object({ id: z.number().int().positive(), amount: z.number().positive(), reason: z.string().trim().min(2).max(2000), repaymentDate: z.string().optional(), repaymentMode: z.enum(["single", "installments"]).default("single"), repaymentStartMonth: z.number().int().min(1).max(12).optional(), repaymentStartYear: z.number().int().min(2000).max(2100).optional(), installmentCount: z.number().int().min(1).max(120).default(1) })).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb()); await assertOperationPermission(db, ctx, "edit");
       const [before] = await db.select().from(advanceRequests).where(eq(advanceRequests.id, input.id)).limit(1);
       if (!before) throw new TRPCError({ code: "NOT_FOUND", message: "طلب السلفة غير موجود" });
-      await db.update(advanceRequests).set({ amount: input.amount.toFixed(2), reason: input.reason, repaymentDate: input.repaymentDate ? new Date(input.repaymentDate) : null, status: "pending", reviewedBy: null, reviewedAt: null, rejectionReason: null }).where(eq(advanceRequests.id, input.id));
+      if (before.status === "approved") throw new TRPCError({ code: "PRECONDITION_FAILED", message: "لا يمكن تعديل سلفة معتمدة؛ أنشئ معالجة أو سلفة جديدة للحفاظ على كشف الحساب" });
+      const plan = resolveAdvancePlan(input);
+      await db.update(advanceRepayments).set({ status: "cancelled" }).where(eq(advanceRepayments.advanceRequestId, input.id));
+      await db.update(advanceRequests).set({ amount: input.amount.toFixed(2), reason: input.reason, repaymentDate: input.repaymentDate ? new Date(input.repaymentDate) : null, ...plan, status: "pending", reviewedBy: null, reviewedAt: null, rejectionReason: null }).where(eq(advanceRequests.id, input.id));
       await db.insert(auditLogs).values({ entityType: "advanceRequest", entityId: input.id, action: "updated_resubmitted", actorId: ctx.user.id, beforeJson: JSON.stringify(before), afterJson: JSON.stringify(input) });
       return { success: true } as const;
     }),
     delete: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
       if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "حذف مستندات الموظفين متاح للمالك فقط" });
-      const db = requireDb(await getDb()); await db.delete(advanceRequests).where(eq(advanceRequests.id, input.id)); await db.insert(auditLogs).values({ entityType: "advanceRequest", entityId: input.id, action: "deleted", actorId: ctx.user.id }); return { success: true } as const;
+      const db = requireDb(await getDb());
+      const [advance] = await db.select().from(advanceRequests).where(eq(advanceRequests.id, input.id)).limit(1);
+      if (!advance) throw new TRPCError({ code: "NOT_FOUND", message: "طلب السلفة غير موجود" });
+      const repayments = await db.select({ id: advanceRepayments.id }).from(advanceRepayments).where(eq(advanceRepayments.advanceRequestId, input.id));
+      if (advance.status === "approved" || repayments.length) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "لا يمكن حذف سلفة معتمدة أو مرتبطة بجدولة خصم؛ حافظ على سجل الموظف واستخدم إجراء تصحيحيًا" });
+      await db.delete(advanceRequests).where(eq(advanceRequests.id, input.id)); await db.insert(auditLogs).values({ entityType: "advanceRequest", entityId: input.id, action: "deleted", actorId: ctx.user.id }); return { success: true } as const;
     }),
     decide: protectedProcedure.input(z.object({ id: z.number().int().positive(), decision: z.enum(["approved", "rejected"]), note: z.string().max(2000).optional() })).mutation(async ({ ctx, input }) => {
       if (ctx.user.role !== "admin" && ctx.user.role !== "general_manager") throw new TRPCError({ code: "FORBIDDEN", message: "اعتماد طلبات السلف متاح للمدير العام والمالك فقط" });
       if (input.decision === "rejected" && !input.note?.trim()) throw new TRPCError({ code: "BAD_REQUEST", message: "يجب كتابة سبب الرفض" });
       const db = requireDb(await getDb());
+      const [advance] = await db.select().from(advanceRequests).where(eq(advanceRequests.id, input.id)).limit(1);
+      if (!advance) throw new TRPCError({ code: "NOT_FOUND", message: "طلب السلفة غير موجود" });
       await db.update(advanceRequests).set({ status: input.decision, reviewedBy: ctx.user.id, reviewedAt: new Date(), rejectionReason: input.decision === "rejected" ? input.note!.trim() : null }).where(eq(advanceRequests.id, input.id));
+      if (input.decision === "approved" && advance.employeeId) {
+        const existing = await db.select({ id: advanceRepayments.id }).from(advanceRepayments).where(eq(advanceRepayments.advanceRequestId, advance.id));
+        if (!existing.length) {
+          const schedule = buildAdvanceSchedule(Number(advance.amount || 0), advance.repaymentStartMonth || new Date().getUTCMonth() + 1, advance.repaymentStartYear || new Date().getUTCFullYear(), advance.installmentCount || 1);
+          await db.insert(advanceRepayments).values(schedule.map((entry) => ({ advanceRequestId: advance.id, employeeId: advance.employeeId!, scheduledMonth: entry.scheduledMonth, scheduledYear: entry.scheduledYear, scheduledAmount: entry.scheduledAmount.toFixed(2), createdBy: ctx.user.id })));
+        }
+      }
       await db.insert(auditLogs).values({ entityType: "advanceRequest", entityId: input.id, action: input.decision, actorId: ctx.user.id, afterJson: JSON.stringify(input) });
       return { success: true } as const;
     }),
@@ -1715,9 +1800,10 @@ export const erpRouter = router({
         if (request.entityType === "payroll_run") {
           const run = (await db.select().from(payrollRuns).where(eq(payrollRuns.id, request.entityId)).limit(1))[0];
           if (!run) throw new TRPCError({ code: "NOT_FOUND", message: "مسير الرواتب غير موجود" });
-          if (!approved) {
-            await db.update(payrollRuns).set({ status: "rejected" }).where(eq(payrollRuns.id, run.id));
-            await db.update(payroll).set({ status: "draft" }).where(eq(payroll.payrollRunId, run.id));
+        if (!approved) {
+          await db.update(payrollRuns).set({ status: "rejected" }).where(eq(payrollRuns.id, run.id));
+          await db.update(payroll).set({ status: "draft" }).where(eq(payroll.payrollRunId, run.id));
+          await releaseAdvanceRepaymentReservationsForRun(db, run);
             await notifyApprovalUsers(db, { type: "payroll_run_returned", title: `مسير الرواتب ${run.runNumber} يحتاج تعديلًا`, message: `تم رفض مسير الرواتب وإعادته إلى منشئه للتعديل ثم إعادة الإرسال.`, userIds: [run.createdBy || request.requestedBy], roles: [] });
           } else if (request.approvalStage === "owner") {
             await db.insert(approvalRequests).values({ projectId: null, entityType: "payroll_run", entityId: run.id, requestedBy: request.requestedBy, status: "pending", approvalStage: "general_manager", stageOrder: 2 });
@@ -1733,15 +1819,27 @@ export const erpRouter = router({
               const projectPayrollExpense = companyAccounts.find((account) => account.code === "5202");
               const administrativePayrollExpense = companyAccounts.find((account) => account.code === "5305") || projectPayrollExpense;
               if (!payrollPayable || !projectPayrollExpense || !administrativePayrollExpense) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "تأكد من وجود حسابات رواتب وأجور المشاريع (5202) ورواتب إدارية (5305) ورواتب وأجور مستحقة (2103) قبل اعتماد المسير" });
+              const grossAmount = rows.reduce((sum, row) => sum + calculatePayrollAdvanceAccrualAmounts(Number(row.totalAmount || 0), Number(row.advanceDeductionAmount || 0)).payrollExpenseAmount, 0);
+              const advanceDeductionAmount = rows.reduce((sum, row) => sum + Number(row.advanceDeductionAmount || 0), 0);
               const totalAmount = rows.reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+              const employeeAdvanceAccountId = advanceDeductionAmount > 0.005 && run.companyId ? await ensureEmployeeAdvanceAccount(db, run.companyId, ctx.user.id) : null;
               const documentNumber = `PA-${Date.now()}`;
-              const created = await db.insert(accountingDocuments).values({ companyId: run.companyId || null, documentType: "journal_entry", documentNumber, partyName: `مسير رواتب ${run.month}/${run.year}`, sourceDocumentId: run.id, documentDate: new Date(), amount: totalAmount.toFixed(2), taxAmount: "0.00", totalAmount: totalAmount.toFixed(2), paymentStatus: "unpaid", status: "posted", notes: `إثبات رواتب وأجور مستحقة لمسير ${run.runNumber}`, createdBy: ctx.user.id });
+              const created = await db.insert(accountingDocuments).values({ companyId: run.companyId || null, documentType: "journal_entry", documentNumber, partyName: `مسير رواتب ${run.month}/${run.year}`, sourceDocumentId: run.id, documentDate: new Date(), amount: grossAmount.toFixed(2), taxAmount: "0.00", totalAmount: grossAmount.toFixed(2), paymentStatus: "unpaid", status: "posted", notes: `إثبات رواتب وأجور مستحقة وتسوية سلف لمسير ${run.runNumber}`, createdBy: ctx.user.id });
               accrualDocumentId = Number(created[0].insertId);
-              const debitLines = rows.map((row) => ({ documentId: accrualDocumentId!, accountId: row.classification === "administrative" ? administrativePayrollExpense.id : projectPayrollExpense.id, projectId: row.projectId || null, stageId: row.stageId || null, description: `راتب مستحق — ${row.employeeName} — ${run.month}/${run.year}`, debit: Number(row.totalAmount || 0).toFixed(2), credit: "0.00" }));
-              await db.insert(accountingDocumentLines).values([...debitLines, { documentId: accrualDocumentId, accountId: payrollPayable.id, projectId: null, stageId: null, description: `إجمالي رواتب وأجور مستحقة — ${run.runNumber}`, debit: "0.00", credit: totalAmount.toFixed(2) }]);
+              const debitLines = rows.map((row) => ({ documentId: accrualDocumentId!, accountId: row.classification === "administrative" ? administrativePayrollExpense.id : projectPayrollExpense.id, projectId: row.projectId || null, stageId: row.stageId || null, description: `إجمالي الراتب المستحق — ${row.employeeName} — ${run.month}/${run.year}`, debit: calculatePayrollAdvanceAccrualAmounts(Number(row.totalAmount || 0), Number(row.advanceDeductionAmount || 0)).payrollExpenseAmount.toFixed(2), credit: "0.00" }));
+              const settlementLines = advanceDeductionAmount > 0.005 && employeeAdvanceAccountId ? [{ documentId: accrualDocumentId, accountId: payrollPayable.id, projectId: null, stageId: null, description: `تسوية سلف الموظفين من مسير ${run.runNumber}`, debit: advanceDeductionAmount.toFixed(2), credit: "0.00" }, { documentId: accrualDocumentId, accountId: employeeAdvanceAccountId, projectId: null, stageId: null, description: `إقفال جزء سلف الموظفين — ${run.month}/${run.year}`, debit: "0.00", credit: advanceDeductionAmount.toFixed(2) }] : [];
+              await db.insert(accountingDocumentLines).values([...debitLines, { documentId: accrualDocumentId, accountId: payrollPayable.id, projectId: null, stageId: null, description: `إجمالي رواتب وأجور مستحقة — ${run.runNumber}`, debit: "0.00", credit: grossAmount.toFixed(2) }, ...settlementLines]);
             }
             await db.update(payrollRuns).set({ status: "approved", approvedAt: new Date(), approvedBy: ctx.user.id, accrualDocumentId }).where(eq(payrollRuns.id, run.id));
             await db.update(payroll).set({ status: "approved" }).where(eq(payroll.payrollRunId, run.id));
+            const reservedRepayments = await db.select().from(advanceRepayments).where(and(eq(advanceRepayments.payrollRunId, run.id), eq(advanceRepayments.status, "reserved")));
+            const next = nextPayrollPeriod(run.month, run.year);
+            const carryForwardRows = reservedRepayments.flatMap((repayment) => {
+              const remaining = Number((Math.max(Number(repayment.scheduledAmount || 0) - Number(repayment.appliedAmount || 0), 0)).toFixed(2));
+              return remaining > 0.005 ? [{ advanceRequestId: repayment.advanceRequestId, employeeId: repayment.employeeId, scheduledMonth: next.month, scheduledYear: next.year, scheduledAmount: remaining.toFixed(2), createdBy: ctx.user.id }] : [];
+            });
+            await db.update(advanceRepayments).set({ status: "applied" }).where(and(eq(advanceRepayments.payrollRunId, run.id), eq(advanceRepayments.status, "reserved")));
+            if (carryForwardRows.length) await db.insert(advanceRepayments).values(carryForwardRows);
             await db.insert(auditLogs).values({ entityType: "payroll_run", entityId: run.id, action: "general_manager_approved_and_accrued", actorId: ctx.user.id, afterJson: JSON.stringify({ accrualDocumentId }) });
           }
         }
@@ -1792,6 +1890,20 @@ export const erpRouter = router({
       return visible.map((project) => { const ratio = totalContractValue ? Number(project.contractValue || 0) / totalContractValue : 0; return { projectId: project.id, projectName: project.name, contractValue: Number(project.contractValue || 0), ratio, allocatedAmount: input.amount * ratio }; });
     }),
     runs: router({
+      advancePreview: protectedProcedure.input(z.object({ month: z.number().int().min(1).max(12), year: z.number().int().min(2000).max(2100) })).query(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        await assertOperationPermission(db, ctx, "payroll");
+        const [employeeRows, advanceRows, repaymentRows] = await Promise.all([db.select().from(employees).where(eq(employees.status, "active")), db.select().from(advanceRequests).where(eq(advanceRequests.status, "approved")), db.select().from(advanceRepayments)]);
+        return employeeRows.map((employee) => {
+          const employeeAdvances = advanceRows.filter((advance) => advance.employeeId === employee.id);
+          const allRepayments = repaymentRows.filter((repayment) => repayment.employeeId === employee.id && repayment.status !== "cancelled");
+          const dueRepayments = allRepayments.filter((repayment) => isRepaymentDue(repayment, input.month, input.year));
+          const appliedAmount = allRepayments.filter((repayment) => repayment.status === "applied").reduce((total, repayment) => total + Number(repayment.appliedAmount || 0), 0);
+          const grantedAmount = employeeAdvances.reduce((total, advance) => total + Number(advance.amount || 0), 0);
+          const legacyUnscheduledAmount = employeeAdvances.filter((advance) => !allRepayments.some((repayment) => repayment.advanceRequestId === advance.id)).reduce((total, advance) => total + Number(advance.amount || 0), 0);
+          return { employeeId: employee.id, grantedAmount, appliedAmount, outstandingAmount: Math.max(grantedAmount - appliedAmount, 0), dueAmount: dueRepayments.reduce((total, repayment) => total + Math.max(Number(repayment.scheduledAmount || 0) - Number(repayment.appliedAmount || 0), 0), 0), dueRepaymentIds: dueRepayments.map((repayment) => repayment.id), legacyUnscheduledAmount };
+        });
+      }),
       list: protectedProcedure.query(async ({ ctx }) => {
         const db = requireDb(await getDb());
         const companyId = await resolveActiveCompanyId(db, ctx);
@@ -1805,27 +1917,56 @@ export const erpRouter = router({
           return { ...run, totalAmount: total, paidAmount: paid, outstandingAmount: Math.max(total - paid, 0), rows: runRows, settlementCount: settlements.filter((settlement) => settlement.payrollRunId === run.id).length };
         }).sort((a, b) => Number(b.id) - Number(a.id));
       }),
-      createDraft: protectedProcedure.input(z.object({ month: z.number().int().min(1).max(12), year: z.number().int().min(2000).max(2100), rows: z.array(z.object({ projectId: z.number().int().positive().optional(), stageId: z.number().int().positive().optional(), employeeId: z.number().int().positive().optional(), employeeName: z.string().trim().min(2), employeeCode: z.string().trim().max(64).optional(), classification: z.enum(["project", "administrative"]), allocationRatio: z.number().min(0).max(100).default(100), amount: z.number().positive(), absenceDays: z.number().int().nonnegative().default(0), deductionAmount: z.number().nonnegative().default(0) })).min(1) })).mutation(async ({ ctx, input }) => {
+      createDraft: protectedProcedure.input(z.object({ month: z.number().int().min(1).max(12), year: z.number().int().min(2000).max(2100), rows: z.array(z.object({ projectId: z.number().int().positive().optional(), stageId: z.number().int().positive().optional(), employeeId: z.number().int().positive().optional(), employeeName: z.string().trim().min(2), employeeCode: z.string().trim().max(64).optional(), classification: z.enum(["project", "administrative"]), allocationRatio: z.number().min(0).max(100).default(100), amount: z.number().positive(), absenceDays: z.number().int().nonnegative().default(0), deductionAmount: z.number().nonnegative().default(0), advanceAction: z.enum(["apply", "defer"]).default("defer"), advanceDeductionAmount: z.number().nonnegative().default(0) })).min(1) })).mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
         await assertOperationPermission(db, ctx, "payroll");
         const companyId = await resolveActiveCompanyId(db, ctx);
         if (!companyId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "لا توجد شركة نشطة" });
-        const prepared = [] as { row: typeof input.rows[number]; total: ReturnType<typeof calculatePayrollTotalsWithDeduction> }[];
+        const repaymentRows = await db.select().from(advanceRepayments);
+        const prepared = [] as Array<{ row: typeof input.rows[number]; total: ReturnType<typeof calculatePayrollTotalsWithDeduction>; applicableRepayments: typeof repaymentRows; advanceDeductionAmount: number }>;
         for (const row of input.rows) {
           if (row.classification === "project" && !row.projectId) throw new TRPCError({ code: "BAD_REQUEST", message: "اختر مشروعًا لكل راتب مشروع" });
           if (row.projectId) { await assertProjectAccess(db, ctx, row.projectId); await assertProjectWrite(db, ctx, row.projectId); await assertPeriodOpen(db, ctx, row.projectId, new Date(input.year, input.month - 1, 1)); }
-          prepared.push({ row, total: calculatePayrollTotalsWithDeduction(row.amount, row.deductionAmount) });
+          const applicableRepayments = row.employeeId ? repaymentRows.filter((repayment) => repayment.employeeId === row.employeeId && isRepaymentDue(repayment, input.month, input.year)) : [];
+          const dueAmount = applicableRepayments.reduce((total, repayment) => total + Math.max(Number(repayment.scheduledAmount || 0) - Number(repayment.appliedAmount || 0), 0), 0);
+          const advanceDeductionAmount = row.advanceAction === "apply" ? calculateAdvanceDeduction({ grossPayrollAmount: row.amount, otherDeductionAmount: row.deductionAmount, dueAmount, requestedAmount: row.advanceDeductionAmount }).appliedAmount : 0;
+          prepared.push({ row, applicableRepayments, advanceDeductionAmount, total: calculatePayrollTotalsWithDeduction(row.amount, row.deductionAmount + advanceDeductionAmount) });
         }
         const totalAmount = prepared.reduce((sum, item) => sum + item.total.totalAmount, 0);
         const createdRun = await db.insert(payrollRuns).values({ companyId, runNumber: `PR-${input.year}${String(input.month).padStart(2, "0")}-${Date.now()}`, month: input.month, year: input.year, totalAmount: totalAmount.toFixed(2), paidAmount: "0.00", status: "draft", createdBy: ctx.user.id });
         const payrollRunId = Number(createdRun[0].insertId);
         const ids: number[] = [];
         for (const item of prepared) {
-          const result = await db.insert(payroll).values({ payrollRunId, projectId: item.row.projectId || null, stageId: item.row.stageId || null, employeeId: item.row.employeeId || null, employeeName: item.row.employeeName, employeeCode: item.row.employeeCode || null, month: input.month, year: input.year, classification: item.row.classification, allocationRatio: (item.row.allocationRatio / 100).toFixed(6), preTaxAmount: item.total.preTaxAmount.toFixed(2), taxAmount: "0.00", totalAmount: item.total.totalAmount.toFixed(2), paidAmount: "0.00", absenceDays: item.row.absenceDays, deductionAmount: item.total.deductionAmount.toFixed(2), createdBy: ctx.user.id, status: "draft" });
-          ids.push(Number(result[0].insertId));
+          const result = await db.insert(payroll).values({ payrollRunId, projectId: item.row.projectId || null, stageId: item.row.stageId || null, employeeId: item.row.employeeId || null, employeeName: item.row.employeeName, employeeCode: item.row.employeeCode || null, month: input.month, year: input.year, classification: item.row.classification, allocationRatio: (item.row.allocationRatio / 100).toFixed(6), preTaxAmount: item.row.amount.toFixed(2), taxAmount: "0.00", totalAmount: item.total.totalAmount.toFixed(2), paidAmount: "0.00", absenceDays: item.row.absenceDays, deductionAmount: item.row.deductionAmount.toFixed(2), advanceDeductionAmount: item.advanceDeductionAmount.toFixed(2), createdBy: ctx.user.id, status: "draft" });
+          const payrollId = Number(result[0].insertId);
+          ids.push(payrollId);
+          if (item.row.advanceAction === "defer" && item.applicableRepayments.length) {
+            const next = nextPayrollPeriod(input.month, input.year);
+            for (const repayment of item.applicableRepayments) await db.update(advanceRepayments).set({ status: "deferred", scheduledMonth: next.month, scheduledYear: next.year, deferredAt: new Date(), payrollRunId, payrollId }).where(eq(advanceRepayments.id, repayment.id));
+          }
+          let remainingAdvanceDeduction = item.advanceDeductionAmount;
+          for (const repayment of item.applicableRepayments) {
+            if (remainingAdvanceDeduction <= 0) break;
+            const available = Math.max(Number(repayment.scheduledAmount || 0) - Number(repayment.appliedAmount || 0), 0);
+            const reservedAmount = Math.min(available, remainingAdvanceDeduction);
+            await db.update(advanceRepayments).set({ status: "reserved", appliedAmount: reservedAmount.toFixed(2), payrollRunId, payrollId }).where(eq(advanceRepayments.id, repayment.id));
+            remainingAdvanceDeduction = Number((remainingAdvanceDeduction - reservedAmount).toFixed(2));
+          }
         }
         await db.insert(auditLogs).values({ entityType: "payroll_run", entityId: payrollRunId, action: "saved_draft", actorId: ctx.user.id, afterJson: JSON.stringify({ month: input.month, year: input.year, totalAmount, payrollIds: ids }) });
         return { id: payrollRunId, payrollIds: ids, totalAmount };
+      }),
+      deleteDraft: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        await assertOperationPermission(db, ctx, "payroll");
+        const run = (await db.select().from(payrollRuns).where(eq(payrollRuns.id, input.id)).limit(1))[0];
+        if (!run || run.createdBy !== ctx.user.id) throw new TRPCError({ code: "NOT_FOUND", message: "مسير الرواتب المسودة غير موجود" });
+        if (!['draft', 'rejected'].includes(run.status)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "لا يمكن حذف مسير محال للاعتماد أو معتمد؛ استخدم دورة التصحيح المعتمدة" });
+        await releaseAdvanceRepaymentReservationsForRun(db, run);
+        await db.delete(payroll).where(eq(payroll.payrollRunId, run.id));
+        await db.delete(payrollRuns).where(eq(payrollRuns.id, run.id));
+        await db.insert(auditLogs).values({ entityType: "payroll_run", entityId: run.id, action: "draft_deleted_and_advance_reservations_released", actorId: ctx.user.id });
+        return { success: true } as const;
       }),
       addManual: protectedProcedure.input(z.object({ payrollRunId: z.number().int().positive().optional(), month: z.number().int().min(1).max(12), year: z.number().int().min(2000).max(2100), projectId: z.number().int().positive().optional(), stageId: z.number().int().positive().optional(), employeeId: z.number().int().positive().optional(), employeeName: z.string().trim().min(2), employeeCode: z.string().trim().max(64).optional(), classification: z.enum(["project", "administrative"]), allocationRatio: z.number().min(0).max(100).default(100), amount: z.number().positive(), absenceDays: z.number().int().nonnegative().default(0), deductionAmount: z.number().nonnegative().default(0) })).mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
@@ -1842,7 +1983,7 @@ export const erpRouter = router({
         if (!run || run.companyId !== companyId || run.status !== "draft") throw new TRPCError({ code: "BAD_REQUEST", message: "يمكن إضافة الأجير إلى مسير مسودة للشركة النشطة فقط" });
         if (run.month !== input.month || run.year !== input.year) throw new TRPCError({ code: "BAD_REQUEST", message: "شهر وسنة الأجير يجب أن تطابق المسير المحدد" });
         const totals = calculatePayrollTotalsWithDeduction(input.amount, input.deductionAmount);
-        const created = await db.insert(payroll).values({ payrollRunId: run.id, projectId: input.projectId || null, stageId: input.stageId || null, employeeId: input.employeeId || null, employeeName: input.employeeName, employeeCode: input.employeeCode || null, month: input.month, year: input.year, classification: input.classification, allocationRatio: (input.allocationRatio / 100).toFixed(6), preTaxAmount: totals.preTaxAmount.toFixed(2), taxAmount: "0.00", totalAmount: totals.totalAmount.toFixed(2), paidAmount: "0.00", absenceDays: input.absenceDays, deductionAmount: totals.deductionAmount.toFixed(2), createdBy: ctx.user.id, status: "draft" });
+        const created = await db.insert(payroll).values({ payrollRunId: run.id, projectId: input.projectId || null, stageId: input.stageId || null, employeeId: input.employeeId || null, employeeName: input.employeeName, employeeCode: input.employeeCode || null, month: input.month, year: input.year, classification: input.classification, allocationRatio: (input.allocationRatio / 100).toFixed(6), preTaxAmount: input.amount.toFixed(2), taxAmount: "0.00", totalAmount: totals.totalAmount.toFixed(2), paidAmount: "0.00", absenceDays: input.absenceDays, deductionAmount: totals.deductionAmount.toFixed(2), createdBy: ctx.user.id, status: "draft" });
         const payrollId = Number(created[0].insertId);
         const currentRows = await db.select().from(payroll).where(eq(payroll.payrollRunId, run.id));
         const runTotal = currentRows.reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
