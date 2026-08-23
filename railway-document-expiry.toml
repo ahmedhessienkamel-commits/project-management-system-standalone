@@ -1,0 +1,4 @@
+[deploy]
+startCommand = "pnpm cron:documents"
+cronSchedule = "0 0 * * *"
+restartPolicyType = "never"
