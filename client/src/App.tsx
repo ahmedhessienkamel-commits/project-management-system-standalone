@@ -6,6 +6,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import Projects from "./pages/Projects";
+import Estimates from "./pages/Estimates";
 import Finance from "./pages/Finance";
 import Approvals from "./pages/Approvals";
 import ProjectDetails from "./pages/ProjectDetails";
@@ -65,6 +66,7 @@ function Router() {
       <Route path={"/indicators"} component={Reports} />
       <Route path={"/projects/:id"} component={ProjectDetails} />
       <Route path={"/projects"} component={Projects} />
+      <Route path={"/estimates"} component={Estimates} />
       <Route path={"/sales"} component={SalesCollections} />
       <Route path={"/transactions"} component={Accounting} />
       <Route path={"/expenses"} component={Finance} />

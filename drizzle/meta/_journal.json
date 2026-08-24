@@ -610,6 +610,13 @@
       "when": 1787522301618,
       "tag": "0087_salty_molly_hayes",
       "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "5",
+      "when": 1787591141990,
+      "tag": "0088_first_white_tiger",
+      "breakpoints": true
     }
   ]
 }
