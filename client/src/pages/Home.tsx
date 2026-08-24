@@ -83,15 +83,13 @@ export default function Home() {
 
           {selectedSummary && <StageTimingPanel project={selectedSummary.project} activeStage={selectedSummary.activeStage} rows={selectedDetailReport?.rows.filter((row) => row.rowType === "stage") ?? []} />}
 
-          {selectedSummary && <ExecutionBoard summary={selectedSummary} rows={selectedDetailReport?.rows.filter((row) => row.rowType === "stage") ?? []} />}
-
-          {selectedSummary && <BudgetOverview summary={selectedSummary} budgetParents={selectedDetailReport?.budgetParents ?? []} />}
-
-
-
           {selectedSummary && <section className="grid gap-4 md:grid-cols-2"><BudgetSummary title="مقارنة المشروع ككل — الميزانية والمنصرف" planned={selectedSummary.plannedBudget} actual={selectedSummary.actualCost} /><BudgetSummary title={`مقارنة المرحلة الحالية — ${selectedSummary.activeStage?.name ?? "لا توجد مرحلة نشطة"}`} planned={selectedSummary.activeStage?.plannedBudget ?? 0} actual={selectedSummary.activeStage?.actualCost ?? 0} /></section>}
 
           {selectedSummary && <LiquiditySummary cashFlow={selectedCashFlow} onOpenReport={() => setLocation("/reports")} />}
+
+          {selectedSummary && <ExecutionBoard summary={selectedSummary} rows={selectedDetailReport?.rows.filter((row) => row.rowType === "stage") ?? []} />}
+
+          {selectedSummary && <BudgetOverview summary={selectedSummary} budgetParents={selectedDetailReport?.budgetParents ?? []} />}
 
           {selectedSummary && <DashboardStageDetail rows={selectedDetailReport?.rows.filter((row) => row.rowType === "stage") ?? []} budgetParents={selectedDetailReport?.budgetParents ?? []} total={selectedDetailReport?.total ?? null} onOpenReport={() => setLocation("/projects")} />}
 
