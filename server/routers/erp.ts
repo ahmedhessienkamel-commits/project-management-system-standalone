@@ -1,11 +1,12 @@
 import { and, desc, eq, inArray, or } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, dailyTasks, leaveRequests, advanceRequests, advanceRepayments, employees, employeeWorkStarts, expenses, notifications, complianceDocuments, payroll, payrollRuns, payrollSettlements, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, projectBudgets, projectBudgetLines, sales, stages, units, users, userInvitations, vendors, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems, inventoryItems, inventoryMovements, accounts, accountingDocuments, accountingDocumentLines, costItems, fixedAssets, fixedAssetDepreciation, companies, companyMembers, companyProfiles, cashAccounts, contractorContracts, estimates, estimateLines, serviceContractEntries, userOperationPermissions } from "../../drizzle/schema";
+import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, dailyTasks, leaveRequests, advanceRequests, advanceRepayments, employees, employeeWorkStarts, expenses, notifications, complianceDocuments, payroll, payrollRuns, payrollSettlements, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, projectBudgets, projectBudgetLines, sales, stages, units, users, userInvitations, vendors, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems, inventoryItems, inventoryMovements, accounts, accountingDocuments, accountingDocumentLines, costItems, fixedAssets, fixedAssetDepreciation, companies, companyMembers, companyProfiles, cashAccounts, contractorContracts, estimates, estimateLines, serviceContractEntries, userOperationPermissions, projectWorkLocations } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { calculateEstimateLine } from "../../shared/estimateMath";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
+import { distanceMetersBetween } from "../../shared/geo";
 import { getSessionCookieOptions } from "../_core/cookies";
 import { calculateCertificateProgress, calculateDocumentCompleteness, calculateExpenseTotals, calculateFinancialSummaryTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, calculateStraightLineDepreciation, calculateParentBudgetMetrics, allocateAdministrativeAmount, canAccessProject, canWriteProject, projectHealthReasons, projectHealthStatus, projectNotificationTriggers } from "../erpCalculations";
 import { accountingTotals } from "../accountingCalculations";
@@ -1058,6 +1059,57 @@ export const erpRouter = router({
         await db.insert(auditLogs).values({ entityType: "stage", entityId: input.id, action: "progress_updated", actorId: ctx.user.id, afterJson: JSON.stringify({ actualProgress: input.actualProgress, status }) });
         return { success: true } as const;
       }),
+  }),
+
+  projectWorkLocations: router({
+    list: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional(), locationType: z.enum(["project", "administrative_office"]).optional() }).optional()).query(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      const locationType = input?.locationType;
+      if (input?.projectId) {
+        await assertProjectAccess(db, ctx, input.projectId);
+        return db.select().from(projectWorkLocations).where(and(eq(projectWorkLocations.projectId, input.projectId), ...(locationType ? [eq(projectWorkLocations.locationType, locationType)] : []))).orderBy(projectWorkLocations.createdAt);
+      }
+      if (locationType === "administrative_office") {
+        const companyId = await resolveActiveCompanyId(db, ctx);
+        return companyId ? db.select().from(projectWorkLocations).where(and(eq(projectWorkLocations.companyId, companyId), eq(projectWorkLocations.locationType, "administrative_office"))).orderBy(projectWorkLocations.createdAt) : [];
+      }
+      return [];
+    }),
+    create: protectedProcedure.input(z.object({ locationType: z.enum(["project", "administrative_office"]).default("project"), projectId: z.number().int().positive().optional(), companyId: z.number().int().positive().optional(), name: z.string().trim().min(2).max(255), latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180), allowedRadiusMeters: z.number().positive().max(10000).default(150) })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      if (input.locationType === "project") {
+        if (!input.projectId) throw new TRPCError({ code: "BAD_REQUEST", message: "موقع المشروع يتطلب اختيار المشروع" });
+        await assertProjectAccess(db, ctx, input.projectId);
+        await assertProjectWrite(db, ctx, input.projectId);
+      }
+      const companyId = input.companyId ?? await resolveActiveCompanyId(db, ctx);
+      if (input.locationType === "administrative_office" && !companyId) throw new TRPCError({ code: "BAD_REQUEST", message: "لا توجد شركة نشطة لربط المكتب الإداري" });
+      const result = await db.insert(projectWorkLocations).values({ companyId: companyId ?? null, projectId: input.projectId ?? null, locationType: input.locationType, name: input.name, latitude: input.latitude.toFixed(7), longitude: input.longitude.toFixed(7), allowedRadiusMeters: input.allowedRadiusMeters.toFixed(2), isActive: true, createdBy: ctx.user.id });
+      const id = Number(result[0].insertId);
+      await db.insert(auditLogs).values({ entityType: "projectWorkLocation", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
+      return { id };
+    }),
+    update: protectedProcedure.input(z.object({ id: z.number().int().positive(), name: z.string().trim().min(2).max(255), latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180), allowedRadiusMeters: z.number().positive().max(10000), isActive: z.boolean() })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      const current = (await db.select().from(projectWorkLocations).where(eq(projectWorkLocations.id, input.id)).limit(1))[0];
+      if (!current) throw new TRPCError({ code: "NOT_FOUND", message: "موقع العمل غير موجود" });
+      if (current.projectId) { await assertProjectAccess(db, ctx, current.projectId); await assertProjectWrite(db, ctx, current.projectId); }
+      else if (ctx.user.role !== "admin" && ctx.user.role !== "general_manager") throw new TRPCError({ code: "FORBIDDEN", message: "تعديل موقع المكتب الإداري متاح للإدارة فقط" });
+      await db.update(projectWorkLocations).set({ name: input.name, latitude: input.latitude.toFixed(7), longitude: input.longitude.toFixed(7), allowedRadiusMeters: input.allowedRadiusMeters.toFixed(2), isActive: input.isActive }).where(eq(projectWorkLocations.id, input.id));
+      await db.insert(auditLogs).values({ entityType: "projectWorkLocation", entityId: input.id, action: "updated", actorId: ctx.user.id, beforeJson: JSON.stringify(current), afterJson: JSON.stringify(input) });
+      return { success: true } as const;
+    }),
+    delete: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      const current = (await db.select().from(projectWorkLocations).where(eq(projectWorkLocations.id, input.id)).limit(1))[0];
+      if (!current) throw new TRPCError({ code: "NOT_FOUND", message: "موقع العمل غير موجود" });
+      if (current.projectId) await assertProjectAccess(db, ctx, current.projectId);
+      else if (ctx.user.role !== "admin" && ctx.user.role !== "general_manager") throw new TRPCError({ code: "FORBIDDEN", message: "الوصول إلى موقع المكتب الإداري متاح للإدارة فقط" });
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "حذف موقع العمل متاح للمالك فقط" });
+      await db.delete(projectWorkLocations).where(eq(projectWorkLocations.id, input.id));
+      await db.insert(auditLogs).values({ entityType: "projectWorkLocation", entityId: input.id, action: "deleted", actorId: ctx.user.id, beforeJson: JSON.stringify(current) });
+      return { success: true } as const;
+    }),
   }),
 
   dashboard: router({
@@ -2704,11 +2756,23 @@ export const erpRouter = router({
       const rows = await db.select().from(attendance).orderBy(attendance.attendanceDate);
       return allowed ? rows.filter((row) => allowed.has(row.projectId)) : rows;
     }),
-    create: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), stageId: z.number().int().positive().optional(), employeeCode: z.string().max(64).optional(), employeeName: z.string().trim().min(2), attendanceDate: z.string(), checkIn: z.string().max(16).optional(), checkOut: z.string().max(16).optional(), status: z.enum(["present", "absent", "late", "leave"]).default("present"), notes: z.string().max(1000).optional() })).mutation(async ({ ctx, input }) => {
+    create: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), stageId: z.number().int().positive().optional(), employeeCode: z.string().max(64).optional(), employeeName: z.string().trim().min(2), attendanceDate: z.string(), checkIn: z.string().max(16).optional(), checkOut: z.string().max(16).optional(), status: z.enum(["present", "absent", "late", "leave"]).default("present"), source: z.enum(["manual", "biometric", "mobile_location", "import"]).default("manual"), latitude: z.number().min(-90).max(90).optional(), longitude: z.number().min(-180).max(180).optional(), locationAccuracyMeters: z.number().positive().max(10000).optional(), locationCapturedAt: z.string().datetime().optional(), notes: z.string().max(1000).optional() })).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
       await assertProjectAccess(db, ctx, input.projectId);
       await assertProjectWrite(db, ctx, input.projectId);
-      const result = await db.insert(attendance).values({ projectId: input.projectId, stageId: input.stageId || null, employeeCode: input.employeeCode || null, employeeName: input.employeeName, attendanceDate: new Date(input.attendanceDate), checkIn: input.checkIn || null, checkOut: input.checkOut || null, status: input.status, notes: input.notes || null });
+      if ((input.source === "mobile_location") !== (input.latitude !== undefined && input.longitude !== undefined)) throw new TRPCError({ code: "BAD_REQUEST", message: "تسجيل الموقع يتطلب إحداثيات الحضور كاملة" });
+      const activeLocations = await db.select().from(projectWorkLocations).where(and(eq(projectWorkLocations.projectId, input.projectId), eq(projectWorkLocations.isActive, true)));
+      let locationDistanceMeters: number | undefined;
+      let locationMatchStatus: "not_checked" | "within_range" | "outside_range" | "no_site_configured" = "not_checked";
+      if (input.source === "mobile_location" && input.latitude !== undefined && input.longitude !== undefined) {
+        if (!activeLocations.length) locationMatchStatus = "no_site_configured";
+        else {
+          locationDistanceMeters = Math.min(...activeLocations.map((site) => distanceMetersBetween(input.latitude!, input.longitude!, Number(site.latitude), Number(site.longitude))));
+          const nearest = activeLocations.find((site) => Math.abs(distanceMetersBetween(input.latitude!, input.longitude!, Number(site.latitude), Number(site.longitude)) - locationDistanceMeters!) < 0.01);
+          locationMatchStatus = nearest && locationDistanceMeters <= Number(nearest.allowedRadiusMeters) ? "within_range" : "outside_range";
+        }
+      }
+      const result = await db.insert(attendance).values({ projectId: input.projectId, stageId: input.stageId || null, employeeCode: input.employeeCode || null, employeeName: input.employeeName, attendanceDate: new Date(input.attendanceDate), checkIn: input.checkIn || null, checkOut: input.checkOut || null, status: input.status, source: input.source, latitude: input.latitude?.toFixed(7) || null, longitude: input.longitude?.toFixed(7) || null, locationAccuracyMeters: input.locationAccuracyMeters?.toFixed(2) || null, locationDistanceMeters: locationDistanceMeters?.toFixed(2) || null, locationMatchStatus, locationCapturedAt: input.locationCapturedAt ? new Date(input.locationCapturedAt) : null, notes: input.notes || null });
       const id = Number(result[0].insertId);
       await db.insert(auditLogs).values({ entityType: "attendance", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
       return { id };

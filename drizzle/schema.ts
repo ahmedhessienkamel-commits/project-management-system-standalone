@@ -1,4 +1,5 @@
 import {
+  boolean,
   date,
   decimal,
   int,
@@ -103,6 +104,21 @@ export const projects = mysqlTable("projects", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
+
+export const projectWorkLocations = mysqlTable("projectWorkLocations", {
+  id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId"),
+  projectId: int("projectId"),
+  locationType: mysqlEnum("locationType", ["project", "administrative_office"]).default("project").notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  latitude: decimal("latitude", { precision: 10, scale: 7 }).notNull(),
+  longitude: decimal("longitude", { precision: 10, scale: 7 }).notNull(),
+  allowedRadiusMeters: decimal("allowedRadiusMeters", { precision: 10, scale: 2 }).notNull().default("150"),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdBy: int("createdBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({ projectIdIdx: index("projectWorkLocations_projectId_idx").on(table.projectId) }));
 
 export const projectMembers = mysqlTable("projectMembers", {
   id: int("id").autoincrement().primaryKey(),
@@ -611,6 +627,13 @@ export const attendance = mysqlTable("attendance", {
   checkIn: varchar("checkIn", { length: 16 }),
   checkOut: varchar("checkOut", { length: 16 }),
   status: mysqlEnum("status", ["present", "absent", "late", "leave"]).default("present").notNull(),
+  source: mysqlEnum("source", ["manual", "biometric", "mobile_location", "import"]).default("manual").notNull(),
+  latitude: decimal("latitude", { precision: 10, scale: 7 }),
+  longitude: decimal("longitude", { precision: 10, scale: 7 }),
+  locationAccuracyMeters: decimal("locationAccuracyMeters", { precision: 10, scale: 2 }),
+  locationDistanceMeters: decimal("locationDistanceMeters", { precision: 10, scale: 2 }),
+  locationMatchStatus: mysqlEnum("locationMatchStatus", ["not_checked", "within_range", "outside_range", "no_site_configured"]).default("not_checked").notNull(),
+  locationCapturedAt: timestamp("locationCapturedAt"),
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
