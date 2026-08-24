@@ -24,6 +24,7 @@ export default function Home() {
   const { user } = useAuth();
   const { data: summaries = [], isLoading } = trpc.erp.dashboard.summary.useQuery();
   const { data: companySummary } = trpc.erp.dashboard.companySummary.useQuery();
+  const { data: currentCompany } = trpc.erp.companies.current.useQuery();
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const selectedSummary = useMemo(() => summaries.find((item) => item.project.id === selectedProjectId) ?? summaries[0] ?? null, [summaries, selectedProjectId]);
   const { data: selectedDetailReport } = trpc.erp.reports.projectStageDetail.useQuery({ projectId: selectedSummary?.project.id ?? 0 }, { enabled: Boolean(selectedSummary?.project.id) });
@@ -68,14 +69,27 @@ export default function Home() {
     <DashboardLayout>
       <div dir="rtl" className="min-h-screen bg-[#f7f8fa] px-4 py-6 sm:px-8 lg:px-10">
         <div className="mx-auto max-w-7xl space-y-8">
-          <header className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div className="w-full lg:order-2 lg:w-72"><label className="mb-2 block text-xs font-semibold text-slate-500">المشروع المعروض في المؤشرات</label><select value={selectedSummary ? String(selectedSummary.project.id) : ""} onChange={(event) => setSelectedProjectId(Number(event.target.value))} className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-[#18324b] shadow-sm outline-none focus:border-[#b28a3b]"><option value="" disabled>اختر مشروعًا</option>{summaries.map((item) => <option key={item.project.id} value={item.project.id}>{item.project.name}</option>)}</select></div>
+          <header className="relative z-40 grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">
+            <div className="min-w-0">
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-2 rounded-full border border-[#d9c28a] bg-[#fffaf0] px-3 py-1.5 text-xs font-bold text-[#80601f]"><Landmark className="h-3.5 w-3.5" />{currentCompany?.company?.tradeName || currentCompany?.company?.legalName || "الشركة الحالية"}</span>
+                <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-500">لوحة قيادة تنفيذية</span>
+              </div>
             <div>
               <p className="mb-2 text-sm font-semibold tracking-wide text-[#b28a3b]">{user?.role === "general_manager" ? "واجهة المدير العام التنفيذية" : "مركز القيادة التنفيذية"}</p><div className="mb-2 inline-flex rounded-full border border-[#eadfca] bg-[#fcfaf5] px-3 py-1 text-xs font-semibold text-[#8b6b2f]">{user?.role === "general_manager" ? "عرض تقارير وموافقات فقط · واجهة مختلفة عن المحاسب ومدير المشاريع" : "لوحة متابعة تنفيذية"}</div>
               <h1 className="text-3xl font-bold tracking-tight text-[#18324b] sm:text-4xl">صورة المشروع في لحظة</h1>
               <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-500">اعرف من أول نظرة هل التنفيذ يسير وفق المخطط، وما سبب أي انحراف في الميزانية أو المراحل أو السيولة.</p>
             </div>
-            {user?.role !== "general_manager" && <Button onClick={() => setLocation("/projects")} className="gap-2 bg-[#18324b] hover:bg-[#244767]">
+            </div>
+            <div className="rounded-2xl border border-[#d9c28a] bg-white p-4 shadow-[0_10px_30px_rgba(24,50,75,0.08)]">
+              <div className="mb-2 flex items-center justify-between gap-3"><label htmlFor="dashboard-project" className="text-xs font-bold text-slate-500">المشروع المعروض في المؤشرات</label><span className="text-[11px] font-semibold text-[#b28a3b]">تغيير العرض</span></div>
+              <select id="dashboard-project" value={selectedSummary ? String(selectedSummary.project.id) : ""} onChange={(event) => setSelectedProjectId(Number(event.target.value))} className="h-12 w-full cursor-pointer rounded-xl border border-slate-200 bg-[#f8fafc] px-3 text-sm font-bold text-[#18324b] shadow-inner outline-none transition focus:border-[#b28a3b] focus:bg-white focus:ring-4 focus:ring-[#b28a3b]/10" aria-label="اختيار المشروع المعروض">
+                <option value="" disabled>{summaries.length ? "اختر مشروعًا" : "لا توجد مشاريع"}</option>
+                {summaries.map((item) => <option key={item.project.id} value={item.project.id}>{item.project.name}</option>)}
+              </select>
+              <p className="mt-2 text-[11px] text-slate-500">تتحدث العدادات والمقارنات والسيولة وتفاصيل المراحل تلقائيًا عند الاختيار.</p>
+            </div>
+            {user?.role !== "general_manager" && <Button onClick={() => setLocation("/projects")} className="hidden gap-2 bg-[#18324b] hover:bg-[#244767]">
               <Plus className="h-4 w-4" />
               إضافة مشروع
             </Button>}
