@@ -130,6 +130,7 @@ export const stages = mysqlTable("stages", {
   status: mysqlEnum("status", ["planned", "active", "completed", "delayed"]).default("planned").notNull(),
   plannedBudget: decimal("plannedBudget", { precision: 14, scale: 2 }).default("0").notNull(),
   plannedBudgetTaxBasis: mysqlEnum("plannedBudgetTaxBasis", ["pre_tax", "inclusive"]).default("pre_tax").notNull(),
+  budgetParentCostItemId: int("budgetParentCostItemId"),
   plannedStart: date("plannedStart"),
   plannedEnd: date("plannedEnd"),
   actualProgress: decimal("actualProgress", { precision: 5, scale: 2 }).default("0").notNull(),

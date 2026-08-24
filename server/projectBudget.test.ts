@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { calculateParentBudgetMetrics } from "./erpCalculations";
 
 const nimarLines = [
   { type: "revenue", amount: 15708739 },
@@ -17,6 +18,17 @@ const nimarLines = [
 ] as const;
 
 describe("Nimar project budget mapping", () => {
+  it("calculates excavation as an allocation inside the construction parent budget", () => {
+    expect(calculateParentBudgetMetrics({ plannedBudget: 7761780, children: [{ plannedBudget: 76911, actual: 0, paidAmount: 0, outstanding: 0 }] })).toMatchObject({ plannedBudget: 7761780, allocated: 76911, available: 7684869, actual: 0, allocationPct: 0.99 });
+  });
+
+  it("does not double count child stages when the parent budget is reported", () => {
+    const parent = calculateParentBudgetMetrics({ plannedBudget: 7761780, children: [{ plannedBudget: 76911, actual: 5000, paidAmount: 2000, outstanding: 3000 }] });
+    expect(parent.actual).toBe(5000);
+    expect(parent.plannedBudget).toBe(7761780);
+    expect(parent.available + parent.allocated).toBe(parent.plannedBudget);
+  });
+
   it("reconciles imported planned lines without treating them as actual transactions", () => {
     const revenue = nimarLines.filter((line) => line.type === "revenue").reduce((sum, line) => sum + line.amount, 0);
     const cost = nimarLines.filter((line) => line.type === "cost").reduce((sum, line) => sum + line.amount, 0);
