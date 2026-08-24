@@ -936,6 +936,8 @@ export const estimates = mysqlTable("estimates", {
   id: int("id").autoincrement().primaryKey(),
   companyId: int("companyId"),
   projectId: int("projectId"),
+  contractId: int("contractId"),
+  certificateId: int("certificateId"),
   code: varchar("code", { length: 64 }).notNull().unique(),
   name: varchar("name", { length: 255 }).notNull(),
   estimateType: mysqlEnum("estimateType", ["contracting", "development", "general"]).notNull().default("contracting"),
