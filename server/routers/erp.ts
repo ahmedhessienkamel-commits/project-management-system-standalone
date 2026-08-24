@@ -19,6 +19,7 @@ import { advanceOutstandingAmount, buildAdvanceSchedule, calculateAdvanceDeducti
 import { calculateWipBalance, buildWipClosingLines } from "../../shared/wip";
 import { canAssignTeamTasks } from "../../shared/taskPermissions";
 import { canViewPendingApproval } from "../../shared/approvalVisibility";
+import { canManageMeetings, isValidMeetingWindow } from "../../shared/meetingRules";
 import { calculateMaterialPlanning } from "../../shared/materialPlanning";
 import { sendApprovalEmail, sendInvitationEmail, sendTaskReminderEmail } from "../email";
 import { buildExecutiveSnapshot } from "../executiveDigest";
@@ -3624,8 +3625,8 @@ export const erpRouter = router({
         return rows.map((meeting) => ({ ...meeting, participants: participantRows.filter((row) => row.meetingId === meeting.id).map((row) => userMap.get(row.userId)).filter(Boolean) }));
       }),
       create: protectedProcedure.input(z.object({ title: z.string().trim().min(2).max(255), description: z.string().trim().max(5000).optional(), scheduledStart: z.coerce.date(), scheduledEnd: z.coerce.date(), meetingLink: z.string().url().max(2000).optional(), participantIds: z.array(z.number().int().positive()).default([]) })).mutation(async ({ ctx, input }) => {
-        if (ctx.user.role !== "admin" && ctx.user.role !== "general_manager") throw new TRPCError({ code: "FORBIDDEN", message: "إنشاء الاجتماعات واختيار الفريق متاح للمدير فقط" });
-        if (input.scheduledEnd <= input.scheduledStart) throw new TRPCError({ code: "BAD_REQUEST", message: "يجب أن يكون وقت نهاية الاجتماع بعد وقت البداية" });
+        if (!canManageMeetings(ctx.user.role)) throw new TRPCError({ code: "FORBIDDEN", message: "إنشاء الاجتماعات واختيار الفريق متاح للمدير العام فقط" });
+        if (!isValidMeetingWindow(input.scheduledStart, input.scheduledEnd)) throw new TRPCError({ code: "BAD_REQUEST", message: "يجب أن يكون وقت نهاية الاجتماع بعد وقت البداية" });
         const db = requireDb(await getDb());
         const companyId = await resolveActiveCompanyId(db, ctx);
         const result = await db.insert(meetings).values({ companyId, title: input.title, description: input.description || null, scheduledStart: input.scheduledStart, scheduledEnd: input.scheduledEnd, meetingLink: input.meetingLink || null, createdBy: ctx.user.id });
@@ -3635,7 +3636,7 @@ export const erpRouter = router({
         return { id: meetingId };
       }),
       updateStatus: protectedProcedure.input(z.object({ id: z.number().int().positive(), status: z.enum(["scheduled", "active", "completed", "archived", "cancelled"]) })).mutation(async ({ ctx, input }) => {
-        if (ctx.user.role !== "admin" && ctx.user.role !== "general_manager") throw new TRPCError({ code: "FORBIDDEN", message: "تعديل حالة الاجتماع متاح للمدير فقط" });
+        if (!canManageMeetings(ctx.user.role)) throw new TRPCError({ code: "FORBIDDEN", message: "تعديل حالة الاجتماع متاح للمدير العام فقط" });
         const db = requireDb(await getDb());
         await db.update(meetings).set({ status: input.status, archivedAt: input.status === "archived" ? new Date() : null }).where(eq(meetings.id, input.id));
         await db.insert(auditLogs).values({ entityType: "meeting", entityId: input.id, action: `status_${input.status}`, actorId: ctx.user.id, afterJson: JSON.stringify({ status: input.status }) });
