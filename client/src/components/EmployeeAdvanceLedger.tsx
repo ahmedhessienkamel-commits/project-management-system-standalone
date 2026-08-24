@@ -29,6 +29,9 @@ export function EmployeeAdvanceLedger({ employees, me, employeesLoading = false,
   const [beneficiaryType, setBeneficiaryType] = useState<"employee" | "worker">("employee");
   const [employeeId, setEmployeeId] = useState("");
   const [employeeSearch, setEmployeeSearch] = useState("");
+  const [createBeneficiaryType, setCreateBeneficiaryType] = useState<"employee" | "worker">("employee");
+  const [createEmployeeId, setCreateEmployeeId] = useState("");
+  const [createEmployeeSearch, setCreateEmployeeSearch] = useState("");
   const [advanceSearch, setAdvanceSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [from, setFrom] = useState("");
@@ -44,6 +47,13 @@ export function EmployeeAdvanceLedger({ employees, me, employeesLoading = false,
     return filterEmployeesBySearch(eligibleEmployees, query);
   }, [employees, employeeSearch, beneficiaryType]);
 
+  const createFilteredEmployees = useMemo(() => {
+    const query = createEmployeeSearch.trim().toLowerCase();
+    const eligibleEmployees = filterEmployeesByBeneficiaryType(employees, createBeneficiaryType);
+    if (!query) return eligibleEmployees;
+    return filterEmployeesBySearch(eligibleEmployees, query);
+  }, [employees, createEmployeeSearch, createBeneficiaryType]);
+
   const rows = useMemo(() => (statement.data?.advances || []).filter((advance: any) => {
     const text = `${advance.reason || ""} ${advance.status || ""} ${advance.amount || ""}`.toLowerCase();
     const date = String(advance.createdAt || "").slice(0, 10);
@@ -54,8 +64,8 @@ export function EmployeeAdvanceLedger({ employees, me, employeesLoading = false,
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
-    if (!employeeId || !form.amount || !form.reason.trim()) return;
-    create.mutate({ employeeId: Number(employeeId), amount: Number(form.amount), reason: form.reason.trim(), repaymentMode: form.repaymentMode, repaymentStartMonth: Number(form.repaymentStartMonth), repaymentStartYear: Number(form.repaymentStartYear), installmentCount: form.repaymentMode === "installments" ? Number(form.installmentCount) : 1 });
+    if (!createEmployeeId || !form.amount || !form.reason.trim()) return;
+    create.mutate({ employeeId: Number(createEmployeeId), amount: Number(form.amount), reason: form.reason.trim(), repaymentMode: form.repaymentMode, repaymentStartMonth: Number(form.repaymentStartMonth), repaymentStartYear: Number(form.repaymentStartYear), installmentCount: form.repaymentMode === "installments" ? Number(form.installmentCount) : 1 });
   };
 
   return <Card className="border-0 shadow-sm">
@@ -90,14 +100,17 @@ export function EmployeeAdvanceLedger({ employees, me, employeesLoading = false,
       </div>
 
       <form className="grid gap-3 rounded-2xl border border-amber-100 bg-amber-50/40 p-4 md:grid-cols-4" onSubmit={submit}>
-        <div className="md:col-span-4"><h3 className="font-bold text-[#18324b]">إنشاء سلفة جديدة</h3><p className="mt-1 text-xs text-slate-500">{employeeId ? `سيتم تسجيل السلفة للمستفيد المختار باعتباره ${beneficiaryType === "worker" ? "أجيرًا" : "موظف شركة"}.` : `اختر ${beneficiaryType === "worker" ? "الأجير برقم الإقامة" : "موظف الشركة"} أولًا، ثم حدّد طريقة السداد وشهر بداية الخصم قبل إرسال السلفة للاعتماد.`}</p></div>
+        <div className="md:col-span-4"><h3 className="font-bold text-[#18324b]">إنشاء سلفة جديدة</h3><p className="mt-1 text-xs text-slate-500">{createEmployeeId ? `سيتم تسجيل السلفة للمستفيد المختار باعتباره ${createBeneficiaryType === "worker" ? "أجيرًا" : "موظف شركة"}.` : `اختر المستفيد من داخل هذا النموذج أولًا، ثم حدّد طريقة السداد وشهر بداية الخصم قبل إرسال السلفة للاعتماد.`}</p></div>
+        <div className="space-y-1.5"><Label>نوع المستفيد في السلفة</Label><select value={createBeneficiaryType} onChange={(event) => { setCreateBeneficiaryType(event.target.value as "employee" | "worker"); setCreateEmployeeId(""); setCreateEmployeeSearch(""); }} className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"><option value="employee">موظف شركة</option><option value="worker">موظف أجير</option></select></div>
+        <div className="relative space-y-1.5"><Label>{createBeneficiaryType === "worker" ? "بحث برقم الإقامة أو الاسم" : "بحث بالاسم أو الكود أو الهوية"}</Label><Search className="absolute right-3 top-9 h-4 w-4 text-slate-400" /><Input className="pr-9" value={createEmployeeSearch} onChange={(event) => setCreateEmployeeSearch(event.target.value)} placeholder={createBeneficiaryType === "worker" ? "رقم إقامة الأجير" : "اسم أو كود الموظف"} /></div>
+        <div className="space-y-1.5 md:col-span-2"><Label>{createBeneficiaryType === "worker" ? "الأجير المستفيد" : "الموظف المستفيد"}</Label><select value={createEmployeeId} onChange={(event) => setCreateEmployeeId(event.target.value)} className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"><option value="">{createBeneficiaryType === "worker" ? "اختر الأجير" : "اختر موظف الشركة"}</option>{createFilteredEmployees.map((employee) => <option key={employee.id} value={employee.id}>{employee.fullName} — {createBeneficiaryType === "worker" ? `رقم الإقامة: ${employee.nationalId || "غير مسجل"}` : `الكود: ${employee.employeeCode || "غير مسجل"}`}</option>)}</select><p className="text-[11px] text-slate-500">{createBeneficiaryType === "worker" ? "البحث هنا يستخدم رقم الإقامة المسجل في دليل الأجراء." : "هذا الاختيار مستقل عن فلتر كشف الحساب أعلاه."}</p>{!employeesLoading && !employeesError && createFilteredEmployees.length === 0 ? <p className="mt-1 text-[11px] text-amber-700">لا توجد سجلات مطابقة. أضف المستفيد الحقيقي من دليل الموظفين.</p> : null}</div>
         <div className="space-y-1.5"><Label>قيمة السلفة</Label><Input type="number" min="1" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} required /></div>
         <div className="space-y-1.5"><Label>نمط الخصم</Label><select value={form.repaymentMode} onChange={(event) => setForm({ ...form, repaymentMode: event.target.value as "single" | "installments", installmentCount: event.target.value === "installments" ? "2" : "1" })} className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"><option value="single">خصم كامل من مسير واحد</option><option value="installments">تقسيط على عدة مسيرات</option></select></div>
         <div className="space-y-1.5"><Label>شهر بدء الخصم</Label><select value={form.repaymentStartMonth} onChange={(event) => setForm({ ...form, repaymentStartMonth: event.target.value })} className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm">{months.map((month, index) => <option key={month} value={index + 1}>{month}</option>)}</select></div>
         <div className="space-y-1.5"><Label>سنة البدء</Label><Input type="number" min="2024" value={form.repaymentStartYear} onChange={(event) => setForm({ ...form, repaymentStartYear: event.target.value })} /></div>
         {form.repaymentMode === "installments" && <div className="space-y-1.5"><Label>عدد الأقساط</Label><Input type="number" min="2" max="120" value={form.installmentCount} onChange={(event) => setForm({ ...form, installmentCount: event.target.value })} /></div>}
         <div className="space-y-1.5 md:col-span-2"><Label>سبب السلفة</Label><Input value={form.reason} onChange={(event) => setForm({ ...form, reason: event.target.value })} required placeholder="مثل: سلفة طارئة للموظف" /></div>
-        <div className="flex items-end"><Button className="w-full bg-[#18324b]" disabled={create.isPending || !employeeId}>{create.isPending ? "جارٍ حفظ السلفة..." : "إرسال سلفة للاعتماد"}</Button></div>
+        <div className="flex items-end"><Button className="w-full bg-[#18324b]" disabled={create.isPending || !createEmployeeId}>{create.isPending ? "جارٍ حفظ السلفة..." : "إرسال سلفة للاعتماد"}</Button></div>
       </form>
 
       {!employeeId ? <p className="rounded-xl border border-dashed border-slate-200 py-8 text-center text-sm text-slate-500">اختر الموظف لعرض كشف الحساب والأقساط المسجلة.</p> : <>
