@@ -1018,7 +1018,7 @@ export const erpRouter = router({
       });
     }),
     create: protectedProcedure
-      .input(z.object({ projectId: z.number().int().positive(), code: z.string().trim().min(1).max(64), name: z.string().trim().min(2).max(255), plannedBudget: z.number().nonnegative(), plannedBudgetTaxBasis: z.enum(["pre_tax", "inclusive"]).default("pre_tax"), budgetParentCostItemId: z.number().int().positive().nullable().optional(), plannedStart: z.string().optional(), plannedEnd: z.string().optional() }))
+      .input(z.object({ projectId: z.number().int().positive(), code: z.string().trim().min(1).max(64), name: z.string().trim().min(2).max(255), plannedBudget: z.number().nonnegative(), plannedBudgetTaxBasis: z.enum(["pre_tax", "inclusive"]).default("pre_tax"), budgetParentCostItemId: z.number().int().positive().nullable().optional(), parentStageId: z.number().int().positive().nullable().optional(), plannedStart: z.string().optional(), plannedEnd: z.string().optional() }))
       .mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
         await assertProjectAccess(db, ctx, input.projectId);
@@ -1026,13 +1026,17 @@ export const erpRouter = router({
           const parent = (await db.select().from(costItems).where(eq(costItems.id, input.budgetParentCostItemId)).limit(1))[0];
           if (!parent || !parent.isActive || (parent.projectId && parent.projectId !== input.projectId)) throw new TRPCError({ code: "BAD_REQUEST", message: "اختر حسابًا أبًا نشطًا ومتاحًا للمشروع" });
         }
-        const result = await db.insert(stages).values({ projectId: input.projectId, code: input.code, name: input.name, plannedBudget: input.plannedBudget.toFixed(2), plannedBudgetTaxBasis: input.plannedBudgetTaxBasis, budgetParentCostItemId: input.budgetParentCostItemId ?? null, plannedStart: input.plannedStart ? new Date(input.plannedStart) : null, plannedEnd: input.plannedEnd ? new Date(input.plannedEnd) : null, actualProgress: "0", status: "planned" });
+        if (input.parentStageId) {
+          const parentStage = (await db.select({ id: stages.id, projectId: stages.projectId }).from(stages).where(eq(stages.id, input.parentStageId)).limit(1))[0];
+          if (!parentStage || parentStage.projectId !== input.projectId) throw new TRPCError({ code: "BAD_REQUEST", message: "اختر مرحلة رئيسية من نفس المشروع" });
+        }
+        const result = await db.insert(stages).values({ projectId: input.projectId, code: input.code, name: input.name, plannedBudget: input.plannedBudget.toFixed(2), plannedBudgetTaxBasis: input.plannedBudgetTaxBasis, budgetParentCostItemId: input.budgetParentCostItemId ?? null, parentStageId: input.parentStageId ?? null, plannedStart: input.plannedStart ? new Date(input.plannedStart) : null, plannedEnd: input.plannedEnd ? new Date(input.plannedEnd) : null, actualProgress: "0", status: "planned" });
         const stageId = Number(result[0].insertId);
         await db.insert(auditLogs).values({ entityType: "stage", entityId: stageId, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
         return { id: stageId };
       }),
     updateSchedule: protectedProcedure
-      .input(z.object({ id: z.number().int().positive(), code: z.string().trim().min(1).max(64), name: z.string().trim().min(2).max(255), plannedBudget: z.number().nonnegative(), plannedBudgetTaxBasis: z.enum(["pre_tax", "inclusive"]).default("pre_tax"), budgetParentCostItemId: z.number().int().positive().nullable().optional(), plannedStart: z.string().optional(), plannedEnd: z.string().optional(), actualProgress: z.number().min(0).max(100), status: z.enum(["planned", "active", "completed", "delayed"]) }))
+      .input(z.object({ id: z.number().int().positive(), code: z.string().trim().min(1).max(64), name: z.string().trim().min(2).max(255), plannedBudget: z.number().nonnegative(), plannedBudgetTaxBasis: z.enum(["pre_tax", "inclusive"]).default("pre_tax"), budgetParentCostItemId: z.number().int().positive().nullable().optional(), parentStageId: z.number().int().positive().nullable().optional(), plannedStart: z.string().optional(), plannedEnd: z.string().optional(), actualProgress: z.number().min(0).max(100), status: z.enum(["planned", "active", "completed", "delayed"]) }))
       .mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
         const before = (await db.select().from(stages).where(eq(stages.id, input.id)).limit(1))[0];
@@ -1043,7 +1047,12 @@ export const erpRouter = router({
           const parent = (await db.select().from(costItems).where(eq(costItems.id, input.budgetParentCostItemId)).limit(1))[0];
           if (!parent || !parent.isActive || (parent.projectId && parent.projectId !== before.projectId)) throw new TRPCError({ code: "BAD_REQUEST", message: "اختر حسابًا أبًا نشطًا ومتاحًا للمشروع" });
         }
-        await db.update(stages).set({ code: input.code, name: input.name, plannedBudget: input.plannedBudget.toFixed(2), plannedBudgetTaxBasis: input.plannedBudgetTaxBasis, budgetParentCostItemId: input.budgetParentCostItemId ?? null, plannedStart: input.plannedStart ? new Date(input.plannedStart) : null, plannedEnd: input.plannedEnd ? new Date(input.plannedEnd) : null, actualProgress: input.actualProgress.toFixed(2), status: input.status }).where(eq(stages.id, input.id));
+        if (input.parentStageId) {
+          if (input.parentStageId === input.id) throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن أن تكون المرحلة أبًا لنفسها" });
+          const parentStage = (await db.select({ id: stages.id, projectId: stages.projectId }).from(stages).where(eq(stages.id, input.parentStageId)).limit(1))[0];
+          if (!parentStage || parentStage.projectId !== before.projectId) throw new TRPCError({ code: "BAD_REQUEST", message: "اختر مرحلة رئيسية من نفس المشروع" });
+        }
+        await db.update(stages).set({ code: input.code, name: input.name, plannedBudget: input.plannedBudget.toFixed(2), plannedBudgetTaxBasis: input.plannedBudgetTaxBasis, budgetParentCostItemId: input.budgetParentCostItemId ?? null, parentStageId: input.parentStageId ?? null, plannedStart: input.plannedStart ? new Date(input.plannedStart) : null, plannedEnd: input.plannedEnd ? new Date(input.plannedEnd) : null, actualProgress: input.actualProgress.toFixed(2), status: input.status }).where(eq(stages.id, input.id));
         await db.insert(auditLogs).values({ entityType: "stage", entityId: input.id, action: "schedule_updated", actorId: ctx.user.id, beforeJson: JSON.stringify(before), afterJson: JSON.stringify(input) });
         return { success: true } as const;
       }),
@@ -2942,8 +2951,10 @@ export const erpRouter = router({
             const supplier = (await db.select({ id: vendors.id, name: vendors.name }).from(vendors).where(eq(vendors.id, input.supplierId)).limit(1))[0];
             if (!supplier) throw new TRPCError({ code: "NOT_FOUND", message: "المورد غير موجود" });
             if ((input.settlementType || "direct") === "invoice" && input.purchaseInvoiceId) {
-              const purchaseInvoice = (await db.select({ id: accountingDocuments.id, partyName: accountingDocuments.partyName, documentType: accountingDocuments.documentType }).from(accountingDocuments).where(eq(accountingDocuments.id, input.purchaseInvoiceId)).limit(1))[0];
+              const purchaseInvoice = (await db.select({ id: accountingDocuments.id, partyName: accountingDocuments.partyName, documentType: accountingDocuments.documentType, projectId: accountingDocuments.projectId }).from(accountingDocuments).where(eq(accountingDocuments.id, input.purchaseInvoiceId)).limit(1))[0];
               if (!purchaseInvoice || purchaseInvoice.documentType !== "purchase_invoice" || purchaseInvoice.partyName !== supplier.name) throw new TRPCError({ code: "BAD_REQUEST", message: "فاتورة الشراء لا تخص المورد المحدد" });
+              if (input.lines.some((line) => line.costItemId || line.stageId)) throw new TRPCError({ code: "BAD_REQUEST", message: "بند التكلفة والمرحلة يُحددان في فاتورة الشراء، ولا يُكرران في سند سداد الفاتورة" });
+              if (input.projectId && purchaseInvoice.projectId && input.projectId !== purchaseInvoice.projectId) throw new TRPCError({ code: "BAD_REQUEST", message: "المشروع في سند السداد يجب أن يطابق مشروع فاتورة الشراء" });
             }
           }
           if (input.contractorId) {
@@ -3139,14 +3150,14 @@ export const erpRouter = router({
         const rows = await loadAccountingLedger(db, input || {});
         const ledgerRevenue = rows.filter((row) => row.account?.accountType === "revenue").reduce((sum, row) => sum + Number(row.credit) - Number(row.debit), 0);
         const ledgerExpenses = rows.filter((row) => row.account?.accountType === "expense").reduce((sum, row) => sum + Number(row.debit) - Number(row.credit), 0);
-        const [salesRows, expenseRows, payrollRows, certificateRows, voucherRows] = await Promise.all([db.select().from(sales), db.select().from(expenses), db.select().from(payroll), db.select().from(certificates), db.select().from(accountingDocuments).where(eq(accountingDocuments.documentType, "payment_voucher"))]);
+        const [salesRows, expenseRows, payrollRows, certificateRows, purchaseInvoiceRows] = await Promise.all([db.select().from(sales), db.select().from(expenses), db.select().from(payroll), db.select().from(certificates), db.select().from(accountingDocuments).where(eq(accountingDocuments.documentType, "purchase_invoice"))]);
         const from = input?.from ? new Date(input.from).getTime() : Number.NEGATIVE_INFINITY;
         const to = input?.to ? new Date(input.to).getTime() + 86400000 : Number.POSITIVE_INFINITY;
         const inRange = (date: Date | null) => !date || (new Date(date).getTime() >= from && new Date(date).getTime() <= to);
         const scoped = <T extends { projectId?: number | null; status?: string; saleDate?: Date | null; expenseDate?: Date | null; createdAt?: Date | null; certificateDate?: Date | null; documentDate?: Date | null }>(rowsToScope: T[], dateKey: keyof T) => rowsToScope.filter((row) => (!input?.projectId || row.projectId === input.projectId) && inRange((row[dateKey] as Date | null | undefined) || null));
         const operationalRevenue = scoped(salesRows, "saleDate").filter((row) => row.status === "confirmed").reduce((sum, row) => sum + Number(row.recognizedRevenue || 0), 0);
         const offPlanClaimCertificatesTotal = scoped(certificateRows, "certificateDate").filter((row) => !row.vendorId && !row.contractId && ["submitted", "approved", "paid"].includes(row.status)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
-        const operationalExpenses = scoped(expenseRows, "expenseDate").filter((row) => row.classification !== "administrative" && ["approved", "posted"].includes(row.status)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) + scoped(payrollRows, "createdAt").filter((row) => row.classification !== "administrative" && ["approved", "posted", "paid"].includes(row.status)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) + scoped(certificateRows, "certificateDate").filter((row) => Boolean(row.vendorId || row.contractId) && ["approved", "paid"].includes(row.status)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) + scoped(voucherRows, "documentDate").filter((row) => row.status === "posted").reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+        const operationalExpenses = scoped(expenseRows, "expenseDate").filter((row) => row.classification !== "administrative" && ["approved", "posted"].includes(row.status)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) + scoped(payrollRows, "createdAt").filter((row) => row.classification !== "administrative" && ["approved", "posted", "paid"].includes(row.status)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) + scoped(certificateRows, "certificateDate").filter((row) => Boolean(row.vendorId || row.contractId) && ["approved", "paid"].includes(row.status)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) + scoped(purchaseInvoiceRows, "documentDate").filter((row) => row.status === "posted").reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
         const income = Math.abs(ledgerRevenue) > 0.001 ? ledgerRevenue : operationalRevenue;
         const expensesTotal = Math.abs(ledgerExpenses) > 0.001 ? ledgerExpenses : operationalExpenses;
         return { revenue: income, expenses: expensesTotal, netIncome: income - expensesTotal, offPlanClaimCertificatesTotal, revenueRows: rows.filter((row) => row.account?.accountType === "revenue"), expenseRows: rows.filter((row) => row.account?.accountType === "expense") };
