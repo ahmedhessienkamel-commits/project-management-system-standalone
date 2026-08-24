@@ -2,6 +2,7 @@ export type EmployeeSearchRecord = {
   fullName?: string | null;
   employeeCode?: string | null;
   nationalId?: string | null;
+  employmentType?: "employee" | "worker" | null;
 };
 
 export function matchesEmployeeSearch(employee: EmployeeSearchRecord, query: string): boolean {
@@ -12,4 +13,8 @@ export function matchesEmployeeSearch(employee: EmployeeSearchRecord, query: str
 
 export function filterEmployeesBySearch<T extends EmployeeSearchRecord>(employees: T[], query: string): T[] {
   return employees.filter((employee) => matchesEmployeeSearch(employee, query));
+}
+
+export function filterEmployeesByBeneficiaryType<T extends EmployeeSearchRecord>(employees: T[], beneficiaryType: "employee" | "worker"): T[] {
+  return employees.filter((employee) => beneficiaryType === "worker" ? employee.employmentType === "worker" : employee.employmentType !== "worker");
 }
