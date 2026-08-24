@@ -707,6 +707,16 @@ export const erpRouter = router({
       await notifyTaskAssignee(db, { employeeId: task.assignedEmployeeId, taskId: input.id, title: `تحديث حالة المهمة: ${task.title}`, message: `تم تحديث حالة المهمة «${task.title}» إلى: ${input.status}.` });
       return { success: true } as const;
     }),
+    remove: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      if (ctx.user.role !== "admin" && ctx.user.role !== "general_manager") throw new TRPCError({ code: "FORBIDDEN", message: "حذف المهام متاح للمالك والمدير العام فقط" });
+      await assertOperationPermission(db, ctx, "delete");
+      const task = (await db.select({ id: dailyTasks.id, title: dailyTasks.title }).from(dailyTasks).where(eq(dailyTasks.id, input.id)).limit(1))[0];
+      if (!task) throw new TRPCError({ code: "NOT_FOUND", message: "المهمة غير موجودة" });
+      await db.delete(dailyTasks).where(eq(dailyTasks.id, input.id));
+      await db.insert(auditLogs).values({ entityType: "daily_task", entityId: input.id, action: "deleted", actorId: ctx.user.id, afterJson: JSON.stringify({ title: task.title }) });
+      return { success: true } as const;
+    }),
   }),
   users: router({
     list: adminProcedure.query(async () => {
@@ -2937,6 +2947,7 @@ export const erpRouter = router({
         const db = requireDb(await getDb());
         const activeCompanyId = await resolveActiveCompanyId(db, ctx);
         if (!activeCompanyId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "لا توجد شركة نشطة لحفظ المستند" });
+        if (["sales_invoice", "purchase_invoice", "payment_voucher"].includes(input.documentType) && !input.documentDate) throw new TRPCError({ code: "BAD_REQUEST", message: "تاريخ المستند إلزامي للفواتير وسندات الصرف" });
         const accountingOperation = ({ sales_invoice: "sales_invoice", purchase_invoice: "purchase_invoice", purchase_receipt: "inventory_receipt", journal_entry: "edit", payment_voucher: "payment_voucher", receipt_voucher: "receipt_voucher", quotation: "edit", purchase_order: "purchase_request", credit_note: "edit" } as const)[input.documentType];
         await assertOperationPermission(db, ctx, accountingOperation);
         if (input.projectId) await assertProjectWrite(db, ctx, input.projectId);

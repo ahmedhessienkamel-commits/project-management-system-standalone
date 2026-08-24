@@ -248,7 +248,7 @@ function DashboardLayoutContent({
 
   return (
     <>
-      <div className="relative" ref={sidebarRef}>
+      <div className="relative shrink-0" ref={sidebarRef}>
         <Sidebar
           collapsible="icon"
           className="border-r-0"
@@ -372,7 +372,7 @@ function DashboardLayoutContent({
             {!isOperationalOnly && <Button variant="outline" size="icon" aria-label="فتح التنبيهات والموافقات" title={unreadNotifications ? `${unreadNotifications} إشعار غير مقروء` : "التنبيهات والموافقات"} onClick={() => setLocation("/approvals")} className="relative border-slate-200"><Bell className="h-4 w-4 text-[#b28a3b]" />{unreadNotifications > 0 && <Badge className="absolute -right-2 -top-2 min-w-5 justify-center rounded-full bg-rose-600 px-1 text-[10px] text-white">{unreadNotifications > 99 ? "99+" : unreadNotifications}</Badge>}</Button>}
           </div>
         </div>
-        <main className="flex-1 p-4">{children}</main>
+        <main className="min-w-0 flex-1 overflow-x-hidden p-4">{children}</main>
       </SidebarInset>
     </>
   );
