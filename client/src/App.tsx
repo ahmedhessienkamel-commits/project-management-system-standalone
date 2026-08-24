@@ -28,6 +28,8 @@ import Inventory from "./pages/Inventory";
 import MyRequests from "./pages/MyRequests";
 import PasswordAuth, { ResetPassword } from "./pages/PasswordAuth";
 import AccountSecurity from "./pages/AccountSecurity";
+import Meetings from "./pages/Meetings";
+import Marketing from "./pages/Marketing";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { canAccessRoute, defaultRouteForRole } from "@/lib/roleAccess";
 import { useEffect } from "react";
@@ -82,6 +84,8 @@ function Router() {
       <Route path={"/attendance"} component={Operations} />
       <Route path={"/custody"} component={Operations} />
       <Route path={"/tasks"} component={Tasks} />
+      <Route path={"/meetings"} component={Meetings} />
+      <Route path={"/marketing"} component={Marketing} />
       <Route path={"/my-requests"} component={MyRequests} />
       <Route path={"/approvals"} component={Approvals} />
       <Route path={"/supplier-statements"} component={StandaloneFinancialReport} />

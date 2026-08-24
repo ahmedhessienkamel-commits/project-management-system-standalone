@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray, or } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, dailyTasks, leaveRequests, advanceRequests, advanceRepayments, employees, employeeWorkStarts, expenses, notifications, complianceDocuments, payroll, payrollRuns, payrollSettlements, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, projectBudgets, projectBudgetLines, sales, stages, units, users, userInvitations, vendors, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems, inventoryItems, inventoryMovements, accounts, accountingDocuments, accountingDocumentLines, costItems, fixedAssets, fixedAssetDepreciation, companies, companyMembers, companyProfiles, cashAccounts, contractorContracts, estimates, estimateLines, serviceContractEntries, userOperationPermissions, projectWorkLocations } from "../../drizzle/schema";
+import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, dailyTasks, leaveRequests, advanceRequests, advanceRepayments, employees, employeeWorkStarts, expenses, notifications, complianceDocuments, payroll, payrollRuns, payrollSettlements, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, projectBudgets, projectBudgetLines, sales, stages, units, users, userInvitations, vendors, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems, inventoryItems, inventoryMovements, accounts, accountingDocuments, accountingDocumentLines, costItems, fixedAssets, fixedAssetDepreciation, companies, companyMembers, companyProfiles, cashAccounts, contractorContracts, estimates, estimateLines, serviceContractEntries, userOperationPermissions, projectWorkLocations, meetings, meetingParticipants, marketingSites, marketingAssets } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { calculateEstimateLine } from "../../shared/estimateMath";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
@@ -18,6 +18,7 @@ import { payrollRunPaymentStatus } from "../../shared/payrollRun";
 import { advanceOutstandingAmount, buildAdvanceSchedule, calculateAdvanceDeduction, calculatePayrollAdvanceAccrualAmounts, isRepaymentDue } from "../../shared/advanceRepayment";
 import { calculateWipBalance, buildWipClosingLines } from "../../shared/wip";
 import { canAssignTeamTasks } from "../../shared/taskPermissions";
+import { canViewPendingApproval } from "../../shared/approvalVisibility";
 import { calculateMaterialPlanning } from "../../shared/materialPlanning";
 import { sendApprovalEmail, sendInvitationEmail, sendTaskReminderEmail } from "../email";
 import { buildExecutiveSnapshot } from "../executiveDigest";
@@ -1935,7 +1936,7 @@ export const erpRouter = router({
         const [requests, projectRows, userRows, memberRows, certificateRows, payrollRows, payrollRunRows, requisitionRows, documentRows, saleRows] = await Promise.all([
           db.select().from(approvalRequests).where(eq(approvalRequests.status, "pending")).orderBy(approvalRequests.createdAt),
           companyId ? db.select({ id: projects.id, name: projects.name }).from(projects).where(eq(projects.companyId, companyId)) : db.select({ id: projects.id, name: projects.name }).from(projects),
-          db.select({ id: users.id, name: users.name, email: users.email, role: users.role }).from(users),
+          db.select({ id: users.id, name: users.name, email: users.email, role: users.role, jobTitle: users.jobTitle }).from(users),
           db.select({ projectId: projectMembers.projectId, userId: projectMembers.userId, projectRole: projectMembers.projectRole }).from(projectMembers),
           db.select({ id: certificates.id, certificateNumber: certificates.certificateNumber, projectId: certificates.projectId, description: certificates.description, totalAmount: certificates.totalAmount, certificateDate: certificates.certificateDate, createdBy: certificates.createdBy }).from(certificates),
           db.select({ id: payroll.id, month: payroll.month, year: payroll.year, employeeName: payroll.employeeName, totalAmount: payroll.totalAmount, createdAt: payroll.createdAt, createdBy: payroll.createdBy }).from(payroll),
@@ -1962,7 +1963,13 @@ export const erpRouter = router({
           if (request.approvalStage === "general_manager") return userRows.filter((user) => user.role === "general_manager");
           return userRows.filter((user) => user.role === "admin");
         };
-        const visible = allowed ? requests.filter((row) => row.projectId === null || allowed.has(row.projectId)) : requests;
+        const projectVisible = allowed ? requests.filter((row) => row.projectId === null || allowed.has(row.projectId)) : requests;
+        const visible = projectVisible.filter((request) => canViewPendingApproval({
+          viewerId: ctx.user.id,
+          viewerRole: ctx.user.role,
+          requesterId: request.requestedBy,
+          recipientIds: recipientsFor(request).map((user) => user.id),
+        }));
         return visible.map((request) => {
           const certificate = request.entityType === "certificate" ? certificateMap.get(request.entityId) : undefined;
           const payrollRow = request.entityType === "payroll" ? payrollMap.get(request.entityId) : undefined;
@@ -1981,7 +1988,7 @@ export const erpRouter = router({
           const workflowStages = workflow.map((step) => ({ ...step, status: step.stage === request.approvalStage ? "current" as const : request.stageOrder && step.order < request.stageOrder ? "approved" as const : "upcoming" as const, responsibleUsers: recipientsFor({ ...request, approvalStage: step.stage }) }));
           const recordLabel = `${title} ${description}`.includes("تجريبي") ? "سجل تجريبي" : "مستند فعلي";
           const sourceExists = Boolean(source);
-          return { ...request, title, typeLabel, description, amount: Number(certificate?.totalAmount || payrollRun?.totalAmount || payrollRow?.totalAmount || document?.totalAmount || sale?.totalAmount || 0), documentDate: certificate?.certificateDate || payrollRun?.createdAt || payrollRow?.createdAt || requisition?.createdAt || document?.documentDate || sale?.saleDate || request.createdAt, requesterName: requestedBy ? userMap.get(requestedBy)?.name || `مستخدم #${requestedBy}` : "غير محدد", requestedBy, workflowLabel, workflowStages, recordLabel, sourceExists, projectName: request.projectId ? projectMap.get(request.projectId)?.name || `مشروع #${request.projectId}` : "مسير عام للشركة", stageLabel: stageLabel(request.approvalStage), responsibleUsers: recipients, isCurrentUserResponsible: recipients.some((user) => user.id === ctx.user.id), waitingDays: Math.max(0, Math.floor((Date.now() - new Date(request.createdAt).getTime()) / 86400000)) };
+          return { ...request, title, typeLabel, description, amount: Number(certificate?.totalAmount || payrollRun?.totalAmount || payrollRow?.totalAmount || document?.totalAmount || sale?.totalAmount || 0), documentDate: certificate?.certificateDate || payrollRun?.createdAt || payrollRow?.createdAt || requisition?.createdAt || document?.documentDate || sale?.saleDate || request.createdAt, requesterName: requestedBy ? userMap.get(requestedBy)?.name || `مستخدم #${requestedBy}` : "غير محدد", requesterRole: requestedBy ? userMap.get(requestedBy)?.jobTitle || userMap.get(requestedBy)?.role || "مسؤول النظام" : "غير محدد", requestedBy, workflowLabel, workflowStages, recordLabel, sourceExists, projectName: request.projectId ? projectMap.get(request.projectId)?.name || `مشروع #${request.projectId}` : "مسير عام للشركة", stageLabel: stageLabel(request.approvalStage), responsibleUsers: recipients, isCurrentUserResponsible: recipients.some((user) => user.id === ctx.user.id), waitingDays: Math.max(0, Math.floor((Date.now() - new Date(request.createdAt).getTime()) / 86400000)) };
         }).filter((item) => item.sourceExists);
       }),
       sendReminder: protectedProcedure.input(z.object({ approvalId: z.number().int().positive(), message: z.string().trim().max(1000).optional() })).mutation(async ({ ctx, input }) => {
@@ -3606,4 +3613,54 @@ export const erpRouter = router({
       }),
     }),
   }),
+  meetings: router({
+      list: protectedProcedure.query(async ({ ctx }) => {
+        const db = requireDb(await getDb());
+        const companyId = await resolveActiveCompanyId(db, ctx);
+        const rows = companyId ? await db.select().from(meetings).where(eq(meetings.companyId, companyId)).orderBy(desc(meetings.scheduledStart)) : await db.select().from(meetings).orderBy(desc(meetings.scheduledStart));
+        const participantRows = rows.length ? await db.select().from(meetingParticipants).where(inArray(meetingParticipants.meetingId, rows.map((row) => row.id))) : [];
+        const userRows = participantRows.length ? await db.select({ id: users.id, name: users.name, email: users.email, role: users.role }).from(users).where(inArray(users.id, participantRows.map((row) => row.userId))) : [];
+        const userMap = new Map(userRows.map((user) => [user.id, user]));
+        return rows.map((meeting) => ({ ...meeting, participants: participantRows.filter((row) => row.meetingId === meeting.id).map((row) => userMap.get(row.userId)).filter(Boolean) }));
+      }),
+      create: protectedProcedure.input(z.object({ title: z.string().trim().min(2).max(255), description: z.string().trim().max(5000).optional(), scheduledStart: z.coerce.date(), scheduledEnd: z.coerce.date(), meetingLink: z.string().url().max(2000).optional(), participantIds: z.array(z.number().int().positive()).default([]) })).mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin" && ctx.user.role !== "general_manager") throw new TRPCError({ code: "FORBIDDEN", message: "إنشاء الاجتماعات واختيار الفريق متاح للمدير فقط" });
+        if (input.scheduledEnd <= input.scheduledStart) throw new TRPCError({ code: "BAD_REQUEST", message: "يجب أن يكون وقت نهاية الاجتماع بعد وقت البداية" });
+        const db = requireDb(await getDb());
+        const companyId = await resolveActiveCompanyId(db, ctx);
+        const result = await db.insert(meetings).values({ companyId, title: input.title, description: input.description || null, scheduledStart: input.scheduledStart, scheduledEnd: input.scheduledEnd, meetingLink: input.meetingLink || null, createdBy: ctx.user.id });
+        const meetingId = Number(result[0].insertId);
+        if (input.participantIds.length) await db.insert(meetingParticipants).values(input.participantIds.map((userId) => ({ meetingId, userId })));
+        await db.insert(auditLogs).values({ entityType: "meeting", entityId: meetingId, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify({ title: input.title, participantIds: input.participantIds }) });
+        return { id: meetingId };
+      }),
+      updateStatus: protectedProcedure.input(z.object({ id: z.number().int().positive(), status: z.enum(["scheduled", "active", "completed", "archived", "cancelled"]) })).mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin" && ctx.user.role !== "general_manager") throw new TRPCError({ code: "FORBIDDEN", message: "تعديل حالة الاجتماع متاح للمدير فقط" });
+        const db = requireDb(await getDb());
+        await db.update(meetings).set({ status: input.status, archivedAt: input.status === "archived" ? new Date() : null }).where(eq(meetings.id, input.id));
+        await db.insert(auditLogs).values({ entityType: "meeting", entityId: input.id, action: `status_${input.status}`, actorId: ctx.user.id, afterJson: JSON.stringify({ status: input.status }) });
+        return { success: true };
+      }),
+      delete: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        await db.delete(meetingParticipants).where(eq(meetingParticipants.meetingId, input.id));
+        await db.delete(meetings).where(eq(meetings.id, input.id));
+        await db.insert(auditLogs).values({ entityType: "meeting", entityId: input.id, action: "deleted", actorId: ctx.user.id, afterJson: JSON.stringify({ deleted: true }) });
+        return { success: true };
+      }),
+    }),
+  marketing: router({
+      sites: router({
+        list: protectedProcedure.query(async ({ ctx }) => { const db = requireDb(await getDb()); const companyId = await resolveActiveCompanyId(db, ctx); return companyId ? db.select().from(marketingSites).where(eq(marketingSites.companyId, companyId)).orderBy(desc(marketingSites.updatedAt)) : db.select().from(marketingSites).orderBy(desc(marketingSites.updatedAt)); }),
+        create: protectedProcedure.input(z.object({ name: z.string().trim().min(2).max(255), description: z.string().trim().max(5000).optional(), publicUrl: z.string().url().max(2000).optional(), customDomain: z.string().trim().max(255).optional(), googleMapsUrl: z.string().url().max(2000).optional(), heroImageUrl: z.string().url().max(2000).optional() })).mutation(async ({ ctx, input }) => { if (ctx.user.role !== "admin" && ctx.user.role !== "general_manager") throw new TRPCError({ code: "FORBIDDEN", message: "إدارة مواقع التسويق متاحة للمدير فقط" }); const db = requireDb(await getDb()); const companyId = await resolveActiveCompanyId(db, ctx); const result = await db.insert(marketingSites).values({ companyId, name: input.name, description: input.description || null, publicUrl: input.publicUrl || null, customDomain: input.customDomain || null, googleMapsUrl: input.googleMapsUrl || null, heroImageUrl: input.heroImageUrl || null, createdBy: ctx.user.id }); return { id: Number(result[0].insertId) }; }),
+        updateStatus: protectedProcedure.input(z.object({ id: z.number().int().positive(), status: z.enum(["draft", "published", "archived"]) })).mutation(async ({ ctx, input }) => { if (ctx.user.role !== "admin" && ctx.user.role !== "general_manager") throw new TRPCError({ code: "FORBIDDEN", message: "تعديل موقع التسويق متاح للمدير فقط" }); const db = requireDb(await getDb()); await db.update(marketingSites).set({ status: input.status, archivedAt: input.status === "archived" ? new Date() : null }).where(eq(marketingSites.id, input.id)); return { success: true }; }),
+        delete: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => { const db = requireDb(await getDb()); await db.update(marketingAssets).set({ siteId: null }).where(eq(marketingAssets.siteId, input.id)); await db.delete(marketingSites).where(eq(marketingSites.id, input.id)); await db.insert(auditLogs).values({ entityType: "marketingSite", entityId: input.id, action: "deleted", actorId: ctx.user.id, afterJson: JSON.stringify({ deleted: true }) }); return { success: true }; }),
+      }),
+      assets: router({
+        list: protectedProcedure.input(z.object({ siteId: z.number().int().positive().optional(), projectId: z.number().int().positive().optional() }).optional()).query(async ({ input }) => { const db = requireDb(await getDb()); const filters = []; if (input?.siteId) filters.push(eq(marketingAssets.siteId, input.siteId)); if (input?.projectId) filters.push(eq(marketingAssets.projectId, input.projectId)); return filters.length ? db.select().from(marketingAssets).where(and(...filters)).orderBy(desc(marketingAssets.createdAt)) : db.select().from(marketingAssets).orderBy(desc(marketingAssets.createdAt)); }),
+        create: protectedProcedure.input(z.object({ siteId: z.number().int().positive().optional(), projectId: z.number().int().positive().optional(), name: z.string().trim().min(2).max(255), assetType: z.enum(["project_mockup", "design", "brochure", "video", "other"]), fileUrl: z.string().url().max(2000), notes: z.string().trim().max(5000).optional() })).mutation(async ({ ctx, input }) => { if (ctx.user.role !== "admin" && ctx.user.role !== "general_manager") throw new TRPCError({ code: "FORBIDDEN", message: "إضافة الأصول الدعائية متاحة للمدير فقط" }); const db = requireDb(await getDb()); const result = await db.insert(marketingAssets).values({ siteId: input.siteId || null, projectId: input.projectId || null, name: input.name, assetType: input.assetType, fileUrl: input.fileUrl, notes: input.notes || null, uploadedBy: ctx.user.id }); return { id: Number(result[0].insertId) }; }),
+        archive: protectedProcedure.input(z.object({ id: z.number().int().positive(), archived: z.boolean() })).mutation(async ({ ctx, input }) => { if (ctx.user.role !== "admin" && ctx.user.role !== "general_manager") throw new TRPCError({ code: "FORBIDDEN", message: "أرشفة الأصول الدعائية متاحة للمدير فقط" }); const db = requireDb(await getDb()); await db.update(marketingAssets).set({ isArchived: input.archived ? 1 : 0 }).where(eq(marketingAssets.id, input.id)); return { success: true }; }),
+        delete: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => { const db = requireDb(await getDb()); await db.delete(marketingAssets).where(eq(marketingAssets.id, input.id)); await db.insert(auditLogs).values({ entityType: "marketingAsset", entityId: input.id, action: "deleted", actorId: ctx.user.id, afterJson: JSON.stringify({ deleted: true }) }); return { success: true }; }),
+      }),
+    }),
 });
