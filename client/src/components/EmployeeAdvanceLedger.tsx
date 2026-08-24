@@ -23,7 +23,7 @@ type AdvanceForm = {
   installmentCount: string;
 };
 
-export function EmployeeAdvanceLedger({ employees, me }: { employees: Employee[]; me: any }) {
+export function EmployeeAdvanceLedger({ employees, me, employeesLoading = false, employeesError = null }: { employees: Employee[]; me: any; employeesLoading?: boolean; employeesError?: string | null }) {
   const utils = trpc.useUtils();
   const canManage = me?.role === "admin" || me?.role === "general_manager" || Number(me?.id) === 13170001;
   const [beneficiaryType, setBeneficiaryType] = useState<"employee" | "worker">("employee");
@@ -61,7 +61,7 @@ export function EmployeeAdvanceLedger({ employees, me }: { employees: Employee[]
   return <Card className="border-0 shadow-sm">
     <CardHeader>
       <CardTitle className="flex items-center gap-2 text-lg text-[#18324b]"><WalletCards className="h-5 w-5 text-[#b28a3b]" /> تسجيل وكشف حساب سلف الموظفين</CardTitle>
-      <p className="text-xs text-slate-500">حدّد أولًا هل المستفيد موظف شركة أو أجير، ثم اختره من السجل المناسب. يستخدم الأجير رقم الإقامة للبحث، وتبقى السلفة مرتبطة بسجل المستفيد نفسه في كشف الحساب ومسير الرواتب.</p>
+          <p className="text-xs text-slate-500">حدّد أولًا هل المستفيد موظف شركة أو أجير، ثم اختره من السجل المناسب. يستخدم الأجير رقم الإقامة للبحث، وتبقى السلفة مرتبطة بسجل المستفيد نفسه في كشف الحساب ومسير الرواتب.</p>{employeesLoading ? <p className="mt-2 text-xs text-blue-700">جارٍ تحميل دليل الموظفين...</p> : employeesError ? <p className="mt-2 rounded-lg bg-rose-50 p-2 text-xs text-rose-700">{employeesError}</p> : <p className="mt-2 text-xs text-slate-500">تم تحميل {employees.length} سجلًا؛ موظفو الشركة والأجراء يظهرون بعد اختيار النوع.</p>}
     </CardHeader>
     <CardContent className="space-y-4">
       <div className="grid gap-3 rounded-2xl bg-slate-50 p-4 md:grid-cols-4">
@@ -77,7 +77,7 @@ export function EmployeeAdvanceLedger({ employees, me }: { employees: Employee[]
             <option value="">{beneficiaryType === "worker" ? "اختر الأجير" : "اختر موظف الشركة"}</option>
             {filteredEmployees.map((employee) => <option key={employee.id} value={employee.id}>{employee.fullName} — {beneficiaryType === "worker" ? `رقم الإقامة: ${employee.nationalId || "غير مسجل"}` : `الكود: ${employee.employeeCode || "غير مسجل"}`}</option>)}
           </select>
-          <p className="text-[11px] text-slate-500">{beneficiaryType === "worker" ? "تظهر هنا سجلات الأجير فقط، والبحث يطابق رقم الإقامة المحفوظ في ملفه." : "تظهر هنا سجلات موظفي الشركة فقط."}</p>
+          <p className="text-[11px] text-slate-500">{beneficiaryType === "worker" ? "تظهر هنا سجلات الأجير فقط، والبحث يطابق رقم الإقامة المحفوظ في ملفه." : "تظهر هنا سجلات موظفي الشركة فقط."}</p>{!employeesLoading && !employeesError && filteredEmployees.length === 0 ? <p className="mt-1 text-[11px] text-amber-700">لا توجد سجلات مطابقة لهذا النوع أو البحث. أضف الموظف من دليل الموظفين أو راجع قيمة نوع التوظيف.</p> : null}
         </div>
         <div className="relative md:col-span-2">
           <Label>بحث داخل كشف السلفة</Label>
