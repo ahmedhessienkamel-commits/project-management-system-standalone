@@ -8,7 +8,7 @@ import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { distanceMetersBetween } from "../../shared/geo";
 import { getSessionCookieOptions } from "../_core/cookies";
-import { calculateCertificateProgress, calculateDocumentCompleteness, calculateExpenseTotals, calculateFinancialSummaryTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, calculateStraightLineDepreciation, calculateParentBudgetMetrics, allocateAdministrativeAmount, canAccessProject, canWriteProject, projectHealthReasons, projectHealthStatus, projectNotificationTriggers } from "../erpCalculations";
+import { calculateCertificateProgress, calculateDocumentCompleteness, calculateExpenseTotals, calculateFinancialSummaryTotals, calculateProjectDocumentCosts, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, calculateStraightLineDepreciation, calculateParentBudgetMetrics, allocateAdministrativeAmount, canAccessProject, canWriteProject, projectHealthReasons, projectHealthStatus, projectNotificationTriggers } from "../erpCalculations";
 import { accountingTotals } from "../accountingCalculations";
 import { calculateStageTimeVariance } from "../../shared/stageTiming";
 import { allocateAdministrativeExpense, normalizeExpenseTaxRate, validateExpenseAllocation } from "../../shared/expenseAllocation";
@@ -3321,13 +3321,14 @@ export const erpRouter = router({
     financialSummary: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), from: z.string().optional(), to: z.string().optional() })).query(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
       await assertProjectAccess(db, ctx, input.projectId);
-      const [salesRows, collectionRows, expenseRows, payrollRows, certificateRows, voucherRows] = await Promise.all([
+      const [salesRows, collectionRows, expenseRows, payrollRows, certificateRows, voucherRows, purchaseInvoiceRows] = await Promise.all([
         db.select().from(sales).where(eq(sales.projectId, input.projectId)),
         db.select().from(collections).where(eq(collections.projectId, input.projectId)),
         db.select().from(expenses).where(eq(expenses.projectId, input.projectId)),
         db.select().from(payroll).where(eq(payroll.projectId, input.projectId)),
         db.select().from(certificates).where(eq(certificates.projectId, input.projectId)),
         db.select().from(accountingDocuments).where(and(eq(accountingDocuments.projectId, input.projectId), eq(accountingDocuments.documentType, "payment_voucher"))),
+        db.select().from(accountingDocuments).where(and(eq(accountingDocuments.projectId, input.projectId), eq(accountingDocuments.documentType, "purchase_invoice"))),
       ]);
       const from = input.from ? new Date(input.from).getTime() : Number.NEGATIVE_INFINITY;
       const to = input.to ? new Date(input.to).getTime() + 86400000 : Number.POSITIVE_INFINITY;
@@ -3339,9 +3340,9 @@ export const erpRouter = router({
       const totals = calculateFinancialSummaryTotals({ sales: scopedSales, collections: scopedCollections, expenses: scopedExpenses, payroll: scopedPayroll });
       const contractorCertificatesTotal = certificateRows.filter((row) => Boolean(row.vendorId || row.contractId) && ["approved", "paid"].includes(row.status) && inRange(row.certificateDate)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
       const offPlanClaimCertificatesTotal = certificateRows.filter((row) => !row.vendorId && !row.contractId && ["submitted", "approved", "paid"].includes(row.status) && inRange(row.certificateDate)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
-      const postedVoucherTotal = voucherRows.filter((row) => row.status === "posted" && inRange(row.documentDate)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
-      const expensesTotal = totals.expensesTotal + contractorCertificatesTotal + postedVoucherTotal;
-      return { ...totals, expensesTotal, contractorCertificatesTotal, offPlanClaimCertificatesTotal, postedVoucherTotal, expenseRows: scopedExpenses, payrollRows: scopedPayroll, salesRows: scopedSales, collectionRows: scopedCollections };
+      const documentCosts = calculateProjectDocumentCosts({ purchaseInvoices: purchaseInvoiceRows.filter((row) => inRange(row.documentDate)), paymentVouchers: voucherRows.filter((row) => inRange(row.documentDate)) });
+      const expensesTotal = totals.expensesTotal + contractorCertificatesTotal + documentCosts.expenseTotal;
+      return { ...totals, expensesTotal, contractorCertificatesTotal, offPlanClaimCertificatesTotal, postedVoucherTotal: documentCosts.postedDirectVoucherTotal, postedDirectVoucherTotal: documentCosts.postedDirectVoucherTotal, postedPurchaseInvoiceTotal: documentCosts.postedPurchaseInvoiceTotal, postedInvoiceSettlementTotal: documentCosts.postedInvoiceSettlementTotal, expenseRows: scopedExpenses, payrollRows: scopedPayroll, salesRows: scopedSales, collectionRows: scopedCollections };
     }),
     dataQuality: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());

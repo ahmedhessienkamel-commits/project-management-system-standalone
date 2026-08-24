@@ -42,6 +42,13 @@ export function calculateFinancialSummaryTotals({ sales, collections, expenses, 
   return { revenue, collectionsReceived, expensesPreTax, expensesTax, expensesTotal, expensesPaid, payrollTotal, payrollPaid, payrollOutstanding: Math.max(payrollTotal - payrollPaid, 0) };
 }
 
+export function calculateProjectDocumentCosts({ purchaseInvoices, paymentVouchers }: { purchaseInvoices: Array<{ status: string; totalAmount: string | number }>; paymentVouchers: Array<{ status: string; settlementType?: string | null; purchaseInvoiceId?: number | null; totalAmount: string | number }> }) {
+  const postedPurchaseInvoiceTotal = purchaseInvoices.filter((row) => row.status === "posted").reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+  const postedDirectVoucherTotal = paymentVouchers.filter((row) => row.status === "posted" && !(row.settlementType === "invoice" && row.purchaseInvoiceId)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+  const postedInvoiceSettlementTotal = paymentVouchers.filter((row) => row.status === "posted" && row.settlementType === "invoice" && Boolean(row.purchaseInvoiceId)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+  return { postedPurchaseInvoiceTotal, postedDirectVoucherTotal, postedInvoiceSettlementTotal, expenseTotal: postedPurchaseInvoiceTotal + postedDirectVoucherTotal };
+}
+
 export function allocateAdministrativeAmount(amount: number, projects: Array<{ projectId: number; projectName: string; contractValue: number }>) {
   const safeAmount = Math.max(0, amount);
   const eligible = projects.filter((project) => project.contractValue > 0);
