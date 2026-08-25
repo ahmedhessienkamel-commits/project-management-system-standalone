@@ -25,6 +25,7 @@ import BanksCash from "./pages/BanksCash";
 import StandaloneFinancialReport from "./pages/StandaloneFinancialReport";
 import Inventory from "./pages/Inventory";
 import MaterialRequests from "./pages/MaterialRequests";
+import ProjectDataAudit from "./pages/ProjectDataAudit";
 import MyRequests from "./pages/MyRequests";
 import PasswordAuth, { ResetPassword } from "./pages/PasswordAuth";
 import AccountSecurity from "./pages/AccountSecurity";
@@ -78,6 +79,7 @@ function Router() {
       <Route path={"/operations"} component={Operations} />
       <Route path={"/inventory"} component={Inventory} />
       <Route path={"/material-requests"} component={MaterialRequests} />
+      <Route path={"/admin/project-data-audit"} component={ProjectDataAudit} />
       <Route path={"/certificates"} component={Operations} />
       <Route path={"/attendance"} component={Operations} />
       <Route path={"/custody"} component={Operations} />
