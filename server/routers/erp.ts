@@ -1210,7 +1210,11 @@ export const erpRouter = router({
         const scheduleVariancePct = projectTime.timeVarianceDays > 0 && projectDurationDays > 0 ? Math.round((projectTime.timeVarianceDays / projectDurationDays) * 100) : 0;
         const projectBudget = projectBudgetRows.find((budget) => budget.projectId === project.id && budget.status !== "draft") ?? null;
         const planned = projectBudget ? Number(projectBudget.plannedCost || 0) : projectStages.reduce((sum, stage) => sum + Number(stage.plannedBudget || 0), 0);
-        const activeStage = [...projectStages].sort((a, b) => (a.plannedStart ? new Date(a.plannedStart).getTime() : Number.MAX_SAFE_INTEGER) - (b.plannedStart ? new Date(b.plannedStart).getTime() : Number.MAX_SAFE_INTEGER)).find((stage) => stage.status !== "completed" && Number(stage.actualProgress || 0) < 100) ?? null;
+        const orderedStages = [...projectStages].sort((a, b) => (a.plannedStart ? new Date(a.plannedStart).getTime() : Number.MAX_SAFE_INTEGER) - (b.plannedStart ? new Date(b.plannedStart).getTime() : Number.MAX_SAFE_INTEGER));
+        const activeStage = orderedStages.find((stage) => stage.status !== "completed" && Number(stage.actualProgress || 0) < 100)
+          ?? orderedStages.find((stage) => stage.status !== "completed")
+          ?? orderedStages.at(-1)
+          ?? null;
         const administrativeExpenseRows = expenseRows.filter((expense) => expense.projectId === project.id && ["approved", "posted"].includes(expense.status) && (expense.classification === "administrative" || expense.expenseType === "administrative"));
         const materialsExpenseRows = projectExpenses.filter((expense) => expense.classification !== "administrative" && expense.expenseType === "materials");
         const operationalExpenseRows = projectExpenses.filter((expense) => expense.classification !== "administrative" && expense.expenseType !== "administrative" && expense.expenseType !== "materials");
