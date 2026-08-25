@@ -36142,8 +36142,8 @@
 - [x] Use project details as the sole manual entry point for main/sub budget items and operational planned budgets
 - [ ] Keep contract archive and execution reports read-linked to the project detail baseline rather than duplicating manual entry
 - [x] Treat the project-detail budget editor as a BoQ/quantity-survey register with main items, sub-items, quantities, units, unit rates, totals, stage links, and operational sections
-- [ ] Make sub-items optional and calculate each main item either from its own amount or from its sub-items, never both
-- [ ] Add tests proving no double counting when a main item has one or more sub-items
+- [x] Make sub-items optional and calculate each main item either from its own amount or from its sub-items, never both
+- [x] Add tests proving no double counting when a main item has one or more sub-items
 - [ ] Add advanced filters to each relevant approval/archive section
 - [ ] Add full document preview for archived records
 - [ ] Show responsible employee, submission date, approval/rejection date, and rejection reason where applicable
@@ -36152,4 +36152,4 @@
 - [x] Show the project's allocated share of company-wide administrative expenses in a separate card
 - [x] Allocate company-wide administrative expenses by active-project contract value within the active company
 - [x] Document allocation basis and prevent direct plus allocated administrative amounts from being double counted
-- [ ] Apply the direct-versus-allocated administrative expense split consistently to every project card, dashboard widget, cost-center report, cash-flow view, income statement, and execution comparison that displays project expenses
+- [x] Apply the direct-versus-allocated administrative expense split consistently to every project card, dashboard widget, cost-center report, cash-flow view, income statement, and execution comparison that displays project expenses
