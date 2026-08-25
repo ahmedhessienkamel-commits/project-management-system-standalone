@@ -36123,3 +36123,13 @@
 - [x] Include every stage cost in the project total planned-cost view without replacing the project total with one stage
 - [x] Keep stage comparisons based on each stage budget and whole-project comparisons based on the project estimate
 - [x] Add tests for project total and cumulative stage-cost behavior
+
+- [ ] Fix the actual project edit form so the independent total estimated project cost field is visibly rendered below contract value
+- [ ] Verify the field persists after save and feeds whole-project comparison while stage budgets remain separate
+
+## Paid contractor certificate in stage report
+
+- [x] Trace why a paid contractor certificate appears as zero paid in the project/stage performance report
+- [x] Include posted linked payment vouchers and accounting payments in the stage paid amount exactly once
+- [x] Recalculate outstanding and balance/variance after recognizing the actual payment
+- [x] Add regression coverage for a paid certificate appearing in the stage report

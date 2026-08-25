@@ -3260,8 +3260,8 @@ export const erpRouter = router({
       const sharedPettyCashPaidAllocated = Number((sharedPettyCashPaid * allocationRatio).toFixed(2));
       const actualForStage = (stageId: number) => activeExpenses.filter((row) => row.stageId === stageId);
       const payrollForStage = (stageId: number) => payrollRows.filter((row) => row.stageId === stageId);
-      const certificateForStage = (stageId: number) => certificateRows.filter((row) => row.stageId === stageId && row.status !== "rejected" && Boolean(row.vendorId || row.contractId));
-      const certificatePaymentData = calculateCashOutFromPaymentVouchers({ certificates: certificateRows.filter((row) => Boolean(row.vendorId || row.contractId)), accountingDocuments: accountingDocumentRows });
+      const certificateForStage = (stageId: number) => certificateRows.filter((row) => row.stageId === stageId && row.status !== "rejected");
+      const certificatePaymentData = calculateCashOutFromPaymentVouchers({ certificates: certificateRows, accountingDocuments: accountingDocumentRows });
       const certificatePaid = (certificate: typeof certificateRows[number]) => Math.max(Number(certificate.paidAmount || 0), certificatePaymentData.voucherPaidByCertificate.get(certificate.id) || 0);
       const timeMetrics = (plannedEnd: Date | string | null, status: string) => calculateStageTimeVariance(plannedEnd, status);
       const makeMetrics = (plannedBudget: number, rows: typeof activeExpenses, stageId?: number) => {

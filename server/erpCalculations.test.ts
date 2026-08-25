@@ -125,6 +125,14 @@ describe("ERP financial rules", () => {
     expect(result.legacyCertificateCashOut).toBe(500);
     expect(result.voucherPaidByCertificate.get(7)).toBe(18630);
   });
+  it("recognizes payment for a stage certificate even when legacy vendor links are missing", () => {
+    const result = calculateCashOutFromPaymentVouchers({
+      certificates: [{ id: 41, paidAmount: 0 }],
+      accountingDocuments: [{ id: 51, documentType: "payment_voucher", status: "posted", totalAmount: 18630, certificateId: 41 }],
+    });
+    expect(result.voucherPaidByCertificate.get(41)).toBe(18630);
+  });
+
   it("counts supplier voucher payments once and preserves the payable balance", () => {
     const result = calculateSupplierStatementTotals({
       vendorId: 7,
