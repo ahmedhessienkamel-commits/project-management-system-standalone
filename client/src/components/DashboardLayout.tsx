@@ -64,8 +64,6 @@ const menuItems = [
   { section: true, label: "الإدارة والمتابعة" },
   { icon: ClipboardList, label: "إسناد ومتابعة مهام الفريق", path: "/tasks" },
   { icon: Video, label: "غرفة الاجتماعات", path: "/meetings" },
-  { section: true, label: "التسويق والدعايا" },
-  { icon: Megaphone, label: "الموقع والمواد الدعائية", path: "/marketing" },
   { icon: Users, label: "المستخدمون والصلاحيات", path: "/users" },
   { icon: ShieldAlert, label: "مركز جودة البيانات", path: "/data-quality" },
   { icon: Settings2, label: "الإعدادات", path: "/settings" },
@@ -177,13 +175,13 @@ function DashboardLayoutContent({
     { label: "إسناد مهمة للفريق", path: "/tasks" },
   ];
   const roleLabelAllowList: Record<string, string[] | undefined> = {
-    general_manager: ["لوحة التنفيذ", "الموافقات والمستندات", "المقايسات التفصيلية", "العقود والمستخلصات", "المبيعات والتحصيلات", "تقرير الخامات والكميات", "قائمة دخل المشاريع", "إسناد ومتابعة مهام الفريق", "غرفة الاجتماعات", "الموقع والمواد الدعائية"],
+    general_manager: ["لوحة التنفيذ", "الموافقات والمستندات", "المقايسات التفصيلية", "العقود والمستخلصات", "المبيعات والتحصيلات", "تقرير الخامات والكميات", "قائمة دخل المشاريع", "إسناد ومتابعة مهام الفريق", "غرفة الاجتماعات"],
     project_manager: ["لوحة التنفيذ", "المشاريع والمراحل", "المقايسات التفصيلية", "العقود والمستخلصات", "الموردون والمقاولون", "الموافقات والمستندات"],
     procurement_manager: ["تقرير الخامات والكميات", "طلبات المواد", "طلباتي"],
     site_worker: ["تقرير الخامات والكميات", "طلبات المواد", "طلباتي"],
   };
   const allowedLabels = roleLabelAllowList[user?.role || ""];
-  const generalManagerOrder = ["لوحة التنفيذ", "الموافقات والمستندات", "المقايسات التفصيلية", "العقود والمستخلصات", "المبيعات والتحصيلات", "تقرير الخامات والكميات", "قائمة دخل المشاريع", "إسناد ومتابعة مهام الفريق", "غرفة الاجتماعات", "الموقع والمواد الدعائية"];
+  const generalManagerOrder = ["لوحة التنفيذ", "الموافقات والمستندات", "المقايسات التفصيلية", "العقود والمستخلصات", "المبيعات والتحصيلات", "تقرير الخامات والكميات", "قائمة دخل المشاريع", "إسناد ومتابعة مهام الفريق", "غرفة الاجتماعات"];
   const generalManagerMenuItems = generalManagerOrder.flatMap((label) => { const item = menuItems.find((candidate) => "path" in candidate && candidate.label === label); return item ? [item] : []; });
   const visibleMenuItems = user?.role === "general_manager" ? generalManagerMenuItems : allowedLabels ? menuItems.filter((item) => "path" in item && allowedLabels.includes(item.label)) : menuItems;
   const isOperationalOnly = isOperationalOnlyRole(user?.role);
