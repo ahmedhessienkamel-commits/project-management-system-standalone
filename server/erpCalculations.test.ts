@@ -76,6 +76,16 @@ describe("ERP financial rules", () => {
     expect(rows.reduce((sum, row) => sum + row.allocatedAmount, 0)).toBe(1500);
   });
 
+  it("allocates shared administrative custody expense to project dashboard totals without duplication", () => {
+    const allocations = allocateAdministrativeAmount(18630, [
+      { projectId: 1, projectName: "نمار", contractValue: 76911 },
+      { projectId: 2, projectName: "مشروع آخر", contractValue: 23089 },
+    ]);
+    expect(allocations[0].allocatedAmount).toBe(14328.52);
+    expect(allocations[1].allocatedAmount).toBe(4301.48);
+    expect(allocations.reduce((sum, row) => sum + row.allocatedAmount, 0)).toBe(18630);
+  });
+
   it("calculates stage progress from approved contractor certificates", () => {
     expect(calculateCertificateProgress({ plannedBudget: 76911, certifiedAmounts: [21000] })).toEqual({ certifiedAmount: 21000, progressPct: 27.3 });
     expect(calculateCertificateProgress({ plannedBudget: 0, certifiedAmounts: [21000] })).toEqual({ certifiedAmount: 21000, progressPct: 0 });
