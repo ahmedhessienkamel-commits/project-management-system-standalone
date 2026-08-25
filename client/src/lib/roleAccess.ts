@@ -1,7 +1,7 @@
 const operationalRoles = new Set(["procurement_manager", "site_worker"]);
 
 export function defaultRouteForRole(role?: string | null) {
-  return operationalRoles.has(role || "") ? "/inventory" : "/";
+  return operationalRoles.has(role || "") ? "/material-requests" : "/";
 }
 
 export function canAccessRoute(role: string | null | undefined, location: string) {
@@ -9,7 +9,7 @@ export function canAccessRoute(role: string | null | undefined, location: string
   const url = new URL(location, "https://erp.local");
   const sharedPaths = new Set(["/login", "/accept-invitation", "/reset-password", "/account-security", "/change-password"]);
   if (sharedPaths.has(url.pathname)) return true;
-  if (url.pathname === "/inventory" || url.pathname === "/my-requests") return true;
+  if (url.pathname === "/inventory" || url.pathname === "/material-requests" || url.pathname === "/my-requests") return true;
   return url.pathname === "/operations" && url.searchParams.get("tab") === "procurement";
 }
 

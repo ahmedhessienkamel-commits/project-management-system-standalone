@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { allocateAdministrativeAmount, calculateCertificateProgress, calculateContractBalance, calculateExpenseTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, calculateStraightLineDepreciation, projectHealthStatus } from "./erpCalculations";
+import { allocateAdministrativeAmount, calculateCashOutFromPaymentVouchers, calculateCertificateProgress, calculateContractBalance, calculateExpenseTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, calculateStraightLineDepreciation, projectHealthStatus } from "./erpCalculations";
 import { calculateAttendanceHours, filterAttendanceByMonth, summarizeAttendanceExceptions } from "../shared/attendance";
 import { isProjectActive } from "../shared/projectStatus";
 
@@ -86,6 +86,19 @@ describe("ERP financial rules", () => {
     expect(calculateContractBalance(76000, [], 21000)).toEqual({ usedBefore: 0, remainingBefore: 76000, remainingAfter: 55000, exceeds: false });
     expect(calculateContractBalance(76000, [21000], 55001).exceeds).toBe(true);
     expect(calculateContractBalance(76000, [21000], 55000).remainingAfter).toBe(0);
+  });
+  it("includes posted payment vouchers in cash flow without duplicating a linked certificate payment", () => {
+    const result = calculateCashOutFromPaymentVouchers({
+      certificates: [{ id: 7, paidAmount: 18630 }, { id: 8, paidAmount: 500 }],
+      accountingDocuments: [
+        { id: 11, documentType: "purchase_invoice", status: "posted", totalAmount: 18630, certificateId: 7 },
+        { id: 12, documentType: "payment_voucher", status: "posted", totalAmount: 18630, purchaseInvoiceId: 11 },
+        { id: 13, documentType: "payment_voucher", status: "draft", totalAmount: 900 },
+      ],
+    });
+    expect(result.voucherCashOut).toBe(18630);
+    expect(result.legacyCertificateCashOut).toBe(500);
+    expect(result.voucherPaidByCertificate.get(7)).toBe(18630);
   });
   it("returns critical for a large cash gap or approval backlog", () => {
     expect(projectHealthStatus({ budgetUsage: 40, progress: 60, delayedStages: 0, cashGapRatio: 0.5 })).toBe("critical");

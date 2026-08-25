@@ -42,6 +42,20 @@ export function calculateFinancialSummaryTotals({ sales, collections, expenses, 
   return { revenue, collectionsReceived, expensesPreTax, expensesTax, expensesTotal, expensesPaid, payrollTotal, payrollPaid, payrollOutstanding: Math.max(payrollTotal - payrollPaid, 0) };
 }
 
+export function calculateCashOutFromPaymentVouchers({ certificates, accountingDocuments }: { certificates: Array<{ id: number; paidAmount: string | number }>; accountingDocuments: Array<{ id: number; documentType: string; status: string; totalAmount: string | number; purchaseInvoiceId?: number | null; certificateId?: number | null }> }) {
+  const invoiceCertificateIds = new Map(accountingDocuments.filter((document) => document.documentType === "purchase_invoice" && document.certificateId).map((document) => [document.id, Number(document.certificateId)]));
+  const paymentVouchers = accountingDocuments.filter((document) => document.documentType === "payment_voucher" && document.status === "posted");
+  const voucherCertificateId = (voucher: (typeof paymentVouchers)[number]) => voucher.certificateId ? Number(voucher.certificateId) : voucher.purchaseInvoiceId ? invoiceCertificateIds.get(Number(voucher.purchaseInvoiceId)) : undefined;
+  const voucherPaidByCertificate = new Map<number, number>();
+  for (const voucher of paymentVouchers) {
+    const certificateId = voucherCertificateId(voucher);
+    if (certificateId) voucherPaidByCertificate.set(certificateId, (voucherPaidByCertificate.get(certificateId) || 0) + Math.max(0, Number(voucher.totalAmount || 0)));
+  }
+  const legacyCertificateCashOut = certificates.reduce((sum, certificate) => sum + Math.max(0, Number(certificate.paidAmount || 0) - (voucherPaidByCertificate.get(certificate.id) || 0)), 0);
+  const voucherCashOut = paymentVouchers.reduce((sum, voucher) => sum + Math.max(0, Number(voucher.totalAmount || 0)), 0);
+  return { paymentVouchers, voucherCashOut, legacyCertificateCashOut, voucherPaidByCertificate, voucherCertificateId };
+}
+
 export function allocateAdministrativeAmount(amount: number, projects: Array<{ projectId: number; projectName: string; contractValue: number }>) {
   const safeAmount = Math.max(0, amount);
   const eligible = projects.filter((project) => project.contractValue > 0);

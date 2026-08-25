@@ -36,7 +36,7 @@ const menuItems = [
   { section: true, label: "التشغيل الأساسي" },
   { icon: ClipboardList, label: "المشاريع والمراحل", path: "/projects" },
   { icon: Boxes, label: "تقرير الخامات والكميات", path: "/inventory" },
-  { icon: ClipboardList, label: "طلبات المواد", path: "/operations?tab=procurement" },
+  { icon: ClipboardList, label: "طلبات المواد", path: "/material-requests" },
   { icon: WalletCards, label: "المبيعات والتحصيلات", path: "/sales" },
   { icon: FileText, label: "التكاليف والمصروفات", path: "/expenses" },
   { icon: ClipboardList, label: "الموردون والمقاولون", path: "/operations?tab=vendors" },
@@ -167,7 +167,7 @@ function DashboardLayoutContent({
     { label: "فتح عقد أو مستخلص", path: "/operations?tab=certificates" },
     { label: "إنشاء سند صرف أو قبض", path: "/accounting" },
     { label: "فتح مسير الرواتب", path: "/payroll" },
-    { label: "تسجيل طلب شراء", path: "/operations" },
+    { label: "تسجيل طلب شراء", path: "/material-requests" },
     { label: "تقرير الخامات والكميات", path: "/inventory" },
     { label: "إسناد مهمة للفريق", path: "/tasks" },
   ];
@@ -182,7 +182,7 @@ function DashboardLayoutContent({
   const generalManagerMenuItems = generalManagerOrder.flatMap((label) => { const item = menuItems.find((candidate) => "path" in candidate && candidate.label === label); return item ? [item] : []; });
   const visibleMenuItems = user?.role === "general_manager" ? generalManagerMenuItems : allowedLabels ? menuItems.filter((item) => "path" in item && allowedLabels.includes(item.label)) : menuItems;
   const isOperationalOnly = isOperationalOnlyRole(user?.role);
-  const visibleQuickActions = user?.role === "general_manager" ? quickActions.filter((action) => action.path === "/operations?tab=certificates" || action.path === "/inventory" || action.path === "/tasks") : isOperationalOnly ? [{ label: "تقرير الخامات والكميات", path: "/inventory" }, { label: "تسجيل استلام خامات", path: "/inventory?mode=receipt" }, { label: "تسجيل صرف خامات", path: "/inventory?mode=issue" }, { label: "طلب مواد", path: "/operations?tab=procurement" }, { label: "طلباتي", path: "/my-requests" }] : allowedLabels ? quickActions.filter((action) => action.path.includes("/operations") || action.path.includes("/tasks") || action.path.includes("/accounting?type=sales_invoice")) : quickActions;
+  const visibleQuickActions = user?.role === "general_manager" ? quickActions.filter((action) => action.path === "/operations?tab=certificates" || action.path === "/inventory" || action.path === "/tasks") : isOperationalOnly ? [{ label: "تقرير الخامات والكميات", path: "/inventory" }, { label: "تسجيل استلام خامات", path: "/inventory?mode=receipt" }, { label: "تسجيل صرف خامات", path: "/inventory?mode=issue" }, { label: "طلب مواد", path: "/material-requests" }, { label: "طلباتي", path: "/my-requests" }] : allowedLabels ? quickActions.filter((action) => action.path.includes("/operations") || action.path.includes("/tasks") || action.path.includes("/accounting?type=sales_invoice")) : quickActions;
   const searchResults = normalizedSearch ? visibleMenuItems.filter((item): item is Extract<(typeof menuItems)[number], { path: string }> => "path" in item && item.label.toLowerCase().includes(normalizedSearch)).slice(0, 6) : [];
 
   useEffect(() => {
