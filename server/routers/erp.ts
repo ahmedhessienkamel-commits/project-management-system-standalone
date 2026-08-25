@@ -1120,11 +1120,12 @@ export const erpRouter = router({
     }),
     companySummary: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
+      const activeCompanyId = await resolveActiveCompanyId(db, ctx);
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
       const [projectRows, expenseRows, payrollRows, administrativePayrollRows, allocationRows, salesRows, certificateRows, inventoryRows, voucherRows] = await Promise.all([
         db.select().from(projects), db.select().from(expenses), db.select().from(payroll), db.select().from(administrativePayroll), db.select().from(payrollAllocations), db.select().from(sales), db.select().from(certificates), db.select().from(inventoryMovements), db.select().from(accountingDocuments).where(eq(accountingDocuments.documentType, "payment_voucher")),
       ]);
-      const visibleProjects = projectRows.filter((project) => !allowed || allowed.has(project.id));
+      const visibleProjects = projectRows.filter((project) => (!activeCompanyId || project.companyId === activeCompanyId) && (!allowed || allowed.has(project.id)));
       const activeProjects = visibleProjects.filter((project) => project.status !== "archived" && Number(project.contractValue || 0) > 0);
       const approved = (status: string) => ["approved", "posted", "paid"].includes(status);
       const visibleProjectIds = new Set(visibleProjects.map((project) => project.id));
