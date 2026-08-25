@@ -1173,7 +1173,8 @@ export const erpRouter = router({
         const projectExpensesPreTax = projectExpenses.reduce((sum, expense) => sum + Number(expense.preTaxAmount || 0), 0);
         const projectExpensesWithTax = projectExpenses.reduce((sum, expense) => sum + Number(expense.totalAmount || 0), 0);
         const administrativeExpensesPreTax = administrativeExpenseRows.reduce((sum, expense) => sum + Number(expense.preTaxAmount || 0), 0) + allocatedAdministrativeExpenses;
-        const financialTotals = calculateFinancialSummaryTotals({ sales: projectSales, collections: projectCollections, expenses: projectExpenses, payroll: [...projectPayroll, ...projectAdministrativePayroll.map((row) => ({ preTaxAmount: row.allocatedAmount, totalAmount: row.allocatedAmount, paidAmount: "0", status: "approved" as const }))] });
+        const operatingExpenseRows = projectExpenses.filter((expense) => expense.classification !== "administrative" && expense.classification !== "petty_cash" && expense.expenseType !== "administrative");
+        const financialTotals = calculateFinancialSummaryTotals({ sales: projectSales, collections: projectCollections, expenses: operatingExpenseRows, payroll: [...projectPayroll, ...projectAdministrativePayroll.map((row) => ({ preTaxAmount: row.allocatedAmount, totalAmount: row.allocatedAmount, paidAmount: "0", status: "approved" as const }))] });
         const actual = financialTotals.expensesTotal + financialTotals.payrollTotal + subcontractorCostsTotal + inventoryIssuedTotal + administrativeExpensesTotal + pettyCashExpensesTotal;
         const paid = financialTotals.expensesPaid + financialTotals.payrollPaid + subcontractorCostsPaid + directAdministrativePaid + allocatedAdministrativePaid + directPettyCashPaid + allocatedPettyCashPaid + projectAdministrativeVoucherTotal + projectPettyCashVoucherTotal;
         const collectionsReceived = financialTotals.collectionsReceived;
@@ -1206,7 +1207,13 @@ export const erpRouter = router({
            materialsExpensesTotal,
            operationalExpensesTotal,
            administrativeExpensesTotal,
+           directAdministrativeExpenses: administrativeExpenseRows.reduce((sum, expense) => sum + Number(expense.totalAmount || 0), 0) + projectAdministrativeVoucherTotal,
+           allocatedAdministrativeExpenses,
+           allocatedAdministrativePaid,
            pettyCashExpensesTotal,
+           directPettyCashExpenses: pettyCashExpenseRows.reduce((sum, expense) => sum + Number(expense.totalAmount || 0), 0) + projectPettyCashVoucherTotal,
+           allocatedPettyCashExpenses,
+           allocatedPettyCashPaid,
            projectExpensesPreTax,
            projectExpensesWithTax,
            administrativeExpensesPreTax,

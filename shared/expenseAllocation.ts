@@ -16,6 +16,18 @@ export function allocateAdministrativeExpense(amount: number, projects: Contract
   });
 }
 
+export type BoqAmountRow = { kind: "main" | "sub"; code?: string; parentCode?: string; plannedAmount: number };
+
+/** Aggregates a BoQ once: a main line with children contributes its children, otherwise its own amount. */
+export function calculateBoqPlannedTotal(items: BoqAmountRow[]): number {
+  const mains = items.filter((item) => item.kind === "main");
+  return Number(mains.reduce((sum, main) => {
+    const children = items.filter((item) => item.kind === "sub" && item.parentCode && item.parentCode === main.code);
+    const amount = children.length ? children.reduce((childSum, child) => childSum + Math.max(0, Number(child.plannedAmount || 0)), 0) : Math.max(0, Number(main.plannedAmount || 0));
+    return sum + amount;
+  }, 0).toFixed(2));
+}
+
 export function normalizeExpenseTaxRate(expenseType: string, taxRate: number): number {
   return expenseType === "payroll" ? 0 : taxRate;
 }

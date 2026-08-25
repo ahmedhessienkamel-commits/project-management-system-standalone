@@ -36148,3 +36148,8 @@
 - [ ] Add full document preview for archived records
 - [ ] Show responsible employee, submission date, approval/rejection date, and rejection reason where applicable
 - [ ] Preserve role visibility for owner and Mostafa while keeping decision permissions unchanged
+- [x] Show project-specific administrative expenses in a separate comparison card
+- [x] Show the project's allocated share of company-wide administrative expenses in a separate card
+- [x] Allocate company-wide administrative expenses by active-project contract value within the active company
+- [x] Document allocation basis and prevent direct plus allocated administrative amounts from being double counted
+- [ ] Apply the direct-versus-allocated administrative expense split consistently to every project card, dashboard widget, cost-center report, cash-flow view, income statement, and execution comparison that displays project expenses
