@@ -1158,7 +1158,7 @@ export const erpRouter = router({
       ]);
       const postedAccountingDocumentIds = new Set(accountingDocumentRows.filter((document) => document.status === "posted").map((document) => document.id));
       const companyScopedProjects = activeCompanyId ? allProjectRows.filter((row) => row.companyId === activeCompanyId) : allProjectRows;
-      const projectSource = companyScopedProjects.length ? companyScopedProjects : allProjectRows;
+      const projectSource = ctx.user.role === "admin" || ctx.user.role === "general_manager" ? allProjectRows : (companyScopedProjects.length ? companyScopedProjects : allProjectRows);
       const projectRows = projectSource.filter((row) => !allowed || allowed.has(row.id));
       const summary = projectRows.map((project) => {
         const projectStages = stageRows.filter((stage) => stage.projectId === project.id);
