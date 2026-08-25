@@ -29,7 +29,7 @@ import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 import { isOperationalOnlyRole } from "@/lib/roleAccess";
 
-const menuItems = [
+export const menuItems = [
   { icon: Settings2, label: "معلومات الشركة", path: "/company-settings" },
   { icon: Landmark, label: "البنوك والخزائن", path: "/banks-cash" },
   { icon: LayoutDashboard, label: "لوحة التنفيذ", path: "/" },
@@ -42,10 +42,12 @@ const menuItems = [
   { icon: ClipboardList, label: "الموردون والمقاولون", path: "/operations?tab=vendors" },
   { icon: FileText, label: "العقود والمستخلصات", path: "/operations?tab=certificates" },
   { icon: FileText, label: "كشوف حساب الموردين", path: "/supplier-statements" },
+  { section: true, label: "الموارد البشرية HR" },
   { icon: UserRound, label: "دليل الموظفين", path: "/employees" },
   { icon: WalletCards, label: "سلف الموظفين", path: "/employee-advances" },
   { icon: FileText, label: "سجل الوثائق والرخص", path: "/compliance-documents" },
   { icon: WalletCards, label: "مسير الرواتب", path: "/payroll" },
+  { icon: ClipboardList, label: "الحضور والانصراف", path: "/attendance" },
   { icon: WalletCards, label: "تسجيل / صرف عهدة", path: "/custody" },
   { icon: FileText, label: "كشوف حساب العهد", path: "/custody?tab=custodyStatement" },
   { icon: ShieldCheck, label: "الموافقات والمستندات", path: "/approvals" },
@@ -59,7 +61,6 @@ const menuItems = [
   { icon: BookOpen, label: "شجرة الحسابات", path: "/accounting-settings#chart-of-accounts" },
   { icon: Boxes, label: "الأصول الثابتة", path: "/accounting-settings#fixed-assets" },
   { section: true, label: "الإدارة والمتابعة" },
-  { icon: ClipboardList, label: "الحضور والانصراف", path: "/attendance" },
   { icon: ClipboardList, label: "إسناد ومتابعة مهام الفريق", path: "/tasks" },
   { icon: Users, label: "المستخدمون والصلاحيات", path: "/users" },
   { icon: ShieldAlert, label: "مركز جودة البيانات", path: "/data-quality" },
