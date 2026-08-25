@@ -1,2 +1,0 @@
-ALTER TABLE `attendance` ADD `locationDistanceMeters` decimal(10,2);--> statement-breakpoint
-ALTER TABLE `attendance` ADD `locationMatchStatus` enum('not_checked','within_range','outside_range','no_site_configured') DEFAULT 'not_checked' NOT NULL;
