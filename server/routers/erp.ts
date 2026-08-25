@@ -11,7 +11,7 @@ import { accountingTotals } from "../accountingCalculations";
 import { calculateStageTimeVariance } from "../../shared/stageTiming";
 import { allocateAdministrativeExpense, normalizeExpenseTaxRate, validateExpenseAllocation } from "../../shared/expenseAllocation";
 import { calculateInventoryBalance, canReceiveContractQuantity, canReviewInventoryStage, nextInventoryApprovalStage, remainingContractQuantity, selectPurchaseInvoiceForIssue, calculateServiceEntryTotal, remainingServiceContractAmount, calculateMaterialReceiptCost, materialReceiptExpenseReference, materialIssueExpenseReference, isMaterialContractType, isInventoryBelowMinimum, resolveMaterialCostAccount, requiresSupplierInvoicePaymentApproval } from "../../shared/inventory";
-import { canReviewCertificateApproval, getCertificateInitialApproval, nextCertificateApproval, nextMaterialRequisitionApproval } from "../../shared/approvalWorkflows";
+import { canReviewCertificateApproval, getCertificateInitialApproval, nextCertificateApproval, nextMaterialRequisitionApproval, requiresCostItemForMaterialRequisition } from "../../shared/approvalWorkflows";
 import { payrollRunPaymentStatus } from "../../shared/payrollRun";
 import { advanceOutstandingAmount, buildAdvanceSchedule, calculateAdvanceDeduction, calculatePayrollAdvanceAccrualAmounts, isRepaymentDue } from "../../shared/advanceRepayment";
 import { calculateWipBalance, buildWipClosingLines } from "../../shared/wip";
@@ -1564,14 +1564,14 @@ export const erpRouter = router({
       create: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), stageId: z.number().int().positive().optional(), description: z.string().max(2000).optional(), requiredBy: z.string().optional(), items: z.array(materialRequisitionLineSchema).min(1) })).mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
         await assertProjectAccess(db, ctx, input.projectId);
-        if (ctx.user.role !== "site_worker") await assertProjectWrite(db, ctx, input.projectId);
+        if (ctx.user.role !== "site_worker" && ctx.user.role !== "procurement_manager") await assertProjectWrite(db, ctx, input.projectId);
         const requestNumber = `MR-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
         const result = await db.insert(materialRequisitions).values({ projectId: input.projectId, stageId: input.stageId || null, requestedBy: ctx.user.id, requestNumber, description: input.description || null, status: "pending_approval", requiredBy: input.requiredBy ? new Date(input.requiredBy) : null });
         const id = Number(result[0].insertId);
         for (const item of input.items) {
           if (!item.inventoryItemId) { await db.insert(materialRequisitionItems).values({ requisitionId: id, description: item.description, unit: item.unit || null, quantity: item.quantity.toFixed(3), estimatedUnitCost: item.estimatedUnitCost.toFixed(2), notes: item.notes || null }); continue; }
           const plan = await resolveMaterialPlanning(db, { projectId: input.projectId, stageId: input.stageId, inventoryItemId: item.inventoryItemId, costItemId: item.costItemId, quantity: item.quantity });
-          await db.insert(materialRequisitionItems).values({ requisitionId: id, inventoryItemId: item.inventoryItemId, costItemId: plan.costItemId, contractId: plan.contractId, contractItemIndex: plan.contractItemIndex, description: plan.material.name, unit: plan.material.unit, quantity: item.quantity.toFixed(3), estimatedUnitCost: item.estimatedUnitCost.toFixed(2), planningStatus: plan.status, plannedQuantity: plan.plannedQuantity.toFixed(3), notes: item.notes || null });
+          await db.insert(materialRequisitionItems).values({ requisitionId: id, inventoryItemId: item.inventoryItemId, costItemId: null, contractId: plan.contractId, contractItemIndex: plan.contractItemIndex, description: plan.material.name, unit: plan.material.unit, quantity: item.quantity.toFixed(3), estimatedUnitCost: item.estimatedUnitCost.toFixed(2), planningStatus: plan.status, plannedQuantity: plan.plannedQuantity.toFixed(3), notes: item.notes || null });
         }
         await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "materialRequisition", entityId: id, requestedBy: ctx.user.id, status: "pending", approvalStage: "mostafa", stageOrder: 1 });
         await db.insert(auditLogs).values({ entityType: "materialRequisition", entityId: id, action: "submitted", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
@@ -1606,7 +1606,7 @@ export const erpRouter = router({
         await db.insert(auditLogs).values({ entityType: "materialRequisition", entityId: input.id, action: "deleted", actorId: ctx.user.id, afterJson: JSON.stringify({ status: "cancelled" }) });
         return { success: true } as const;
       }),
-      decide: protectedProcedure.input(z.object({ id: z.number().int().positive(), decision: z.enum(["approved", "rejected"]), note: z.string().max(1000).optional() })).mutation(async ({ ctx, input }) => {
+      decide: protectedProcedure.input(z.object({ id: z.number().int().positive(), decision: z.enum(["approved", "rejected"]), note: z.string().max(1000).optional(), costItemId: z.number().int().positive().optional() })).mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
         const request = (await db.select().from(materialRequisitions).where(eq(materialRequisitions.id, input.id)).limit(1))[0];
         if (!request) throw new TRPCError({ code: "NOT_FOUND", message: "طلب المواد غير موجود" });
@@ -1615,6 +1615,12 @@ export const erpRouter = router({
         const stage = approval.approvalStage === "owner" ? "owner" : approval.approvalStage === "project_manager" ? "project_manager" : approval.approvalStage === "general_manager" ? "general_manager" : "mostafa";
         const canReviewStage = stage === "mostafa" ? Number(ctx.user.id) === 13170001 : stage === "project_manager" ? ctx.user.role === "project_manager" : stage === "owner" ? ctx.user.role === "admin" : ctx.user.role === "general_manager";
         if (!canReviewStage) throw new TRPCError({ code: "FORBIDDEN", message: stage === "mostafa" ? "اعتماد طلب المواد في المرحلة الأولى مخصص لمصطفى" : stage === "owner" ? "اعتماد طلب المواد في المرحلة الثانية مخصص للمالك" : stage === "project_manager" ? "اعتماد طلب المواد في المرحلة الثالثة مخصص لمدير المشاريع" : "الاعتماد النهائي مخصص للمدير العام" });
+        if (requiresCostItemForMaterialRequisition(stage, input.decision)) {
+          if (!input.costItemId) throw new TRPCError({ code: "BAD_REQUEST", message: "يجب على المالك اختيار بند التكلفة قبل اعتماد طلب المواد" });
+          const costItem = (await db.select().from(costItems).where(eq(costItems.id, input.costItemId)).limit(1))[0];
+          if (!costItem || !costItem.isActive || (costItem.projectId && costItem.projectId !== request.projectId)) throw new TRPCError({ code: "BAD_REQUEST", message: "بند التكلفة المحدد غير صالح لهذا المشروع" });
+          await db.update(materialRequisitionItems).set({ costItemId: input.costItemId }).where(eq(materialRequisitionItems.requisitionId, input.id));
+        }
         await db.update(approvalRequests).set({ status: input.decision, reviewedBy: ctx.user.id, note: input.note || null, reviewedAt: new Date() }).where(eq(approvalRequests.id, approval.id));
         if (input.decision === "rejected") {
           await db.update(materialRequisitions).set({ status: "rejected" }).where(eq(materialRequisitions.id, input.id));
@@ -1624,14 +1630,14 @@ export const erpRouter = router({
         const nextStage = nextMaterialRequisitionApproval(stage);
         if (nextStage) {
           await db.insert(approvalRequests).values({ projectId: request.projectId, entityType: "materialRequisition", entityId: request.id, requestedBy: request.requestedBy, status: "pending", approvalStage: nextStage.approvalStage, stageOrder: nextStage.stageOrder });
-          const recipientConfig = nextStage.approvalStage === "owner" ? { roles: ["admin"] as UserRole[], type: "material_requisition_owner_pending", title: `طلب مواد بانتظار اعتماد المالك #${input.id}`, message: `اعتمد مصطفى طلب المواد #${input.id} وأصبح بانتظار اعتماد المالك.` } : nextStage.approvalStage === "project_manager" ? { roles: ["project_manager"] as UserRole[], type: "material_requisition_project_manager_pending", title: `طلب مواد بانتظار مدير المشاريع #${input.id}`, message: `اعتمد المالك طلب المواد #${input.id} وأصبح بانتظار اعتماد مدير المشاريع.` } : { roles: ["general_manager"] as UserRole[], type: "material_requisition_general_manager_pending", title: `طلب مواد بانتظار اعتماد المدير العام #${input.id}`, message: `اعتمد مدير المشاريع طلب المواد #${input.id} وأصبح بانتظار اعتماد المدير العام.` };
+          const recipientConfig = nextStage.approvalStage === "owner" ? { roles: ["admin"] as UserRole[], type: "material_requisition_owner_pending", title: `طلب مواد بانتظار اعتماد المالك #${input.id}`, message: `اعتمد مصطفى طلب المواد #${input.id} وأصبح بانتظار اعتماد المالك وتعيين بند التكلفة.` } : { roles: ["project_manager"] as UserRole[], type: "material_requisition_project_manager_pending", title: `طلب مواد بانتظار مدير المشاريع #${input.id}`, message: `اعتمد المالك طلب المواد وحدد بند التكلفة، وأصبح بانتظار اعتماد مدير المشاريع النهائي.` };
           await db.insert(auditLogs).values({ entityType: "materialRequisition", entityId: input.id, action: `${stage}_approved_${nextStage.approvalStage}_pending`, actorId: ctx.user.id, afterJson: JSON.stringify({ note: input.note || null }) });
           await notifyApprovalUsers(db, recipientConfig);
           return { success: true, status: "pending_approval" as const, approvalStage: nextStage.approvalStage };
         }
         await db.update(materialRequisitions).set({ status: "approved" }).where(eq(materialRequisitions.id, input.id));
-        await db.insert(auditLogs).values({ entityType: "materialRequisition", entityId: input.id, action: "general_manager_approved", actorId: ctx.user.id, afterJson: JSON.stringify({ note: input.note || null }) });
-        await notifyApprovalUsers(db, { type: "material_requisition_approved", title: `تم اعتماد طلب المواد #${input.id}`, message: `تم اعتماد طلب المواد نهائيًا ويمكن استكمال التنفيذ التشغيلي.`, userIds: [request.requestedBy, 13170001], roles: [] });
+        await db.insert(auditLogs).values({ entityType: "materialRequisition", entityId: input.id, action: `${stage}_final_approved`, actorId: ctx.user.id, afterJson: JSON.stringify({ note: input.note || null, costItemId: input.costItemId || null }) });
+        await notifyApprovalUsers(db, { type: "material_requisition_approved", title: `تم اعتماد طلب المواد #${input.id}`, message: `اعتمد مدير المشاريع طلب المواد نهائيًا ويمكن استكمال التنفيذ التشغيلي.`, userIds: [request.requestedBy, 13170001], roles: [] });
         return { success: true, status: "approved" as const, approvalStage: "complete" as const };
       }),
     }),

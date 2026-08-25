@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MOSTAFA_USER_ID, canReviewCertificateApproval, getCertificateInitialApproval, nextCertificateApproval, nextMaterialRequisitionApproval } from "../shared/approvalWorkflows";
+import { MOSTAFA_USER_ID, canReviewCertificateApproval, getCertificateInitialApproval, nextCertificateApproval, nextMaterialRequisitionApproval, requiresCostItemForMaterialRequisition } from "../shared/approvalWorkflows";
 
 describe("certificate approval workflow", () => {
   it("sends a certificate created by Mostafa directly to the owner", () => {
@@ -28,10 +28,16 @@ describe("certificate approval workflow", () => {
 });
 
 describe("material requisition workflow", () => {
-  it("requires Mostafa, then owner, then project manager, then general manager", () => {
+  it("requires Mostafa, then owner, then project manager as the final decision", () => {
     expect(nextMaterialRequisitionApproval("mostafa")).toEqual({ approvalStage: "owner", stageOrder: 2 });
     expect(nextMaterialRequisitionApproval("owner")).toEqual({ approvalStage: "project_manager", stageOrder: 3 });
-    expect(nextMaterialRequisitionApproval("project_manager")).toEqual({ approvalStage: "general_manager", stageOrder: 4 });
-    expect(nextMaterialRequisitionApproval("general_manager")).toBeNull();
+    expect(nextMaterialRequisitionApproval("project_manager")).toBeNull();
+  });
+
+  it("requires the owner to assign a cost item only when approving the request", () => {
+    expect(requiresCostItemForMaterialRequisition("owner", "approved")).toBe(true);
+    expect(requiresCostItemForMaterialRequisition("owner", "rejected")).toBe(false);
+    expect(requiresCostItemForMaterialRequisition("mostafa", "approved")).toBe(false);
+    expect(requiresCostItemForMaterialRequisition("project_manager", "approved")).toBe(false);
   });
 });
