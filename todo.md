@@ -36165,3 +36165,13 @@
 - [ ] Accept the pending Manus invitation on the GitHub repository before pushing the current build to Railway
 - [ ] Resolve the GitHub invitation addressed to Manus, currently shown as Pending Invite / Awaiting manus-agent’s response
 - [ ] If the invitation cannot be accepted, establish an alternative authenticated push path without exposing or changing the user’s private data
+- [ ] Diagnose Railway serving the old dashboard layout with no selected project and aggregated financial cards
+- [ ] Restore the intended executive dashboard layout on the existing Railway service without changing database data
+- [ ] Verify project selection, project summary, stage data, and split administrative cards on the Railway URL
+
+## Dashboard layout restoration
+
+- [ ] Remove excessive empty space and reduce visual crowding in the RTL execution dashboard
+- [ ] Make the selected project and current stage the primary visual focus
+- [ ] Preserve the separate direct and allocated administrative expense cards in the redesigned layout
+- [ ] Verify dashboard layout and project selector on the Railway deployment

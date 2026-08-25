@@ -8,7 +8,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { isProjectActive } from "../../../shared/projectStatus";
 import { ArrowLeft, CalendarClock, CheckCircle2, CircleDollarSign, Clock3, FileCheck2, FolderKanban, HandCoins, HardHat, Landmark, MessageSquare, Plus, ReceiptText, ShieldAlert, WalletCards } from "lucide-react";
 import { useLocation } from "wouter";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const statusLabels = {
   on_track: { label: "على المسار", className: "bg-emerald-50 text-emerald-700 border-emerald-200" },
@@ -25,6 +25,15 @@ export default function Home() {
   const { data: summaries = [], isLoading } = trpc.erp.dashboard.summary.useQuery();
   const { data: companySummary } = trpc.erp.dashboard.companySummary.useQuery();
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  useEffect(() => {
+    if (!summaries.length) {
+      setSelectedProjectId(null);
+      return;
+    }
+    if (selectedProjectId === null || !summaries.some((item) => item.project.id === selectedProjectId)) {
+      setSelectedProjectId(summaries[0].project.id);
+    }
+  }, [summaries, selectedProjectId]);
   const selectedSummary = useMemo(() => summaries.find((item) => item.project.id === selectedProjectId) ?? summaries[0] ?? null, [summaries, selectedProjectId]);
   const { data: selectedDetailReport } = trpc.erp.reports.projectStageDetail.useQuery({ projectId: selectedSummary?.project.id ?? 0 }, { enabled: Boolean(selectedSummary?.project.id) });
   const { data: selectedCashFlow } = trpc.erp.reports.cashFlow.useQuery({ projectId: selectedSummary?.project.id ?? 0 }, { enabled: Boolean(selectedSummary?.project.id) });
@@ -63,9 +72,9 @@ export default function Home() {
 
   return (
     <DashboardLayout>
-      <div dir="rtl" className="min-h-screen bg-[#f7f8fa] px-4 py-6 sm:px-8 lg:px-10">
-        <div className="mx-auto max-w-7xl space-y-8">
-          <header className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+      <div dir="rtl" className="min-h-screen bg-[#f7f8fa] px-4 py-4 sm:px-7 lg:px-8">
+        <div className="mx-auto max-w-[1480px] space-y-5">
+          <header className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-white/80 px-4 py-4 shadow-sm lg:flex-row lg:items-end lg:justify-between sm:px-5">
             <div className="w-full lg:order-2 lg:w-72"><label className="mb-2 block text-xs font-semibold text-slate-500">المشروع المعروض في المؤشرات</label><select value={selectedSummary ? String(selectedSummary.project.id) : ""} onChange={(event) => setSelectedProjectId(Number(event.target.value))} className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-[#18324b] shadow-sm outline-none focus:border-[#b28a3b]"><option value="" disabled>اختر مشروعًا</option>{summaries.map((item) => <option key={item.project.id} value={item.project.id}>{item.project.name}</option>)}</select></div>
             <div>
               <p className="mb-2 text-sm font-semibold tracking-wide text-[#b28a3b]">{user?.role === "general_manager" ? "واجهة المدير العام التنفيذية" : "مركز القيادة التنفيذية"}</p><div className="mb-2 inline-flex rounded-full border border-[#eadfca] bg-[#fcfaf5] px-3 py-1 text-xs font-semibold text-[#8b6b2f]">{user?.role === "general_manager" ? "عرض تقارير وموافقات فقط · واجهة مختلفة عن المحاسب ومدير المشاريع" : "لوحة متابعة تنفيذية"}</div>
@@ -88,13 +97,13 @@ export default function Home() {
 
           {selectedSummary && <DashboardStageDetail rows={selectedDetailReport?.rows.filter((row) => row.rowType === "stage") ?? []} total={selectedDetailReport?.total ?? null} onOpenReport={() => setLocation("/projects")} />}
 
-          <section className="rounded-3xl border border-[#b28a3b]/30 bg-white p-5 shadow-lg sm:p-7">
+          <section className="rounded-2xl border border-[#b28a3b]/30 bg-white p-4 shadow-md sm:p-5">
             <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 pb-5"><div><p className="text-sm font-semibold tracking-wide text-[#b28a3b]">الملخص المالي العام</p><h2 className="mt-1 text-2xl font-bold text-[#18324b] sm:text-3xl">ملخص مالي للشركة ككل</h2><p className="mt-2 text-sm leading-6 text-slate-500">إجماليات الشركة كاملة، مع فصل تكلفة المشاريع عن المصروفات المشتركة وتوزيعها على المشاريع النشطة حسب قيمة العقد.</p></div><Badge variant="outline" className="border-[#b28a3b]/40 bg-[#fffaf0] px-3 py-1 text-[#8a6825]">أساس التوزيع: قيمة العقد</Badge></div>
             <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-5"><CompanyMetric label="إجمالي تكاليف المشاريع" value={companySummary?.projectCosts ?? 0} tone="blue" /><CompanyMetric label="إجمالي إيراد المشاريع" value={companySummary?.projectRevenue ?? 0} tone="green" /><CompanyMetric label="المصروفات الإدارية" value={companySummary?.administrativeExpenses ?? 0} tone="amber" /><CompanyMetric label="المصروفات النثرية" value={companySummary?.pettyCashExpenses ?? 0} tone="slate" /><CompanyMetric label="الرواتب الإدارية للشركة" value={companySummary?.administrativePayroll ?? 0} tone="violet" /></div>
-            <div className="mt-5 rounded-2xl bg-[#f7f8fa] p-4"><div className="flex flex-wrap items-end justify-between gap-2"><div><h3 className="font-bold text-[#18324b]">تحميل المصروفات الإدارية والرواتب على المشاريع النشطة</h3><p className="mt-1 text-xs text-slate-500">الإجمالي المشترك الموزع: <b className="text-[#18324b]">{money.format(companySummary?.sharedTotal ?? 0)} ر.س</b></p></div><span className="text-xs text-slate-500">لا تُضاف هذه القيم مرة أخرى إلى تكلفة المشروع المباشرة.</span></div><div className="mt-4 overflow-x-auto">{companySummary?.activeProjects?.length ? <table className="w-full min-w-[720px] text-right text-sm"><thead><tr className="border-b border-slate-200 bg-[#18324b] text-white"><th className="p-3">المشروع</th><th className="p-3">قيمة العقد</th><th className="p-3">نسبة التحمل</th><th className="p-3">إداري</th><th className="p-3">نثريات</th><th className="p-3">رواتب إدارية</th><th className="p-3">إجمالي التحميل</th></tr></thead><tbody>{companySummary.activeProjects.map((item) => <tr key={item.projectId} className="border-b border-slate-100 bg-white"><td className="p-3 font-semibold text-[#18324b]">{item.projectName}</td><td className="p-3">{money.format(item.contractValue)} ر.س</td><td className="p-3 font-bold text-[#b28a3b]">{(item.ratio * 100).toFixed(2)}%</td><td className="p-3">{money.format(item.administrativeExpenses ?? 0)} ر.س</td><td className="p-3">{money.format(item.pettyCashExpenses ?? 0)} ر.س</td><td className="p-3">{money.format(item.administrativePayroll ?? 0)} ر.س</td><td className="p-3 font-bold text-[#18324b]">{money.format(item.allocatedAmount)} ر.س</td></tr>)}</tbody></table> : <p className="py-8 text-center text-sm text-slate-500">لا توجد مشاريع نشطة ذات قيمة عقد حتى الآن لتوزيع المصروفات المشتركة.</p>}</div></div>
+            <div className="mt-4 rounded-2xl bg-[#f7f8fa] p-3"><div className="flex flex-wrap items-end justify-between gap-2"><div><h3 className="font-bold text-[#18324b]">تحميل المصروفات الإدارية والرواتب على المشاريع النشطة</h3><p className="mt-1 text-xs text-slate-500">الإجمالي المشترك الموزع: <b className="text-[#18324b]">{money.format(companySummary?.sharedTotal ?? 0)} ر.س</b></p></div><span className="text-xs text-slate-500">لا تُضاف هذه القيم مرة أخرى إلى تكلفة المشروع المباشرة.</span></div><div className="mt-4 overflow-x-auto">{companySummary?.activeProjects?.length ? <table className="w-full min-w-[720px] text-right text-sm"><thead><tr className="border-b border-slate-200 bg-[#18324b] text-white"><th className="p-3">المشروع</th><th className="p-3">قيمة العقد</th><th className="p-3">نسبة التحمل</th><th className="p-3">إداري</th><th className="p-3">نثريات</th><th className="p-3">رواتب إدارية</th><th className="p-3">إجمالي التحميل</th></tr></thead><tbody>{companySummary.activeProjects.map((item) => <tr key={item.projectId} className="border-b border-slate-100 bg-white"><td className="p-3 font-semibold text-[#18324b]">{item.projectName}</td><td className="p-3">{money.format(item.contractValue)} ر.س</td><td className="p-3 font-bold text-[#b28a3b]">{(item.ratio * 100).toFixed(2)}%</td><td className="p-3">{money.format(item.administrativeExpenses ?? 0)} ر.س</td><td className="p-3">{money.format(item.pettyCashExpenses ?? 0)} ر.س</td><td className="p-3">{money.format(item.administrativePayroll ?? 0)} ر.س</td><td className="p-3 font-bold text-[#18324b]">{money.format(item.allocatedAmount)} ر.س</td></tr>)}</tbody></table> : <p className="py-4 text-center text-sm text-slate-500">لا توجد مشاريع نشطة ذات قيمة عقد حتى الآن لتوزيع المصروفات المشتركة.</p>}</div></div>
           </section>
 
-          <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             <MetricCard icon={HardHat} label="تكاليف مقاولي الباطن" value={`${money.format(selectedSummary ? selectedSummary.subcontractorCostsTotal : shortcutTotals.subcontractorCostsTotal)} ر.س`} hint="من إجمالي المستخلصات المعتمدة" tone="slate" onClick={() => setLocation("/operations?tab=certificates")} />
             <MetricCard icon={Landmark} label="تقرير تكلفة الخامات" value={`${money.format(selectedExpenseTotals.materials)} ر.س`} hint="تفصيل الخامات في قائمة الدخل" tone="gold" onClick={() => setLocation(`/accounting?report=materials${selectedSummary ? `&projectId=${selectedSummary.project.id}` : ""}`)} />
             <MetricCard icon={WalletCards} label="التكلفة التشغيلية" value={`${money.format(selectedExpenseTotals.operational)} ر.س`} hint="تشغيل ومعدات وخدمات" tone="blue" onClick={() => setLocation("/expenses")} />
