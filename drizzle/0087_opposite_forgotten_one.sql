@@ -1,1 +1,0 @@
-ALTER TABLE `projects` ADD `plannedBudget` decimal(14,2) DEFAULT '0' NOT NULL;

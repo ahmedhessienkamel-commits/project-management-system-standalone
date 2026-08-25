@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { allocateAdministrativeExpense, calculateBoqPlannedTotal, normalizeExpenseTaxRate, validateExpenseAllocation } from "../shared/expenseAllocation";
+import { allocateAdministrativeExpense, normalizeExpenseTaxRate, validateExpenseAllocation } from "../shared/expenseAllocation";
 
 describe("expense allocation rules", () => {
   it("requires a project only for project allocation", () => {
@@ -26,16 +26,6 @@ describe("expense allocation rules", () => {
   it("keeps stages optional and project-scoped", () => {
     expect(validateExpenseAllocation({ classification: "administrative", stageId: 2 })).toEqual({ ok: false, message: "المرحلة متاحة فقط للمصروف المحمل على مشروع" });
     expect(validateExpenseAllocation({ classification: "project", projectId: 3, stageId: 2 })).toEqual({ ok: true });
-  });
-
-  it("does not double count a main BoQ item when optional sub-items exist", () => {
-    expect(calculateBoqPlannedTotal([
-      { kind: "main", code: "BLD", plannedAmount: 100000 },
-      { kind: "sub", code: "EXC", parentCode: "BLD", plannedAmount: 25000 },
-      { kind: "sub", code: "CON", parentCode: "BLD", plannedAmount: 35000 },
-      { kind: "main", code: "SAL", plannedAmount: 10000 },
-    ])).toBe(70000);
-    expect(calculateBoqPlannedTotal([{ kind: "main", code: "ADM", plannedAmount: 1250 }])).toBe(1250);
   });
 
   it("allocates administrative expenses by contract value without rounding loss", () => {
