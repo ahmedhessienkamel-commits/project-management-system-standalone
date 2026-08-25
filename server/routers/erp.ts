@@ -6,7 +6,7 @@ import { getDb } from "../db";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { getSessionCookieOptions } from "../_core/cookies";
-import { calculateCertificateProgress, calculateCashOutFromPaymentVouchers, calculateDocumentCompleteness, calculateExpenseTotals, calculateFinancialSummaryTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, calculateStraightLineDepreciation, allocateAdministrativeAmount, canAccessProject, canWriteProject, projectHealthReasons, projectHealthStatus, projectNotificationTriggers } from "../erpCalculations";
+import { calculateCertificateProgress, calculateCashOutFromPaymentVouchers, calculateDocumentCompleteness, calculateExpenseTotals, calculateFinancialSummaryTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, calculateStraightLineDepreciation, calculateSupplierStatementTotals, allocateAdministrativeAmount, canAccessProject, canWriteProject, projectHealthReasons, projectHealthStatus, projectNotificationTriggers } from "../erpCalculations";
 import { accountingTotals } from "../accountingCalculations";
 import { calculateStageTimeVariance } from "../../shared/stageTiming";
 import { allocateAdministrativeExpense, normalizeExpenseTaxRate, validateExpenseAllocation } from "../../shared/expenseAllocation";
@@ -3174,15 +3174,13 @@ export const erpRouter = router({
     supplierStatement: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), vendorId: z.number().int().positive() })).query(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
       await assertProjectAccess(db, ctx, input.projectId);
-      const [expenseRows, certificateRows] = await Promise.all([
+      const [expenseRows, certificateRows, invoiceRows, voucherRows] = await Promise.all([
         db.select().from(expenses).where(eq(expenses.projectId, input.projectId)),
         db.select().from(certificates).where(eq(certificates.projectId, input.projectId)),
+        db.select().from(accountingDocuments).where(and(eq(accountingDocuments.projectId, input.projectId), eq(accountingDocuments.documentType, "purchase_invoice"))),
+        db.select().from(accountingDocuments).where(and(eq(accountingDocuments.projectId, input.projectId), eq(accountingDocuments.documentType, "payment_voucher"), eq(accountingDocuments.status, "posted"))),
       ]);
-      const vendorExpenses = expenseRows.filter((row) => row.vendorId === input.vendorId);
-      const vendorCertificates = certificateRows.filter((row) => row.vendorId === input.vendorId);
-      const debit = vendorExpenses.reduce((sum, row) => sum + Number(row.totalAmount), 0) + vendorCertificates.reduce((sum, row) => sum + Number(row.totalAmount), 0);
-      const credit = vendorExpenses.reduce((sum, row) => sum + Number(row.paidAmount), 0) + vendorCertificates.reduce((sum, row) => sum + Number(row.paidAmount), 0);
-      return { debit, credit, balance: debit - credit, expenses: vendorExpenses, certificates: vendorCertificates };
+      return calculateSupplierStatementTotals({ vendorId: input.vendorId, expenses: expenseRows, certificates: certificateRows, invoices: invoiceRows, vouchers: voucherRows });
     }),
     financialSummary: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), from: z.string().optional(), to: z.string().optional() })).query(async ({ ctx, input }) => {
       const db = requireDb(await getDb());

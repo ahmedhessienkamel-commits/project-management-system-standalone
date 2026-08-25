@@ -154,3 +154,19 @@ export function calculateContractBalance(contractTotal: number, certificateTotal
   const remainingAfter = Math.max(0, remainingBefore - Math.max(0, currentCertificateTotal));
   return { usedBefore, remainingBefore, remainingAfter, exceeds: Math.max(0, currentCertificateTotal) > remainingBefore + 0.01 };
 }
+
+export function calculateSupplierStatementTotals({ vendorId, expenses, certificates, invoices, vouchers }: { vendorId: number; expenses: Array<{ id: number; vendorId?: number | null; expenseDate?: Date | string | null; reference?: string | null; description?: string | null; totalAmount?: string | number | null; paidAmount?: string | number | null }>; certificates: Array<{ id: number; vendorId?: number | null; certificateDate?: Date | string | null; certificateNumber?: string | null; description?: string | null; totalAmount?: string | number | null; paidAmount?: string | number | null }>; invoices: Array<{ id: number; supplierId?: number | null; contractorId?: number | null; totalAmount?: string | number | null; paidAmount?: string | number | null; relatedDocumentType?: string | null; relatedDocumentId?: number | null }>; vouchers: Array<{ id: number; supplierId?: number | null; contractorId?: number | null; certificateId?: number | null; purchaseInvoiceId?: number | null; documentDate?: Date | string | null; documentNumber?: string | null; notes?: string | null; totalAmount?: string | number | null }> }) {
+  const vendorExpenses = expenses.filter((row) => row.vendorId === vendorId);
+  const vendorCertificates = certificates.filter((row) => row.vendorId === vendorId);
+  const certificateIds = new Set(vendorCertificates.map((row) => row.id));
+  const vendorInvoices = invoices.filter((row) => (row.supplierId === vendorId || row.contractorId === vendorId) && !(row.relatedDocumentType === "certificate" && row.relatedDocumentId && certificateIds.has(row.relatedDocumentId)));
+  const invoiceIds = new Set(vendorInvoices.map((row) => row.id));
+  const vendorVouchers = vouchers.filter((row) => row.supplierId === vendorId || row.contractorId === vendorId || (row.purchaseInvoiceId ? invoiceIds.has(row.purchaseInvoiceId) : false) || (row.certificateId ? certificateIds.has(row.certificateId) : false));
+  const debit = vendorExpenses.reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) + vendorCertificates.reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) + vendorInvoices.reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+  const expensePaid = vendorExpenses.reduce((sum, row) => sum + Number(row.paidAmount || 0), 0);
+  const certificatePaid = vendorCertificates.reduce((sum, row) => sum + Math.max(Number(row.paidAmount || 0), vendorVouchers.filter((voucher) => voucher.certificateId === row.id).reduce((value, voucher) => value + Number(voucher.totalAmount || 0), 0)), 0);
+  const invoicePaid = vendorInvoices.reduce((sum, row) => sum + Math.max(Number(row.paidAmount || 0), vendorVouchers.filter((voucher) => voucher.purchaseInvoiceId === row.id).reduce((value, voucher) => value + Number(voucher.totalAmount || 0), 0)), 0);
+  const directVoucherPaid = vendorVouchers.filter((voucher) => !voucher.certificateId && !(voucher.purchaseInvoiceId && invoiceIds.has(voucher.purchaseInvoiceId))).reduce((sum, voucher) => sum + Number(voucher.totalAmount || 0), 0);
+  const credit = expensePaid + certificatePaid + invoicePaid + directVoucherPaid;
+  return { debit, credit, balance: debit - credit, expenses: vendorExpenses, certificates: vendorCertificates, invoices: vendorInvoices, paymentVouchers: vendorVouchers };
+}

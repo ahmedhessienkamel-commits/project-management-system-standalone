@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { allocateAdministrativeAmount, calculateCashOutFromPaymentVouchers, calculateCertificateProgress, calculateContractBalance, calculateExpenseTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, calculateStraightLineDepreciation, projectHealthStatus } from "./erpCalculations";
+import { allocateAdministrativeAmount, calculateCashOutFromPaymentVouchers, calculateSupplierStatementTotals, calculateCertificateProgress, calculateContractBalance, calculateExpenseTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, calculateStraightLineDepreciation, projectHealthStatus } from "./erpCalculations";
 import { calculateAttendanceHours, filterAttendanceByMonth, summarizeAttendanceExceptions } from "../shared/attendance";
 import { isProjectActive } from "../shared/projectStatus";
 
@@ -100,6 +100,20 @@ describe("ERP financial rules", () => {
     expect(result.legacyCertificateCashOut).toBe(500);
     expect(result.voucherPaidByCertificate.get(7)).toBe(18630);
   });
+  it("counts supplier voucher payments once and preserves the payable balance", () => {
+    const result = calculateSupplierStatementTotals({
+      vendorId: 7,
+      expenses: [],
+      certificates: [{ id: 21, vendorId: 7, totalAmount: "18630.00", paidAmount: "0.00" }],
+      invoices: [],
+      vouchers: [{ id: 31, contractorId: 7, certificateId: 21, totalAmount: "18630.00" }],
+    });
+    expect(result.debit).toBe(18630);
+    expect(result.credit).toBe(18630);
+    expect(result.balance).toBe(0);
+    expect(result.paymentVouchers).toHaveLength(1);
+  });
+
   it("returns critical for a large cash gap or approval backlog", () => {
     expect(projectHealthStatus({ budgetUsage: 40, progress: 60, delayedStages: 0, cashGapRatio: 0.5 })).toBe("critical");
     expect(projectHealthStatus({ budgetUsage: 40, progress: 60, delayedStages: 0, pendingApprovals: 3 })).toBe("critical");

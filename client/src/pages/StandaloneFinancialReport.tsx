@@ -37,11 +37,12 @@ export default function StandaloneFinancialReport() {
 
   const supplierMovements = useMemo(() => {
     const rows = [
-      ...(supplier.data?.expenses ?? []).map((row) => ({ date: row.expenseDate, reference: row.reference || `مصروف #${row.id}`, description: row.description, type: "مصروف", total: Number(row.totalAmount || 0), paid: Number(row.paidAmount || 0) })),
-      ...(supplier.data?.certificates ?? []).map((row) => ({ date: row.certificateDate, reference: row.certificateNumber, description: row.description || "مستخلص مقاول", type: "مستخلص", total: Number(row.totalAmount || 0), paid: Number(row.paidAmount || 0) })),
+      ...(supplier.data?.expenses ?? []).map((row) => ({ date: row.expenseDate ?? null, reference: row.reference || `مصروف #${row.id}`, description: row.description || "مصروف مسجل", type: "مصروف", total: Number(row.totalAmount || 0), paid: Number(row.paidAmount || 0) })),
+      ...(supplier.data?.certificates ?? []).map((row) => ({ date: row.certificateDate ?? null, reference: row.certificateNumber || `مستخلص #${row.id}`, description: row.description || "مستخلص مقاول", type: "مستخلص", total: Number(row.totalAmount || 0), paid: Number(row.paidAmount || 0) })),
+      ...(supplier.data?.paymentVouchers ?? []).map((row) => ({ date: row.documentDate ?? null, reference: row.documentNumber || `سند صرف #${row.id}`, description: row.notes || "سند صرف للمورد أو المقاول", type: "سند صرف", total: 0, paid: Number(row.totalAmount || 0) })),
     ].filter((row) => (!from || !row.date || String(row.date).slice(0, 10) >= from) && (!to || !row.date || String(row.date).slice(0, 10) <= to)).sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
     let balance = 0;
-    return rows.map((row) => { const outstanding = Math.max(row.total - row.paid, 0); balance += outstanding; return { ...row, outstanding, balance }; });
+    return rows.map((row) => { const outstanding = Math.max(row.total - row.paid, 0); balance += row.total - row.paid; return { ...row, outstanding, balance }; });
   }, [supplier.data, from, to]);
 
   const costCenterRows = useMemo(() => { const rows = costCenter.data?.rows ?? []; const stages = rows.filter((row) => row.rowType === "stage"); const items = rows.filter((row) => row.rowType === "costItem"); return [...stages.flatMap((stage) => [stage, ...items.filter((item) => item.stageId === stage.id)]), ...items.filter((item) => !item.stageId || !stages.some((stage) => stage.id === item.stageId))]; }, [costCenter.data]);
