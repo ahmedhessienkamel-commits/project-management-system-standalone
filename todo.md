@@ -36116,3 +36116,10 @@
 - [x] إدراج سندات الصرف الإدارية والنثرية وتوزيع المصروفات العامة على المشروع في مركز التكلفة.
 - [x] إظهار السداد المرتبط بالمستخلص داخل المدفوع لمرحلة مركز التكلفة.
 - [ ] التحقق الحي من كشف المورد وترتيب الحركات والرصيد التراكمي بعد النشر.
+
+## Project total estimated cost and stage inclusion
+
+- [x] Add editable total estimated project cost to the project form, independent from any single stage budget
+- [x] Include every stage cost in the project total planned-cost view without replacing the project total with one stage
+- [x] Keep stage comparisons based on each stage budget and whole-project comparisons based on the project estimate
+- [x] Add tests for project total and cumulative stage-cost behavior

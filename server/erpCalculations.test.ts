@@ -2,8 +2,23 @@ import { describe, expect, it } from "vitest";
 import { allocateAdministrativeAmount, calculateCashOutFromPaymentVouchers, calculateSupplierStatementTotals, calculateCertificateProgress, calculateContractBalance, calculateExpenseTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, calculateStraightLineDepreciation, projectHealthStatus } from "./erpCalculations";
 import { calculateAttendanceHours, filterAttendanceByMonth, summarizeAttendanceExceptions } from "../shared/attendance";
 import { isProjectActive } from "../shared/projectStatus";
+import { calculateProjectBudgetPosition } from "../shared/projectBudget";
 
 describe("ERP financial rules", () => {
+  it("keeps the project estimate independent while including stage budgets in its breakdown", () => {
+    expect(calculateProjectBudgetPosition(1000000, [250000, 150000])).toEqual({
+      projectEstimatedTotal: 1000000,
+      stageBudgetTotal: 400000,
+      unallocatedAmount: 600000,
+      stageCoveragePct: 40,
+    });
+    expect(calculateProjectBudgetPosition(1000000, [])).toEqual({
+      projectEstimatedTotal: 1000000,
+      stageBudgetTotal: 0,
+      unallocatedAmount: 1000000,
+      stageCoveragePct: 0,
+    });
+  });
   it("calculates pre-tax, VAT, and total for expenses", () => {
     expect(calculateExpenseTotals(1000, 15)).toEqual({ preTaxAmount: 1000, taxRate: 15, taxAmount: 150, totalAmount: 1150 });
   });
