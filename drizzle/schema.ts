@@ -94,7 +94,6 @@ export const projects = mysqlTable("projects", {
   wipClosedBy: int("wipClosedBy"),
   wipClosingDocumentId: int("wipClosingDocumentId"),
   contractValue: decimal("contractValue", { precision: 14, scale: 2 }).default("0").notNull(),
-  plannedBudget: decimal("plannedBudget", { precision: 14, scale: 2 }).default("0").notNull(),
   location: varchar("location", { length: 255 }),
   plannedStart: date("plannedStart"),
   plannedEnd: date("plannedEnd"),

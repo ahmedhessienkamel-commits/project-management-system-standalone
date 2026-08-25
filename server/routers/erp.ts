@@ -513,8 +513,7 @@ export const erpRouter = router({
       return (canReviewAll ? rows : rows.filter((row) => row.requestedBy === ctx.user.id)).map((row) => {
         const employee = row.employeeId ? employeeRows.find((item) => item.id === row.employeeId) : undefined;
         const requester = userRows.find((item) => item.id === row.requestedBy);
-        const reviewer = row.reviewedBy ? userRows.find((item) => item.id === row.reviewedBy) : undefined;
-        return { ...row, employeeName: employee?.fullName || null, employeeCode: employee?.employeeCode || null, requesterName: requester?.name || requester?.email || `المستخدم #${row.requestedBy}`, reviewerName: reviewer?.name || reviewer?.email || null };
+        return { ...row, employeeName: employee?.fullName || null, employeeCode: employee?.employeeCode || null, requesterName: requester?.name || requester?.email || `المستخدم #${row.requestedBy}` };
       });
     }),
     create: protectedProcedure.input(z.object({ employeeId: z.number().int().positive().nullable().optional(), leaveType: z.enum(["annual", "sick", "emergency", "unpaid", "official", "other"]), startDate: z.string().min(10), endDate: z.string().min(10), reason: z.string().max(2000).optional() })).mutation(async ({ ctx, input }) => {
@@ -568,8 +567,7 @@ export const erpRouter = router({
         const appliedAmount = applied.reduce((total, repayment) => total + Number(repayment.appliedAmount || 0), 0);
         const employee = row.employeeId ? employeeRows.find((item) => item.id === row.employeeId) : undefined;
         const requester = userRows.find((item) => item.id === row.requestedBy);
-        const reviewer = row.reviewedBy ? userRows.find((item) => item.id === row.reviewedBy) : undefined;
-        return { ...row, employeeName: employee?.fullName || null, employeeCode: employee?.employeeCode || null, requesterName: requester?.name || requester?.email || `المستخدم #${row.requestedBy}`, reviewerName: reviewer?.name || reviewer?.email || null, repayments: schedule, appliedAmount, outstandingAmount: advanceOutstandingAmount(Number(row.amount || 0), applied.map((repayment) => repayment.appliedAmount)) };
+        return { ...row, employeeName: employee?.fullName || null, employeeCode: employee?.employeeCode || null, requesterName: requester?.name || requester?.email || `المستخدم #${row.requestedBy}`, repayments: schedule, appliedAmount, outstandingAmount: advanceOutstandingAmount(Number(row.amount || 0), applied.map((repayment) => repayment.appliedAmount)) };
       });
     }),
     statement: protectedProcedure.input(z.object({ employeeId: z.number().int().positive() })).query(async ({ ctx, input }) => {
@@ -800,7 +798,7 @@ export const erpRouter = router({
         ]);
         const total = (rows: Array<{ totalAmount?: string | number | null }>) => rows.reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
         const paid = (rows: Array<{ paidAmount?: string | number | null }>) => rows.reduce((sum, row) => sum + Number(row.paidAmount || 0), 0);
-        return { project: { id: project.id, code: project.code, name: project.name, companyId: project.companyId, status: project.status, classification: project.classification, projectType: project.projectType, contractValue: Number(project.contractValue || 0), plannedBudget: Number(project.plannedBudget || 0), plannedStart: project.plannedStart, plannedEnd: project.plannedEnd, createdAt: project.createdAt }, counts: { stages: stageRows.length, expenses: expenseRows.length, payroll: payrollRows.length, custody: custodyRows.length, certificates: certificateRows.length, contracts: contractRows.length, sales: salesRows.length, collections: collectionRows.length, members: memberRows.length, approvals: approvalRows.length, attachments: attachmentRows.length, materialRequisitions: requisitionRows.length, purchaseOrders: orderRows.length, purchaseReceipts: receiptRows.length, inventoryMovements: movementRows.length, accountingDocuments: documentRows.length, accountingLines: lineRows.length }, totals: { stageBudget: stageRows.reduce((sum, row) => sum + Number(row.plannedBudget || 0), 0), expenses: total(expenseRows), expensesPaid: paid(expenseRows), payroll: total(payrollRows), payrollPaid: paid(payrollRows), custodyIssued: custodyRows.reduce((sum, row) => sum + Number(row.issuedAmount || 0), 0), custodySettled: custodyRows.reduce((sum, row) => sum + Number(row.settledAmount || 0), 0), certificates: total(certificateRows), certificatesPaid: paid(certificateRows), sales: total(salesRows), collections: collectionRows.filter((row) => row.status === "received").reduce((sum, row) => sum + Number(row.amount || 0), 0), purchaseOrders: total(orderRows), inventoryMovements: movementRows.reduce((sum, row) => sum + Number(row.totalAmount || 0), 0), postedPaymentVouchers: documentRows.filter((row) => row.documentType === "payment_voucher" && row.status === "posted").reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) } };
+        return { project: { id: project.id, code: project.code, name: project.name, companyId: project.companyId, status: project.status, classification: project.classification, projectType: project.projectType, contractValue: Number(project.contractValue || 0), plannedStart: project.plannedStart, plannedEnd: project.plannedEnd, createdAt: project.createdAt }, counts: { stages: stageRows.length, expenses: expenseRows.length, payroll: payrollRows.length, custody: custodyRows.length, certificates: certificateRows.length, contracts: contractRows.length, sales: salesRows.length, collections: collectionRows.length, members: memberRows.length, approvals: approvalRows.length, attachments: attachmentRows.length, materialRequisitions: requisitionRows.length, purchaseOrders: orderRows.length, purchaseReceipts: receiptRows.length, inventoryMovements: movementRows.length, accountingDocuments: documentRows.length, accountingLines: lineRows.length }, totals: { stageBudget: stageRows.reduce((sum, row) => sum + Number(row.plannedBudget || 0), 0), expenses: total(expenseRows), expensesPaid: paid(expenseRows), payroll: total(payrollRows), payrollPaid: paid(payrollRows), custodyIssued: custodyRows.reduce((sum, row) => sum + Number(row.issuedAmount || 0), 0), custodySettled: custodyRows.reduce((sum, row) => sum + Number(row.settledAmount || 0), 0), certificates: total(certificateRows), certificatesPaid: paid(certificateRows), sales: total(salesRows), collections: collectionRows.filter((row) => row.status === "received").reduce((sum, row) => sum + Number(row.amount || 0), 0), purchaseOrders: total(orderRows), inventoryMovements: movementRows.reduce((sum, row) => sum + Number(row.totalAmount || 0), 0), postedPaymentVouchers: documentRows.filter((row) => row.documentType === "payment_voucher" && row.status === "posted").reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) } };
       }));
     }),
     create: protectedProcedure
@@ -815,7 +813,6 @@ export const erpRouter = router({
         escrowTrusteeName: z.string().trim().max(255).optional(),
         escrowStatementReference: z.string().trim().max(128).optional(),
         contractValue: z.number().nonnegative().default(0),
-        plannedBudget: z.number().nonnegative().default(0),
         plannedStart: z.string().optional(),
         plannedEnd: z.string().optional(),
       }))
@@ -827,9 +824,8 @@ export const erpRouter = router({
           escrowCashAccountId: input.projectType === "off_plan_sales" ? input.escrowCashAccountId || null : null,
           escrowTrusteeName: input.projectType === "off_plan_sales" ? input.escrowTrusteeName || null : null,
           escrowStatementReference: input.projectType === "off_plan_sales" ? input.escrowStatementReference || null : null,
-contractValue: input.contractValue.toFixed(2),
-           plannedBudget: input.plannedBudget.toFixed(2),
-           location: input.location || null,
+          contractValue: input.contractValue.toFixed(2),
+          location: input.location || null,
           plannedStart: input.plannedStart ? new Date(input.plannedStart) : null,
           plannedEnd: input.plannedEnd ? new Date(input.plannedEnd) : null,
           createdBy: ctx.user.id,
@@ -846,7 +842,7 @@ contractValue: input.contractValue.toFixed(2),
         return { id: projectId, wipAccountId };
       }),
     update: protectedProcedure
-      .input(z.object({ id: z.number().int().positive(), code: z.string().trim().min(2).max(64), name: z.string().trim().min(2).max(255), location: z.string().trim().max(255).optional(), status: projectStatus, classification: projectClassification, projectType: projectType, escrowCashAccountId: z.number().int().positive().nullable().optional(), escrowTrusteeName: z.string().trim().max(255).optional(), escrowStatementReference: z.string().trim().max(128).optional(), contractValue: z.number().nonnegative(), plannedBudget: z.number().nonnegative().default(0), plannedStart: z.string().optional(), plannedEnd: z.string().optional() }))
+      .input(z.object({ id: z.number().int().positive(), code: z.string().trim().min(2).max(64), name: z.string().trim().min(2).max(255), location: z.string().trim().max(255).optional(), status: projectStatus, classification: projectClassification, projectType: projectType, escrowCashAccountId: z.number().int().positive().nullable().optional(), escrowTrusteeName: z.string().trim().max(255).optional(), escrowStatementReference: z.string().trim().max(128).optional(), contractValue: z.number().nonnegative(), plannedStart: z.string().optional(), plannedEnd: z.string().optional() }))
       .mutation(async ({ ctx, input }) => {
         if (ctx.user.role === "general_manager") throw new TRPCError({ code: "FORBIDDEN", message: "المدير العام يملك صلاحية الاطلاع والتقارير فقط ولا يمكنه تعديل المشروع" });
         const db = requireDb(await getDb());
@@ -855,7 +851,7 @@ contractValue: input.contractValue.toFixed(2),
         const before = (await db.select().from(projects).where(eq(projects.id, input.id)).limit(1))[0];
         if (!before) throw new TRPCError({ code: "NOT_FOUND", message: "المشروع غير موجود" });
         await ensureProjectWipAccount(db, { id: input.id, code: input.code, name: input.name }, ctx.user.id);
-          await db.update(projects).set({ code: input.code, name: input.name, location: input.location || null, status: input.status, classification: input.classification, projectType: input.projectType, escrowCashAccountId: input.projectType === "off_plan_sales" ? input.escrowCashAccountId || null : null, escrowTrusteeName: input.projectType === "off_plan_sales" ? input.escrowTrusteeName || null : null, escrowStatementReference: input.projectType === "off_plan_sales" ? input.escrowStatementReference || null : null, contractValue: input.contractValue.toFixed(2), plannedBudget: input.plannedBudget.toFixed(2), plannedStart: input.plannedStart ? new Date(input.plannedStart) : null, plannedEnd: input.plannedEnd ? new Date(input.plannedEnd) : null }).where(eq(projects.id, input.id));
+          await db.update(projects).set({ code: input.code, name: input.name, location: input.location || null, status: input.status, classification: input.classification, projectType: input.projectType, escrowCashAccountId: input.projectType === "off_plan_sales" ? input.escrowCashAccountId || null : null, escrowTrusteeName: input.projectType === "off_plan_sales" ? input.escrowTrusteeName || null : null, escrowStatementReference: input.projectType === "off_plan_sales" ? input.escrowStatementReference || null : null, contractValue: input.contractValue.toFixed(2), plannedStart: input.plannedStart ? new Date(input.plannedStart) : null, plannedEnd: input.plannedEnd ? new Date(input.plannedEnd) : null }).where(eq(projects.id, input.id));
         await db.insert(auditLogs).values({ entityType: "project", entityId: input.id, action: "updated", actorId: ctx.user.id, beforeJson: JSON.stringify(before), afterJson: JSON.stringify(input) });
         return { success: true } as const;
       }),
@@ -1121,8 +1117,7 @@ contractValue: input.contractValue.toFixed(2),
         const progress = timeline.weight ? Math.round((timeline.actual / timeline.weight) * 100) : 0;
         const expectedScheduleProgress = timeline.weight ? Math.round((timeline.expected / timeline.weight) * 100) : 0;
         const scheduleVariancePct = projectTime.timeVarianceDays > 0 && projectDurationDays > 0 ? Math.round((projectTime.timeVarianceDays / projectDurationDays) * 100) : 0;
-        const stageBudget = projectStages.reduce((sum, stage) => sum + Number(stage.plannedBudget || 0), 0);
-         const planned = Number(project.plannedBudget || 0);
+        const planned = projectStages.reduce((sum, stage) => sum + Number(stage.plannedBudget || 0), 0);
         const activeStage = [...projectStages].sort((a, b) => (a.plannedStart ? new Date(a.plannedStart).getTime() : Number.MAX_SAFE_INTEGER) - (b.plannedStart ? new Date(b.plannedStart).getTime() : Number.MAX_SAFE_INTEGER)).find((stage) => stage.status !== "completed" && Number(stage.actualProgress || 0) < 100) ?? null;
         const administrativeExpenseRows = expenseRows.filter((expense) => expense.projectId === project.id && approvedExpenseStatuses.has(expense.status) && (expense.classification === "administrative" || expense.expenseType === "administrative"));
         const pettyCashExpenseRows = expenseRows.filter((expense) => expense.projectId === project.id && approvedExpenseStatuses.has(expense.status) && expense.classification === "petty_cash");
@@ -1160,10 +1155,8 @@ contractValue: input.contractValue.toFixed(2),
           wipCredit: wipTotals.credit,
           wipBalance: wipTotals.balance,
           wipClosed: Boolean(project.wipClosedAt),
-plannedBudget: planned,
-           stageBudget,
-           budgetStatus: planned > 0 ? "defined" as const : "not_defined" as const,
-           actualCost: actual,
+          plannedBudget: planned,
+          actualCost: actual,
           paidCost: paid,
           outstandingCost: Math.max(actual - paid, 0),
           collectionsReceived,
@@ -3165,16 +3158,13 @@ plannedBudget: planned,
         const directExpenses = scoped(expenseRows, "expenseDate").filter((row) => row.classification !== "administrative" && row.expenseType !== "administrative" && ["approved", "posted"].includes(row.status)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
         const administrativeExpenses = scoped(expenseRows, "expenseDate").filter((row) => (row.classification === "administrative" || row.expenseType === "administrative") && ["approved", "posted"].includes(row.status));
         const sharedAdministrativeTotal = expenseRows.filter((row) => row.projectId === null && (row.classification === "administrative" || row.expenseType === "administrative") && ["approved", "posted"].includes(row.status) && inRange(row.expenseDate)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
-        const sharedAdministrativeVoucherTotal = voucherRows.filter((row) => row.projectId === null && row.voucherCategory === "administrative" && row.status === "posted" && inRange(row.documentDate)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
-        const sharedPettyCashVoucherTotal = voucherRows.filter((row) => row.projectId === null && row.voucherCategory === "petty_cash" && row.status === "posted" && inRange(row.documentDate)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
         const selectedProject = input?.projectId ? projectRows.find((project) => project.id === input.projectId) : null;
         const eligibleProjects = projectRows.filter((project) => project.status !== "archived" && Number(project.contractValue || 0) > 0).map((project) => ({ projectId: project.id, projectName: project.name, contractValue: Number(project.contractValue || 0) }));
-        const selectedProjectAdministrative = selectedProject ? (allocateAdministrativeAmount(sharedAdministrativeTotal + sharedAdministrativeVoucherTotal, eligibleProjects).find((item) => item.projectId === selectedProject.id)?.allocatedAmount || 0) : sharedAdministrativeTotal + sharedAdministrativeVoucherTotal;
-        const selectedProjectPettyCash = selectedProject ? (allocateAdministrativeAmount(sharedPettyCashVoucherTotal, eligibleProjects).find((item) => item.projectId === selectedProject.id)?.allocatedAmount || 0) : sharedPettyCashVoucherTotal;
+        const selectedProjectAdministrative = selectedProject ? (allocateAdministrativeAmount(sharedAdministrativeTotal, eligibleProjects).find((item) => item.projectId === selectedProject.id)?.allocatedAmount || 0) : sharedAdministrativeTotal;
         const directAdministrativeTotal = input?.projectId ? administrativeExpenses.filter((row) => row.projectId === input.projectId).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) : administrativeExpenses.filter((row) => row.projectId === null).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
-        const operationalExpenses = directExpenses + directAdministrativeTotal + selectedProjectAdministrative + selectedProjectPettyCash + scoped(payrollRows, "createdAt").filter((row) => row.classification !== "administrative" && ["approved", "posted", "paid"].includes(row.status)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) + scoped(certificateRows, "certificateDate").filter((row) => Boolean(row.vendorId || row.contractId) && ["approved", "paid"].includes(row.status)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) + scoped(voucherRows, "documentDate").filter((row) => row.status === "posted").reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+        const operationalExpenses = directExpenses + directAdministrativeTotal + selectedProjectAdministrative + scoped(payrollRows, "createdAt").filter((row) => row.classification !== "administrative" && ["approved", "posted", "paid"].includes(row.status)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) + scoped(certificateRows, "certificateDate").filter((row) => Boolean(row.vendorId || row.contractId) && ["approved", "paid"].includes(row.status)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) + scoped(voucherRows, "documentDate").filter((row) => row.status === "posted").reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
         const income = Math.abs(ledgerRevenue) > 0.001 ? ledgerRevenue : operationalRevenue;
-        const expensesTotal = input?.projectId ? operationalExpenses : (Math.abs(ledgerExpenses) > 0.001 ? ledgerExpenses : operationalExpenses);
+        const expensesTotal = Math.abs(ledgerExpenses) > 0.001 ? ledgerExpenses : operationalExpenses;
         return { revenue: income, expenses: expensesTotal, netIncome: income - expensesTotal, offPlanClaimCertificatesTotal, revenueRows: rows.filter((row) => row.account?.accountType === "revenue"), expenseRows: rows.filter((row) => row.account?.accountType === "expense") };
       }),
       balanceSheet: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional(), from: z.string().optional(), to: z.string().optional() }).optional()).query(async ({ input }) => {
@@ -3244,7 +3234,7 @@ plannedBudget: planned,
         db.select().from(costItems),
         db.select().from(vendors).where(eq(vendors.projectId, input.projectId)),
         db.select().from(accountingDocuments),
-        db.select({ id: projects.id, name: projects.name, contractValue: projects.contractValue, plannedBudget: projects.plannedBudget, status: projects.status }).from(projects),
+        db.select({ id: projects.id, name: projects.name, contractValue: projects.contractValue, status: projects.status }).from(projects),
       ]);
       const vendorName = (ids: Array<number | null>) => Array.from(new Set(ids.filter((id): id is number => Boolean(id)).map((id) => vendorRows.find((vendor) => vendor.id === id)?.name).filter((name): name is string => Boolean(name)))).join("، ");
       const projectExpenseRows = expenseRows.filter((row) => row.projectId === input.projectId);
@@ -3259,7 +3249,6 @@ plannedBudget: planned,
       const sharedPettyCashPaid = sharedPettyCashExpenseRows.reduce((sum, row) => sum + Number(row.paidAmount || 0), 0) + sharedVoucherRows.filter((row) => row.voucherCategory === "petty_cash").reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
       const allocationProjects = allProjectRows.filter((row) => row.status !== "archived" && Number(row.contractValue || 0) > 0);
       const targetProject = allocationProjects.find((row) => row.id === input.projectId);
-      const projectBudget = Number(targetProject?.plannedBudget || 0);
       const totalContractValue = allocationProjects.reduce((sum, row) => sum + Number(row.contractValue || 0), 0);
       const allocationRatio = targetProject && totalContractValue > 0 ? Number(targetProject.contractValue || 0) / totalContractValue : 0;
       const sharedAdministrativeAllocated = Number((sharedAdministrativeTotal * allocationRatio).toFixed(2));
@@ -3306,7 +3295,7 @@ plannedBudget: planned,
       const stageTotal = rows.reduce((acc, row) => ({ plannedBudget: acc.plannedBudget + row.plannedBudget, actual: acc.actual + row.actual, paidAmount: acc.paidAmount + row.paidAmount, outstanding: acc.outstanding + row.outstanding }), { plannedBudget: 0, actual: 0, paidAmount: 0, outstanding: 0 });
       const materialsTotal = costItemRows.reduce((acc, row) => ({ plannedBudget: acc.plannedBudget + row.plannedBudget, actual: acc.actual + row.actual, paidAmount: acc.paidAmount + row.paidAmount, outstanding: acc.outstanding + row.outstanding }), { plannedBudget: 0, actual: 0, paidAmount: 0, outstanding: 0 });
       const withVariance = (value: typeof total) => ({ ...value, variance: value.plannedBudget - value.actual, consumptionPct: value.plannedBudget > 0 ? (value.actual / value.plannedBudget) * 100 : 0 });
-      return { rows: allRows, total: withVariance(total), stageTotal: withVariance(stageTotal), materialsTotal: withVariance(materialsTotal), projectBudget, stageBudgetStatus: projectBudget > 0 ? "defined" as const : "not_defined" as const };
+      return { rows: allRows, total: withVariance(total), stageTotal: withVariance(stageTotal), materialsTotal: withVariance(materialsTotal) };
     }),
     cashFlow: protectedProcedure.input(z.object({ projectId: z.number().int().positive() })).query(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
