@@ -152,6 +152,10 @@ describe("ERP sales and collections API flow", () => {
     const requisition = await admin.erp.procurement.requisitions.create({ projectId: 1, stageId: 2, description: "مواد خرسانة", items: [{ description: "حديد", unit: "طن", quantity: 2, estimatedUnitCost: 1000 }] });
     const mostafa = appRouter.createCaller(context(13170001, "user"));
     await mostafa.erp.procurement.requisitions.decide({ id: requisition.id, decision: "approved" });
+    const mostafaVisibleRequests = await mostafa.erp.procurement.requisitions.list();
+    const mostafaVisibleRequest = mostafaVisibleRequests.find((item) => item.id === requisition.id);
+    expect(mostafaVisibleRequest).toMatchObject({ id: requisition.id, requestNumber: requisition.requestNumber, items: [expect.objectContaining({ description: "حديد" })] });
+    expect(mostafaVisibleRequest?.items[0]?.costItemId).toBeUndefined();
     state.materialRequisitions[0].status = "approved";
     const order = await admin.erp.procurement.purchaseOrders.create({ requisitionId: requisition.id, vendorId: vendor.id, items: [{ description: "حديد", unit: "طن", quantity: 2, unitCost: 1000 }] });
     await admin.erp.procurement.purchaseOrders.decide({ id: order.id, decision: "approved" });

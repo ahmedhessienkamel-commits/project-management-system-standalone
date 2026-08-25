@@ -1550,11 +1550,11 @@ export const erpRouter = router({
       list: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional() }).optional()).query(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
         const companyId = await resolveActiveCompanyId(db, ctx);
-        const projectRows = companyId ? await db.select({ id: projects.id }).from(projects).where(eq(projects.companyId, companyId)) : [];
+        const projectRows = companyId ? await db.select({ id: projects.id }).from(projects).where(eq(projects.companyId, companyId)) : Number(ctx.user.id) === 13170001 ? await db.select({ id: projects.id }).from(projects) : [];
         const companyProjectIds = new Set(projectRows.map((project) => project.id));
         const rows = await db.select().from(materialRequisitions);
         const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
-        const filtered = rows.filter((row) => companyProjectIds.has(row.projectId) && (!input?.projectId || row.projectId === input.projectId) && (!allowed || allowed.has(row.projectId)));
+        const filtered = rows.filter((row) => companyProjectIds.has(row.projectId) && (!input?.projectId || row.projectId === input.projectId) && (!allowed || allowed.has(row.projectId) || Number(ctx.user.id) === 13170001));
         return Promise.all(filtered.map(async (row) => ({ ...row, items: await db.select().from(materialRequisitionItems).where(eq(materialRequisitionItems.requisitionId, row.id)) })));
       }),
       planning: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), stageId: z.number().int().positive().optional(), inventoryItemId: z.number().int().positive(), costItemId: z.number().int().positive().optional(), quantity: z.number().positive() })).query(async ({ ctx, input }) => {
@@ -1615,9 +1615,9 @@ export const erpRouter = router({
         if (!approval) throw new TRPCError({ code: "BAD_REQUEST", message: "لا توجد مرحلة اعتماد معلقة لهذا الطلب" });
         const stage = approval.approvalStage === "owner" ? "owner" : approval.approvalStage === "project_manager" ? "project_manager" : approval.approvalStage === "general_manager" ? "general_manager" : "mostafa";
         const canReviewStage = stage === "mostafa" ? Number(ctx.user.id) === 13170001 : stage === "project_manager" ? ctx.user.role === "project_manager" : stage === "owner" ? ctx.user.role === "admin" : ctx.user.role === "general_manager";
-        if (!canReviewStage) throw new TRPCError({ code: "FORBIDDEN", message: stage === "mostafa" ? "اعتماد طلب المواد في المرحلة الأولى مخصص لمصطفى" : stage === "owner" ? "اعتماد طلب المواد في المرحلة الثانية مخصص للمالك" : stage === "project_manager" ? "اعتماد طلب المواد في المرحلة الثالثة مخصص لمدير المشاريع" : "الاعتماد النهائي مخصص للمدير العام" });
+        if (!canReviewStage) throw new TRPCError({ code: "FORBIDDEN", message: stage === "mostafa" ? "اعتماد طلب المواد في المرحلة الأولى مخصص لمصطفى" : stage === "owner" ? "اعتماد طلب المواد في المرحلة الثانية مخصص لمدير الحسابات" : stage === "project_manager" ? "اعتماد طلب المواد في المرحلة الثالثة مخصص لمدير المشاريع" : "الاعتماد النهائي مخصص للمدير العام" });
         if (requiresCostItemForMaterialRequisition(stage, input.decision)) {
-          if (!input.costItemId) throw new TRPCError({ code: "BAD_REQUEST", message: "يجب على المالك اختيار بند التكلفة قبل اعتماد طلب المواد" });
+          if (!input.costItemId) throw new TRPCError({ code: "BAD_REQUEST", message: "يجب على مدير الحسابات اختيار بند التكلفة قبل اعتماد طلب المواد" });
           const costItem = (await db.select().from(costItems).where(eq(costItems.id, input.costItemId)).limit(1))[0];
           if (!costItem || !costItem.isActive || (costItem.projectId && costItem.projectId !== request.projectId)) throw new TRPCError({ code: "BAD_REQUEST", message: "بند التكلفة المحدد غير صالح لهذا المشروع" });
           await db.update(materialRequisitionItems).set({ costItemId: input.costItemId }).where(eq(materialRequisitionItems.requisitionId, input.id));
@@ -1631,7 +1631,7 @@ export const erpRouter = router({
         const nextStage = nextMaterialRequisitionApproval(stage);
         if (nextStage) {
           await db.insert(approvalRequests).values({ projectId: request.projectId, entityType: "materialRequisition", entityId: request.id, requestedBy: request.requestedBy, status: "pending", approvalStage: nextStage.approvalStage, stageOrder: nextStage.stageOrder });
-          const recipientConfig = nextStage.approvalStage === "owner" ? { roles: ["admin"] as UserRole[], type: "material_requisition_owner_pending", title: `طلب مواد بانتظار اعتماد المالك #${input.id}`, message: `اعتمد مصطفى طلب المواد #${input.id} وأصبح بانتظار اعتماد المالك وتعيين بند التكلفة.` } : { roles: ["project_manager"] as UserRole[], type: "material_requisition_project_manager_pending", title: `طلب مواد بانتظار مدير المشاريع #${input.id}`, message: `اعتمد المالك طلب المواد وحدد بند التكلفة، وأصبح بانتظار اعتماد مدير المشاريع النهائي.` };
+          const recipientConfig = nextStage.approvalStage === "owner" ? { roles: ["admin"] as UserRole[], type: "material_requisition_owner_pending", title: `طلب مواد بانتظار اعتماد مدير الحسابات #${input.id}`, message: `اعتمد مصطفى طلب المواد #${input.id} وأصبح بانتظار اعتماد مدير الحسابات وتعيين بند التكلفة.` } : { roles: ["project_manager"] as UserRole[], type: "material_requisition_project_manager_pending", title: `طلب مواد بانتظار مدير المشاريع #${input.id}`, message: `اعتمد مدير الحسابات طلب المواد وحدد بند التكلفة، وأصبح بانتظار اعتماد مدير المشاريع النهائي.` };
           await db.insert(auditLogs).values({ entityType: "materialRequisition", entityId: input.id, action: `${stage}_approved_${nextStage.approvalStage}_pending`, actorId: ctx.user.id, afterJson: JSON.stringify({ note: input.note || null }) });
           await notifyApprovalUsers(db, recipientConfig);
           return { success: true, status: "pending_approval" as const, approvalStage: nextStage.approvalStage };
@@ -1776,7 +1776,7 @@ export const erpRouter = router({
         const documentMap = new Map(documentRows.map((row) => [row.id, row]));
         const saleMap = new Map(saleRows.map((row) => [row.id, row]));
         const userMap = new Map(userRows.map((row) => [row.id, row]));
-        const stageLabel = (stage?: string | null) => stage === "mostafa" ? "مصطفى" : stage === "owner" ? "المالك" : stage === "project_manager" ? "مدير المشاريع" : stage === "general_manager" ? "المدير العام" : "المسؤول المعتمد";
+        const stageLabel = (stage?: string | null) => stage === "mostafa" ? "مصطفى" : stage === "owner" ? "مدير الحسابات" : stage === "project_manager" ? "مدير المشاريع" : stage === "general_manager" ? "المدير العام" : "المسؤول المعتمد";
         const recipientsFor = (request: typeof requests[number]) => {
           if (request.approvalStage === "mostafa") return userRows.filter((user) => user.id === 13170001);
           if (request.approvalStage === "project_manager") {
@@ -1786,7 +1786,7 @@ export const erpRouter = router({
           if (request.approvalStage === "general_manager") return userRows.filter((user) => user.role === "general_manager");
           return userRows.filter((user) => user.role === "admin");
         };
-        const visible = allowed ? requests.filter((row) => row.projectId === null || allowed.has(row.projectId)) : requests;
+        const visible = allowed ? requests.filter((row) => row.projectId === null || allowed.has(row.projectId) || (Number(ctx.user.id) === 13170001 && row.entityType === "materialRequisition")) : requests;
         return visible.map((request) => {
           const certificate = request.entityType === "certificate" ? certificateMap.get(request.entityId) : undefined;
           const payrollRow = request.entityType === "payroll" ? payrollMap.get(request.entityId) : undefined;
@@ -1800,7 +1800,7 @@ export const erpRouter = router({
           const requestedBy = request.requestedBy || (source as { createdBy?: number | null } | undefined)?.createdBy || requisition?.requestedBy || null;
           const recipients = recipientsFor(request);
           const description = certificate?.description || requisition?.description || document?.notes || (sale ? `بيع وحدة للعميل ${sale.customerName}` : payrollRun ? `مسير ${payrollRun.month}/${payrollRun.year} بقيمة إجمالية ${Number(payrollRun.totalAmount || 0).toFixed(2)} ر.س` : payrollRow ? `راتب شهر ${payrollRow.month}/${payrollRow.year} — ${payrollRow.employeeName}` : "—");
-          const workflowLabel = request.entityType === "payroll_run" || request.entityType === "payroll" ? "المالك ← المدير العام" : request.entityType === "certificate" ? "مصطفى ← المالك ← مدير المشاريع ← المدير العام" : request.entityType === "materialRequisition" ? "موظف الموقع ← مصطفى ← المالك ← مدير المشاريع ← المدير العام" : "منشئ المستند ← المسؤول المعتمد";
+          const workflowLabel = request.entityType === "payroll_run" || request.entityType === "payroll" ? "المالك ← المدير العام" : request.entityType === "certificate" ? "مصطفى ← المالك ← مدير المشاريع ← المدير العام" : request.entityType === "materialRequisition" ? "موظف الموقع ← مصطفى ← مدير الحسابات ← مدير المشاريع" : "منشئ المستند ← المسؤول المعتمد";
           const recordLabel = `${title} ${description}`.includes("تجريبي") ? "سجل تجريبي" : "مستند فعلي";
           const sourceExists = Boolean(source);
           return { ...request, title, typeLabel, description, amount: Number(certificate?.totalAmount || payrollRun?.totalAmount || payrollRow?.totalAmount || document?.totalAmount || sale?.totalAmount || 0), documentDate: certificate?.certificateDate || payrollRun?.createdAt || payrollRow?.createdAt || requisition?.createdAt || document?.documentDate || sale?.saleDate || request.createdAt, requesterName: requestedBy ? userMap.get(requestedBy)?.name || `مستخدم #${requestedBy}` : "غير محدد", requestedBy, workflowLabel, recordLabel, sourceExists, projectName: request.projectId ? projectMap.get(request.projectId)?.name || `مشروع #${request.projectId}` : "مسير عام للشركة", stageLabel: stageLabel(request.approvalStage), responsibleUsers: recipients, isCurrentUserResponsible: recipients.some((user) => user.id === ctx.user.id), waitingDays: Math.max(0, Math.floor((Date.now() - new Date(request.createdAt).getTime()) / 86400000)) };
