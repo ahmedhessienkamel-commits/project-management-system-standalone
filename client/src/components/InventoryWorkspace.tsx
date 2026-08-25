@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useEffect } from "react";
+import { useLocation } from "wouter";
 
 const amount = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 const qty = new Intl.NumberFormat("en-US", { maximumFractionDigits: 3 });
@@ -16,6 +17,7 @@ type WorkspaceView = "report" | "operations" | "ledger";
 
 export function InventoryWorkspace() {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const utils = trpc.useUtils();
   const isOperational = user?.role === "site_worker" || user?.role === "procurement_manager";
   const canManageCatalog = !isOperational && user?.role !== "general_manager";
@@ -55,7 +57,7 @@ export function InventoryWorkspace() {
   };
 
   return <div className="space-y-6" dir="rtl">
-    <header className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-sm font-semibold text-[#b28a3b]">مراقبة الخامات والكميات</p><h1 className="mt-1 text-3xl font-bold text-[#18324b]">{isOperational ? "عمليات الكميات الميدانية" : "مركز الكميات والخامات"}</h1><p className="mt-2 text-sm text-slate-500">التقارير منفصلة عن الإدخالات، مع انتقال مباشر بين الأرصدة والاستلام والصرف والسجل.</p></div><Button variant="outline" className="gap-2" disabled={isOperational && !projectId} onClick={exportSummary}><Download className="h-4 w-4" /> تصدير الأرصدة Excel</Button></header>
+    <header className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-sm font-semibold text-[#b28a3b]">مراقبة الخامات والكميات</p><h1 className="mt-1 text-3xl font-bold text-[#18324b]">{isOperational ? "عمليات الكميات الميدانية" : "مركز الكميات والخامات"}</h1><p className="mt-2 text-sm text-slate-500">التقارير منفصلة عن الإدخالات، مع انتقال مباشر بين الأرصدة والاستلام والصرف والسجل.</p></div><div className="flex flex-wrap gap-2"><Button variant="outline" className="gap-2" disabled={isOperational && !projectId} onClick={exportSummary}><Download className="h-4 w-4" /> تصدير الأرصدة Excel</Button>{isOperational && <Button className="gap-2 bg-[#18324b] hover:bg-[#254765]" onClick={() => setLocation("/operations?tab=procurement")}><ClipboardList className="h-4 w-4" /> طلب شراء مواد</Button>}</div></header>
     <div className="flex flex-wrap gap-2 rounded-2xl bg-white p-2 shadow-sm"><NavButton active={view === "report"} icon={BarChart3} label="تقرير الأرصدة" onClick={() => setView("report")} /><NavButton active={view === "operations"} icon={PackagePlus} label="الاستلام والصرف" onClick={() => setView("operations")} /><NavButton active={view === "ledger"} icon={ClipboardList} label="سجل الحركات" onClick={() => setView("ledger")} /></div>
     <Card className="border-0 shadow-sm"><CardContent className="grid gap-4 p-5 md:grid-cols-[1fr_auto_auto_auto] md:items-end"><div><Label>{isOperational ? "المشروع المسند" : "نطاق المشروع"}</Label><select required={isOperational} className="mt-2 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm" value={projectId} onChange={(event) => chooseProject(event.target.value)}><option value="">{isOperational ? (projects.length ? "اختر مشروعًا مسندًا" : "لا يوجد مشروع مسند إلى هذا الحساب") : "كل المشاريع"}</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></div><Metric label="إجمالي الكمية المتاحة" value={qty.format(totals.quantity)} /><Metric label="قيمة المخزون" value={`${amount.format(totals.value)} ر.س`} /><Metric label="أصناف تحت الحد الأدنى" value={String(totals.low)} warning /></CardContent></Card>
     {isOperational && !projectId && <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">اختر مشروعًا مسندًا إليك أولًا. لا يعرض حساب مسؤول المشتريات أرصدة أو حركات جميع المشاريع.</div>}
