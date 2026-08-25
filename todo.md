@@ -36124,7 +36124,7 @@
 - [x] Keep stage comparisons based on each stage budget and whole-project comparisons based on the project estimate
 - [x] Add tests for project total and cumulative stage-cost behavior
 
-- [ ] Fix the actual project edit form so the independent total estimated project cost field is visibly rendered below contract value
+- [x] Fix the actual project edit form so the independent total estimated project cost field is visibly rendered below contract value
 - [ ] Verify the field persists after save and feeds whole-project comparison while stage budgets remain separate
 
 ## Paid contractor certificate in stage report
@@ -36133,3 +36133,20 @@
 - [x] Include posted linked payment vouchers and accounting payments in the stage paid amount exactly once
 - [x] Recalculate outstanding and balance/variance after recognizing the actual payment
 - [x] Add regression coverage for a paid certificate appearing in the stage report
+
+## Railway paid amount discrepancy
+
+- [x] Confirm the Railway live bundle contains the latest projectStageDetail payment-link fix
+- [ ] Trace the live certificate, invoice, payment voucher, and accounting-document link fields without changing transaction data
+- [ ] Ensure the stage report recognizes the actual paid amount and reduces outstanding exactly once
+
+## Project form visibility and guarantee validation
+
+- [ ] Render the independent estimated total cost field in the exact project edit form used by the user
+- [ ] Make guarantee-account validation conditional on the project guarantee configuration instead of blocking unrelated edits
+- [ ] Verify saved project total and guarantee fields on the deployed form
+
+- [x] Replace the active Railway deployment labeled with the old financial-dashboard checkpoint by the build containing commit 5847096
+- [ ] Verify the live stage report no longer shows zero paid for the paid excavation certificate
+- [x] Do not accept the old-checkpoint Redeploy as the final deployment; publish the latest GitHub main commit 5847096 instead
+- [x] Push local commit 5847096 to the correctly connected GitHub main branch so Railway can deploy it
