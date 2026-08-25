@@ -1016,9 +1016,9 @@ export const erpRouter = router({
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
       const rows = await db.select().from(stages).orderBy(stages.createdAt);
       const certificateRows = await db.select().from(certificates);
-      const visibleRows = allowed ? rows.filter((row) => allowed.has(row.projectId)) : rows;
+      const visibleRows = allowed ? rows.filter((row) => Array.from(allowed).some((projectId) => Number(projectId) === Number(row.projectId))) : rows;
       return visibleRows.map((row) => {
-        const approvedCertificates = certificateRows.filter((certificate) => certificate.stageId === row.id && Boolean(certificate.vendorId || certificate.contractId) && ["approved", "paid"].includes(certificate.status));
+        const approvedCertificates = certificateRows.filter((certificate) => Number(certificate.stageId) === Number(row.id) && Boolean(certificate.vendorId || certificate.contractId) && ["approved", "paid"].includes(certificate.status));
         const progress = calculateCertificateProgress({ plannedBudget: Number(row.plannedBudget || 0), certifiedAmounts: approvedCertificates.map((certificate) => certificate.totalAmount) });
         return {
           ...row,
@@ -1164,8 +1164,9 @@ export const erpRouter = router({
       const companyScopedProjects = activeCompanyId ? allProjectRows.filter((row) => row.companyId === activeCompanyId) : allProjectRows;
       const projectSource = ctx.user.role === "admin" || ctx.user.role === "general_manager" ? allProjectRows : (companyScopedProjects.length ? companyScopedProjects : allProjectRows);
       const projectRows = projectSource.filter((row) => !allowed || allowed.has(row.id));
+      const sameId = (left: number | string | null | undefined, right: number | string | null | undefined) => left != null && right != null && Number(left) === Number(right);
       const summary = projectRows.map((project) => {
-        const projectStages = stageRows.filter((stage) => stage.projectId === project.id);
+        const projectStages = stageRows.filter((stage) => sameId(stage.projectId, project.id));
         const wipLines = accountingLineRows.filter((line) => line.projectId === project.id && project.wipAccountId && line.accountId === project.wipAccountId && postedAccountingDocumentIds.has(line.documentId));
         const wipTotals = calculateWipBalance(wipLines);
         const projectExpenses = expenseRows.filter((expense) => expense.projectId === project.id && expense.classification !== "administrative" && ["approved", "posted"].includes(expense.status));
@@ -1234,7 +1235,7 @@ export const erpRouter = router({
         const budgetUsage = planned ? Math.round((actual / planned) * 100) : 0;
         const delayedStages = projectStages.filter((stage) => stage.status === "delayed").length + overdueStages.length;
         const activeStagePlannedBudget = activeStage ? Number(activeStage.plannedBudget || 0) : 0;
-        const activeStageActualCost = activeStage ? projectExpenses.filter((expense) => expense.stageId === activeStage.id).reduce((sum, expense) => sum + Number(expense.totalAmount || 0), 0) + projectPayroll.filter((row) => row.stageId === activeStage.id).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) + projectCertificates.filter((certificate) => certificate.stageId === activeStage.id && Boolean(certificate.vendorId || certificate.contractId)).reduce((sum, certificate) => sum + Number(certificate.totalAmount || 0), 0) + projectInventoryIssues.filter((movement) => movement.stageId === activeStage.id).reduce((sum, movement) => sum + Number(movement.totalAmount || 0), 0) : 0;
+        const activeStageActualCost = activeStage ? projectExpenses.filter((expense) => sameId(expense.stageId, activeStage.id)).reduce((sum, expense) => sum + Number(expense.totalAmount || 0), 0) + projectPayroll.filter((row) => sameId(row.stageId, activeStage.id)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) + projectCertificates.filter((certificate) => sameId(certificate.stageId, activeStage.id) && Boolean(certificate.vendorId || certificate.contractId)).reduce((sum, certificate) => sum + Number(certificate.totalAmount || 0), 0) + projectInventoryIssues.filter((movement) => sameId(movement.stageId, activeStage.id)).reduce((sum, movement) => sum + Number(movement.totalAmount || 0), 0) : 0;
         const status = projectHealthStatus({ budgetUsage, progress, delayedStages, cashGapRatio: actual ? cashGap / actual : 0, pendingApprovals: projectApprovals.length, overdueApprovals, scheduleVariancePct });
         const reasons = projectHealthReasons({ budgetUsage, progress, delayedStages, cashGap, pendingApprovals: projectApprovals.length, overdueApprovals, scheduleVariancePct });
         return {
