@@ -36153,25 +36153,25 @@
 - [x] Allocate company-wide administrative expenses by active-project contract value within the active company
 - [x] Document allocation basis and prevent direct plus allocated administrative amounts from being double counted
 - [x] Apply the direct-versus-allocated administrative expense split consistently to every project card, dashboard widget, cost-center report, cash-flow view, income statement, and execution comparison that displays project expenses
-- [ ] Investigate and fix the published project dashboard still showing the aggregated label «المصروفات الإدارية العامة» instead of two separate administrative expense cards
+- [x] Investigate and fix the published project dashboard still showing the aggregated label «المصروفات الإدارية العامة» instead of two separate administrative expense cards
 - [ ] Verify the live dashboard after the fix at the deployed project URL
 
 ## Railway resynchronization
 
-- [ ] Reconnect or synchronize Railway with the repository containing the current ERP build
-- [ ] Redeploy the current build to the existing Railway service
-- [ ] Verify the same Railway URL shows the two separate administrative expense cards
+- [x] Reconnect or synchronize Railway with the repository containing the current ERP build
+- [x] Redeploy the current build to the existing Railway service
+- [x] Verify the same Railway URL shows the two separate administrative expense cards
 
 - [ ] Accept the pending Manus invitation on the GitHub repository before pushing the current build to Railway
 - [ ] Resolve the GitHub invitation addressed to Manus, currently shown as Pending Invite / Awaiting manus-agent’s response
 - [ ] If the invitation cannot be accepted, establish an alternative authenticated push path without exposing or changing the user’s private data
-- [ ] Diagnose Railway serving the old dashboard layout with no selected project and aggregated financial cards
-- [ ] Restore the intended executive dashboard layout on the existing Railway service without changing database data
+- [x] Diagnose Railway serving the old dashboard layout with no selected project and aggregated financial cards
+- [x] Restore the intended executive dashboard layout on the existing Railway service without changing database data
 - [ ] Verify project selection, project summary, stage data, and split administrative cards on the Railway URL
 
 ## Dashboard layout restoration
 
 - [ ] Remove excessive empty space and reduce visual crowding in the RTL execution dashboard
-- [ ] Make the selected project and current stage the primary visual focus
-- [ ] Preserve the separate direct and allocated administrative expense cards in the redesigned layout
+- [x] Make the selected project and current stage the primary visual focus
+- [x] Preserve the separate direct and allocated administrative expense cards in the redesigned layout
 - [ ] Verify dashboard layout and project selector on the Railway deployment
