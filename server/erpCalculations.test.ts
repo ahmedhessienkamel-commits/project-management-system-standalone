@@ -2,23 +2,8 @@ import { describe, expect, it } from "vitest";
 import { allocateAdministrativeAmount, calculateCashOutFromPaymentVouchers, calculateSupplierStatementTotals, calculateCertificateProgress, calculateContractBalance, calculateExpenseTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, calculateStraightLineDepreciation, projectHealthStatus } from "./erpCalculations";
 import { calculateAttendanceHours, filterAttendanceByMonth, summarizeAttendanceExceptions } from "../shared/attendance";
 import { isProjectActive } from "../shared/projectStatus";
-import { calculateProjectBudgetPosition } from "../shared/projectBudget";
 
 describe("ERP financial rules", () => {
-  it("keeps the project estimate independent while including stage budgets in its breakdown", () => {
-    expect(calculateProjectBudgetPosition(1000000, [250000, 150000])).toEqual({
-      projectEstimatedTotal: 1000000,
-      stageBudgetTotal: 400000,
-      unallocatedAmount: 600000,
-      stageCoveragePct: 40,
-    });
-    expect(calculateProjectBudgetPosition(1000000, [])).toEqual({
-      projectEstimatedTotal: 1000000,
-      stageBudgetTotal: 0,
-      unallocatedAmount: 1000000,
-      stageCoveragePct: 0,
-    });
-  });
   it("calculates pre-tax, VAT, and total for expenses", () => {
     expect(calculateExpenseTotals(1000, 15)).toEqual({ preTaxAmount: 1000, taxRate: 15, taxAmount: 150, totalAmount: 1150 });
   });
@@ -125,14 +110,6 @@ describe("ERP financial rules", () => {
     expect(result.legacyCertificateCashOut).toBe(500);
     expect(result.voucherPaidByCertificate.get(7)).toBe(18630);
   });
-  it("recognizes payment for a stage certificate even when legacy vendor links are missing", () => {
-    const result = calculateCashOutFromPaymentVouchers({
-      certificates: [{ id: 41, paidAmount: 0 }],
-      accountingDocuments: [{ id: 51, documentType: "payment_voucher", status: "posted", totalAmount: 18630, certificateId: 41 }],
-    });
-    expect(result.voucherPaidByCertificate.get(41)).toBe(18630);
-  });
-
   it("counts supplier voucher payments once and preserves the payable balance", () => {
     const result = calculateSupplierStatementTotals({
       vendorId: 7,

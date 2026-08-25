@@ -6,9 +6,9 @@ import { Progress } from "@/components/ui/progress";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { isProjectActive } from "../../../shared/projectStatus";
-import { ArrowLeft, CalendarClock, CheckCircle2, CircleDollarSign, Clock3, FileCheck2, FolderKanban, HandCoins, HardHat, Landmark, MessageSquare, ReceiptText, ShieldAlert, WalletCards } from "lucide-react";
+import { ArrowLeft, CalendarClock, CheckCircle2, CircleDollarSign, Clock3, FileCheck2, FolderKanban, HandCoins, HardHat, Landmark, MessageSquare, Plus, ReceiptText, ShieldAlert, WalletCards } from "lucide-react";
 import { useLocation } from "wouter";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 const statusLabels = {
   on_track: { label: "على المسار", className: "bg-emerald-50 text-emerald-700 border-emerald-200" },
@@ -23,15 +23,9 @@ export default function Home() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
   const { data: summaries = [], isLoading } = trpc.erp.dashboard.summary.useQuery();
+  const { data: companySummary } = trpc.erp.dashboard.companySummary.useQuery();
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
-  useEffect(() => {
-    if (!summaries.length) {
-      setSelectedProjectId(null);
-      return;
-    }
-    setSelectedProjectId((current) => current && summaries.some((item) => item.project.id === current) ? current : summaries[0].project.id);
-  }, [summaries]);
-  const selectedSummary = useMemo(() => summaries.find((item) => item.project.id === selectedProjectId) ?? null, [summaries, selectedProjectId]);
+  const selectedSummary = useMemo(() => summaries.find((item) => item.project.id === selectedProjectId) ?? summaries[0] ?? null, [summaries, selectedProjectId]);
   const { data: selectedDetailReport } = trpc.erp.reports.projectStageDetail.useQuery({ projectId: selectedSummary?.project.id ?? 0 }, { enabled: Boolean(selectedSummary?.project.id) });
   const { data: selectedCashFlow } = trpc.erp.reports.cashFlow.useQuery({ projectId: selectedSummary?.project.id ?? 0 }, { enabled: Boolean(selectedSummary?.project.id) });
   const { data: approvalRows = [] } = trpc.erp.approvals.list.useQuery();
@@ -76,7 +70,10 @@ export default function Home() {
               <h1 className="text-3xl font-bold tracking-tight text-[#18324b] sm:text-4xl">صورة المشروع في لحظة</h1>
               <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-500">اعرف من أول نظرة هل التنفيذ يسير وفق المخطط، وما سبب أي انحراف في الميزانية أو المراحل أو السيولة.</p>
             </div>
-
+            {user?.role !== "general_manager" && <Button onClick={() => setLocation("/projects")} className="gap-2 bg-[#18324b] hover:bg-[#244767]">
+              <Plus className="h-4 w-4" />
+              إضافة مشروع
+            </Button>}
           </header>
 
           {selectedSummary && <ExecutionBoard summary={selectedSummary} rows={selectedDetailReport?.rows.filter((row) => row.rowType === "stage") ?? []} />}
@@ -89,6 +86,11 @@ export default function Home() {
 
           {selectedSummary && <DashboardStageDetail rows={selectedDetailReport?.rows.filter((row) => row.rowType === "stage") ?? []} total={selectedDetailReport?.total ?? null} onOpenReport={() => setLocation("/projects")} />}
 
+          <section className="rounded-3xl border border-[#b28a3b]/30 bg-white p-5 shadow-lg sm:p-7">
+            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 pb-5"><div><p className="text-sm font-semibold tracking-wide text-[#b28a3b]">الملخص المالي العام</p><h2 className="mt-1 text-2xl font-bold text-[#18324b] sm:text-3xl">ملخص مالي للشركة ككل</h2><p className="mt-2 text-sm leading-6 text-slate-500">إجماليات الشركة كاملة، مع فصل تكلفة المشاريع عن المصروفات المشتركة وتوزيعها على المشاريع النشطة حسب قيمة العقد.</p></div><Badge variant="outline" className="border-[#b28a3b]/40 bg-[#fffaf0] px-3 py-1 text-[#8a6825]">أساس التوزيع: قيمة العقد</Badge></div>
+            <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-5"><CompanyMetric label="إجمالي تكاليف المشاريع" value={companySummary?.projectCosts ?? 0} tone="blue" /><CompanyMetric label="إجمالي إيراد المشاريع" value={companySummary?.projectRevenue ?? 0} tone="green" /><CompanyMetric label="المصروفات الإدارية" value={companySummary?.administrativeExpenses ?? 0} tone="amber" /><CompanyMetric label="المصروفات النثرية" value={companySummary?.pettyCashExpenses ?? 0} tone="slate" /><CompanyMetric label="الرواتب الإدارية للشركة" value={companySummary?.administrativePayroll ?? 0} tone="violet" /></div>
+            <div className="mt-5 rounded-2xl bg-[#f7f8fa] p-4"><div className="flex flex-wrap items-end justify-between gap-2"><div><h3 className="font-bold text-[#18324b]">تحميل المصروفات الإدارية والرواتب على المشاريع النشطة</h3><p className="mt-1 text-xs text-slate-500">الإجمالي المشترك الموزع: <b className="text-[#18324b]">{money.format(companySummary?.sharedTotal ?? 0)} ر.س</b></p></div><span className="text-xs text-slate-500">لا تُضاف هذه القيم مرة أخرى إلى تكلفة المشروع المباشرة.</span></div><div className="mt-4 overflow-x-auto">{companySummary?.activeProjects?.length ? <table className="w-full min-w-[720px] text-right text-sm"><thead><tr className="border-b border-slate-200 bg-[#18324b] text-white"><th className="p-3">المشروع</th><th className="p-3">قيمة العقد</th><th className="p-3">نسبة التحمل</th><th className="p-3">إداري</th><th className="p-3">نثريات</th><th className="p-3">رواتب إدارية</th><th className="p-3">إجمالي التحميل</th></tr></thead><tbody>{companySummary.activeProjects.map((item) => <tr key={item.projectId} className="border-b border-slate-100 bg-white"><td className="p-3 font-semibold text-[#18324b]">{item.projectName}</td><td className="p-3">{money.format(item.contractValue)} ر.س</td><td className="p-3 font-bold text-[#b28a3b]">{(item.ratio * 100).toFixed(2)}%</td><td className="p-3">{money.format(item.administrativeExpenses ?? 0)} ر.س</td><td className="p-3">{money.format(item.pettyCashExpenses ?? 0)} ر.س</td><td className="p-3">{money.format(item.administrativePayroll ?? 0)} ر.س</td><td className="p-3 font-bold text-[#18324b]">{money.format(item.allocatedAmount)} ر.س</td></tr>)}</tbody></table> : <p className="py-8 text-center text-sm text-slate-500">لا توجد مشاريع نشطة ذات قيمة عقد حتى الآن لتوزيع المصروفات المشتركة.</p>}</div></div>
+          </section>
 
           <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             <MetricCard icon={HardHat} label="تكاليف مقاولي الباطن" value={`${money.format(selectedSummary ? selectedSummary.subcontractorCostsTotal : shortcutTotals.subcontractorCostsTotal)} ر.س`} hint="من إجمالي المستخلصات المعتمدة" tone="slate" onClick={() => setLocation("/operations?tab=certificates")} />
@@ -208,6 +210,8 @@ function BudgetSummary({ title, planned, actual }: { title: string; planned: num
   const scopeLabel = title.includes("المرحلة") ? "المرحلة الحالية" : "المشروع ككل";
   return <Card className="overflow-hidden border-0 shadow-sm"><CardHeader className="bg-[#18324b] py-3 text-white"><CardTitle className="text-base">{title}</CardTitle></CardHeader><CardContent className="p-0"><div className="grid grid-cols-3 divide-x divide-x-reverse divide-slate-200 bg-[#f5f0e5] text-center text-sm font-bold text-[#18324b]"><div className="p-3"><p className="text-xs font-normal text-slate-500">ميزانية {scopeLabel}</p><p className="mt-1">{money.format(Number(planned))}</p></div><div className="p-3"><p className="text-xs font-normal text-slate-500">تكلفة {scopeLabel} فعليًا</p><p className="mt-1">{money.format(Number(actual))}</p></div><div className={`p-3 ${favorable ? "text-emerald-700" : "text-rose-700"}`}><p className="text-xs font-normal text-slate-500">رصيد {scopeLabel}</p><p className="mt-1">{money.format(Math.max(difference, 0))}</p></div></div><div className="grid grid-cols-3 divide-x divide-x-reverse divide-slate-200 text-center text-sm"><div className="p-3"><p className="text-xs text-slate-500">معدل انحراف تكلفة {scopeLabel}</p><p className={`mt-1 font-bold ${costVariancePct > 0 ? "text-rose-700" : "text-emerald-700"}`}>{costVariancePct.toFixed(1)}%</p></div><div className="p-3"><p className="text-xs text-slate-500">الحالة</p><p className={`mt-1 font-bold ${favorable ? "text-emerald-700" : "text-rose-700"}`}>{favorable ? "ضمن الميزانية" : "تجاوز الميزانية"}</p></div><div className="p-3"><p className="text-xs text-slate-500">القراءة التنفيذية</p><p className="mt-1 font-bold text-[#18324b]">{favorable ? "لا يوجد انحراف تكلفة" : "تحتاج إجراء"}</p></div></div><div className="border-t border-slate-200 bg-white p-3 text-center text-xs text-slate-500">{planned ? "المقارنة مبنية على مركز التكلفة والقيود المسجلة" : "أدخل ميزانية مركز التكلفة لعرض المقارنة"}</div></CardContent></Card>;
 }
+
+function CompanyMetric({ label, value, tone }: { label: string; value: number; tone: "blue" | "green" | "amber" | "violet" | "slate" }) { const styles = { blue: "bg-blue-50 text-blue-800", green: "bg-emerald-50 text-emerald-800", amber: "bg-amber-50 text-amber-800", violet: "bg-violet-50 text-violet-800", slate: "bg-slate-100 text-slate-800" } as const; return <div className={`rounded-2xl p-4 ${styles[tone]}`}><p className="text-xs opacity-75">{label}</p><p className="mt-2 text-xl font-bold">{money.format(value)} ر.س</p></div>; }
 
 function MetricCard({ icon: Icon, label, value, hint, tone, onClick }: { icon: typeof FolderKanban; label: string; value: string; hint: string; tone: "blue" | "gold" | "rose" | "amber" | "green" | "teal" | "violet" | "slate"; onClick?: () => void }) {
   const colors = { blue: "bg-blue-50 text-blue-700", gold: "bg-amber-50 text-amber-700", rose: "bg-rose-50 text-rose-700", amber: "bg-orange-50 text-orange-700", green: "bg-emerald-50 text-emerald-700", teal: "bg-cyan-50 text-cyan-700", violet: "bg-violet-50 text-violet-700", slate: "bg-slate-100 text-slate-700" };
