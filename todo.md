@@ -36150,3 +36150,6 @@
 - [ ] Verify the live stage report no longer shows zero paid for the paid excavation certificate
 - [x] Do not accept the old-checkpoint Redeploy as the final deployment; publish the latest GitHub main commit 5847096 instead
 - [x] Push local commit 5847096 to the correctly connected GitHub main branch so Railway can deploy it
+- [x] Restore the professional dashboard layout without reverting budget or payment logic
+- [x] Make the dashboard select and load the first active project automatically
+- [ ] Verify dashboard cards and spacing in the live RTL view
