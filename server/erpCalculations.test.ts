@@ -138,6 +138,11 @@ describe("ERP financial rules", () => {
     expect(result.invoices).toHaveLength(0);
   });
 
+  it("preserves paid amounts for legacy certificates without vendor or contract links", () => {
+    const result = calculateCashOutFromPaymentVouchers({ certificates: [{ id: 99, paidAmount: "18630.00" }], accountingDocuments: [] });
+    expect(result.legacyCertificateCashOut).toBe(18630);
+  });
+
   it("returns critical for a large cash gap or approval backlog", () => {
     expect(projectHealthStatus({ budgetUsage: 40, progress: 60, delayedStages: 0, cashGapRatio: 0.5 })).toBe("critical");
     expect(projectHealthStatus({ budgetUsage: 40, progress: 60, delayedStages: 0, pendingApprovals: 3 })).toBe("critical");

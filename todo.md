@@ -36118,3 +36118,13 @@
 - [ ] التحقق الحي من كشف المورد وترتيب الحركات والرصيد التراكمي بعد النشر.
 - [x] Roll back the GitHub main branch connected to Railway to commit 1420c9ac so the live app matches the requested version
 - [x] Verify Railway deploys commit 1420c9ac without changing the MySQL data
+
+## New local-only ERP improvement batch
+
+- [x] Add an independent editable estimated project cost field as the whole-project comparison reference
+- [x] Aggregate all project-under-construction costs by project: stages, materials, salaries, and operating expenses
+- [x] Fix paid certificate amounts in the stage report, including legacy payment links, and make the stage-document refresh action work
+- [x] Add approval archive filters, full preview for the owner and Mustafa, rejection reasons, sender, dates, and current approval status
+- [x] Split administrative expenses consistently into direct project administration and allocated company administration across every related report
+- [x] Simplify accounting-entry labels and remove invoice-style confusion around payable/status fields
+- [ ] Run local TypeScript, unit tests, and visual verification; do not publish to Railway until the user explicitly says «انشر»

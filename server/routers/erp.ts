@@ -813,6 +813,7 @@ export const erpRouter = router({
         escrowTrusteeName: z.string().trim().max(255).optional(),
         escrowStatementReference: z.string().trim().max(128).optional(),
         contractValue: z.number().nonnegative().default(0),
+        estimatedTotalCost: z.number().nonnegative().default(0),
         plannedStart: z.string().optional(),
         plannedEnd: z.string().optional(),
       }))
@@ -825,6 +826,7 @@ export const erpRouter = router({
           escrowTrusteeName: input.projectType === "off_plan_sales" ? input.escrowTrusteeName || null : null,
           escrowStatementReference: input.projectType === "off_plan_sales" ? input.escrowStatementReference || null : null,
           contractValue: input.contractValue.toFixed(2),
+          estimatedTotalCost: input.estimatedTotalCost.toFixed(2),
           location: input.location || null,
           plannedStart: input.plannedStart ? new Date(input.plannedStart) : null,
           plannedEnd: input.plannedEnd ? new Date(input.plannedEnd) : null,
@@ -842,7 +844,7 @@ export const erpRouter = router({
         return { id: projectId, wipAccountId };
       }),
     update: protectedProcedure
-      .input(z.object({ id: z.number().int().positive(), code: z.string().trim().min(2).max(64), name: z.string().trim().min(2).max(255), location: z.string().trim().max(255).optional(), status: projectStatus, classification: projectClassification, projectType: projectType, escrowCashAccountId: z.number().int().positive().nullable().optional(), escrowTrusteeName: z.string().trim().max(255).optional(), escrowStatementReference: z.string().trim().max(128).optional(), contractValue: z.number().nonnegative(), plannedStart: z.string().optional(), plannedEnd: z.string().optional() }))
+      .input(z.object({ id: z.number().int().positive(), code: z.string().trim().min(2).max(64), name: z.string().trim().min(2).max(255), location: z.string().trim().max(255).optional(), status: projectStatus, classification: projectClassification, projectType: projectType, escrowCashAccountId: z.number().int().positive().nullable().optional(), escrowTrusteeName: z.string().trim().max(255).optional(), escrowStatementReference: z.string().trim().max(128).optional(), contractValue: z.number().nonnegative(), estimatedTotalCost: z.number().nonnegative(), plannedStart: z.string().optional(), plannedEnd: z.string().optional() }))
       .mutation(async ({ ctx, input }) => {
         if (ctx.user.role === "general_manager") throw new TRPCError({ code: "FORBIDDEN", message: "المدير العام يملك صلاحية الاطلاع والتقارير فقط ولا يمكنه تعديل المشروع" });
         const db = requireDb(await getDb());
@@ -851,7 +853,7 @@ export const erpRouter = router({
         const before = (await db.select().from(projects).where(eq(projects.id, input.id)).limit(1))[0];
         if (!before) throw new TRPCError({ code: "NOT_FOUND", message: "المشروع غير موجود" });
         await ensureProjectWipAccount(db, { id: input.id, code: input.code, name: input.name }, ctx.user.id);
-          await db.update(projects).set({ code: input.code, name: input.name, location: input.location || null, status: input.status, classification: input.classification, projectType: input.projectType, escrowCashAccountId: input.projectType === "off_plan_sales" ? input.escrowCashAccountId || null : null, escrowTrusteeName: input.projectType === "off_plan_sales" ? input.escrowTrusteeName || null : null, escrowStatementReference: input.projectType === "off_plan_sales" ? input.escrowStatementReference || null : null, contractValue: input.contractValue.toFixed(2), plannedStart: input.plannedStart ? new Date(input.plannedStart) : null, plannedEnd: input.plannedEnd ? new Date(input.plannedEnd) : null }).where(eq(projects.id, input.id));
+          await db.update(projects).set({ code: input.code, name: input.name, location: input.location || null, status: input.status, classification: input.classification, projectType: input.projectType, escrowCashAccountId: input.projectType === "off_plan_sales" ? input.escrowCashAccountId || null : null, escrowTrusteeName: input.projectType === "off_plan_sales" ? input.escrowTrusteeName || null : null, escrowStatementReference: input.projectType === "off_plan_sales" ? input.escrowStatementReference || null : null, contractValue: input.contractValue.toFixed(2), estimatedTotalCost: input.estimatedTotalCost.toFixed(2), plannedStart: input.plannedStart ? new Date(input.plannedStart) : null, plannedEnd: input.plannedEnd ? new Date(input.plannedEnd) : null }).where(eq(projects.id, input.id));
         await db.insert(auditLogs).values({ entityType: "project", entityId: input.id, action: "updated", actorId: ctx.user.id, beforeJson: JSON.stringify(before), afterJson: JSON.stringify(input) });
         return { success: true } as const;
       }),
@@ -863,13 +865,23 @@ export const erpRouter = router({
       const wipAccountId = project.wipAccountId || await ensureProjectWipAccount(db, { id: project.id, code: project.code, name: project.name }, ctx.user.id);
       const wipAccount = (await db.select({ code: accounts.code, name: accounts.name }).from(accounts).where(eq(accounts.id, wipAccountId)).limit(1))[0];
       const [documents, lines] = await Promise.all([
-        db.select({ id: accountingDocuments.id, status: accountingDocuments.status }).from(accountingDocuments),
+        db.select({ id: accountingDocuments.id, status: accountingDocuments.status, voucherCategory: accountingDocuments.voucherCategory, documentType: accountingDocuments.documentType }).from(accountingDocuments),
         db.select().from(accountingDocumentLines).where(and(eq(accountingDocumentLines.projectId, project.id), eq(accountingDocumentLines.accountId, wipAccountId))),
       ]);
       const posted = new Set(documents.filter((document) => document.status === "posted").map((document) => document.id));
       const postedLines = lines.filter((line) => posted.has(line.documentId));
       const totals = calculateWipBalance(postedLines);
-      return { projectId: project.id, wipAccountId, wipAccountCode: wipAccount?.code || null, wipAccountName: wipAccount?.name || null, ...totals, closed: Boolean(project.wipClosedAt), closedAt: project.wipClosedAt, closingDocumentId: project.wipClosingDocumentId };
+      const documentById = new Map(documents.map((document) => [document.id, document]));
+      const breakdown = { stages: 0, materials: 0, salaries: 0, operating: 0 };
+      for (const line of postedLines) {
+        const amount = Math.max(Number(line.debit || 0) - Number(line.credit || 0), 0);
+        const document = documentById.get(line.documentId);
+        if (document?.voucherCategory === "materials" || document?.documentType === "purchase_invoice" || document?.documentType === "purchase_receipt") breakdown.materials += amount;
+        else if (document?.voucherCategory === "payroll") breakdown.salaries += amount;
+        else if (document?.voucherCategory === "operating") breakdown.operating += amount;
+        else breakdown.stages += amount;
+      }
+      return { projectId: project.id, wipAccountId, wipAccountCode: wipAccount?.code || null, wipAccountName: wipAccount?.name || null, ...totals, breakdown: Object.fromEntries(Object.entries(breakdown).map(([key, value]) => [key, Number(value.toFixed(2))])), closed: Boolean(project.wipClosedAt), closedAt: project.wipClosedAt, closingDocumentId: project.wipClosingDocumentId };
     }),
     closeWip: protectedProcedure.input(z.object({ id: z.number().int().positive(), destinationAccountId: z.number().int().positive(), handoverDate: z.string().min(1), note: z.string().max(2000).optional() })).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
@@ -3257,8 +3269,8 @@ export const erpRouter = router({
       const sharedPettyCashPaidAllocated = Number((sharedPettyCashPaid * allocationRatio).toFixed(2));
       const actualForStage = (stageId: number) => activeExpenses.filter((row) => row.stageId === stageId);
       const payrollForStage = (stageId: number) => payrollRows.filter((row) => row.stageId === stageId);
-      const certificateForStage = (stageId: number) => certificateRows.filter((row) => row.stageId === stageId && row.status !== "rejected" && Boolean(row.vendorId || row.contractId));
-      const certificatePaymentData = calculateCashOutFromPaymentVouchers({ certificates: certificateRows.filter((row) => Boolean(row.vendorId || row.contractId)), accountingDocuments: accountingDocumentRows });
+      const certificateForStage = (stageId: number) => certificateRows.filter((row) => row.stageId === stageId && row.status !== "rejected");
+      const certificatePaymentData = calculateCashOutFromPaymentVouchers({ certificates: certificateRows, accountingDocuments: accountingDocumentRows });
       const certificatePaid = (certificate: typeof certificateRows[number]) => Math.max(Number(certificate.paidAmount || 0), certificatePaymentData.voucherPaidByCertificate.get(certificate.id) || 0);
       const timeMetrics = (plannedEnd: Date | string | null, status: string) => calculateStageTimeVariance(plannedEnd, status);
       const makeMetrics = (plannedBudget: number, rows: typeof activeExpenses, stageId?: number) => {
