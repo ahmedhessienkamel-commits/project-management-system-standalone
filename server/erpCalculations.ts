@@ -66,6 +66,14 @@ export function allocateAdministrativeAmount(amount: number, projects: Array<{ p
   });
 }
 
+export function calculateBudgetPosition(plannedBudget: number, actualCost: number) {
+  const planned = Math.max(0, Number(plannedBudget || 0));
+  const actual = Math.max(0, Number(actualCost || 0));
+  const remaining = Math.max(planned - actual, 0);
+  const overrun = Math.max(actual - planned, 0);
+  return { planned, actual, remaining, overrun, withinBudget: overrun === 0, consumptionPct: planned > 0 ? Number(((actual / planned) * 100).toFixed(2)) : 0 };
+}
+
 export function calculateDashboardShortcutTotals(summaries: Array<{ plannedBudget: number; actualCost: number; outstandingCost: number; recognizedRevenue: number; collectionsReceived: number; payrollOutstanding: number; cashGap: number; pendingApprovals: number }>) {
   return summaries.reduce((totals, item) => ({
     plannedBudget: totals.plannedBudget + item.plannedBudget,
