@@ -1138,23 +1138,27 @@ export const erpRouter = router({
       const db = requireDb(await getDb());
       const activeCompanyId = await resolveActiveCompanyId(db, ctx);
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
+      const safeRows = async <T>(label: string, query: Promise<T>, fallback: T): Promise<T> => {
+        try { return await query; }
+        catch (error) { console.warn(`[Dashboard] ${label} query failed; using empty fallback`, error); return fallback; }
+      };
       const [allProjectRows, stageRows, expenseRows, collectionRows, approvalRows, attachmentRows, salesRows, payrollRows, vendorRows, certificateRows, administrativePayrollRows, payrollAllocationRows, inventoryMovementRows, accountingDocumentRows, accountingLineRows, projectBudgetRows] = await Promise.all([
-        db.select().from(projects),
-        db.select().from(stages),
-        db.select().from(expenses),
-        db.select().from(collections),
-        db.select().from(approvalRequests),
-        db.select().from(attachments),
-        db.select().from(sales),
-        db.select().from(payroll),
-        db.select().from(vendors),
-        db.select().from(certificates),
-        db.select().from(administrativePayroll),
-        db.select().from(payrollAllocations),
-        db.select().from(inventoryMovements),
-        db.select({ id: accountingDocuments.id, status: accountingDocuments.status }).from(accountingDocuments),
-        db.select().from(accountingDocumentLines),
-        db.select().from(projectBudgets),
+        safeRows("projects", db.select().from(projects), []),
+        safeRows("stages", db.select().from(stages), []),
+        safeRows("expenses", db.select().from(expenses), []),
+        safeRows("collections", db.select().from(collections), []),
+        safeRows("approvalRequests", db.select().from(approvalRequests), []),
+        safeRows("attachments", db.select().from(attachments), []),
+        safeRows("sales", db.select().from(sales), []),
+        safeRows("payroll", db.select().from(payroll), []),
+        safeRows("vendors", db.select().from(vendors), []),
+        safeRows("certificates", db.select().from(certificates), []),
+        safeRows("administrativePayroll", db.select().from(administrativePayroll), []),
+        safeRows("payrollAllocations", db.select().from(payrollAllocations), []),
+        safeRows("inventoryMovements", db.select().from(inventoryMovements), []),
+        safeRows("accountingDocuments", db.select({ id: accountingDocuments.id, status: accountingDocuments.status }).from(accountingDocuments), []),
+        safeRows("accountingDocumentLines", db.select().from(accountingDocumentLines), []),
+        safeRows("projectBudgets", db.select().from(projectBudgets), []),
       ]);
       const postedAccountingDocumentIds = new Set(accountingDocumentRows.filter((document) => document.status === "posted").map((document) => document.id));
       const companyScopedProjects = activeCompanyId ? allProjectRows.filter((row) => row.companyId === activeCompanyId) : allProjectRows;
