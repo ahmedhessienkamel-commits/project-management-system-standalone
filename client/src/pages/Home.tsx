@@ -65,10 +65,6 @@ export default function Home() {
               <h1 className="text-3xl font-bold tracking-tight text-[#18324b] sm:text-4xl">صورة المشروع في لحظة</h1>
               <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-500">اعرف من أول نظرة هل التنفيذ يسير وفق المخطط، وما سبب أي انحراف في الميزانية أو المراحل أو السيولة.</p>
             </div>
-            <Button onClick={() => setLocation("/projects")} className="gap-2 bg-[#18324b] hover:bg-[#244767]">
-              <Plus className="h-4 w-4" />
-              إضافة مشروع
-            </Button>
           </header>
 
           {selectedSummary && <ExecutionBoard summary={selectedSummary} rows={selectedDetailReport?.rows.filter((row) => row.rowType === "stage") ?? []} />}
@@ -81,11 +77,6 @@ export default function Home() {
 
           {selectedSummary && <DashboardStageDetail rows={selectedDetailReport?.rows.filter((row) => row.rowType === "stage") ?? []} total={selectedDetailReport?.total ?? null} onOpenReport={() => setLocation("/projects")} />}
 
-          <section className="rounded-3xl border border-[#b28a3b]/30 bg-white p-5 shadow-lg sm:p-7">
-            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 pb-5"><div><p className="text-sm font-semibold tracking-wide text-[#b28a3b]">الملخص المالي العام</p><h2 className="mt-1 text-2xl font-bold text-[#18324b] sm:text-3xl">ملخص مالي للشركة ككل</h2><p className="mt-2 text-sm leading-6 text-slate-500">إجماليات الشركة كاملة، مع فصل تكلفة المشاريع عن المصروفات المشتركة وتوزيعها على المشاريع النشطة حسب قيمة العقد.</p></div><Badge variant="outline" className="border-[#b28a3b]/40 bg-[#fffaf0] px-3 py-1 text-[#8a6825]">أساس التوزيع: قيمة العقد</Badge></div>
-            <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-5"><CompanyMetric label="إجمالي تكاليف المشاريع" value={companySummary?.projectCosts ?? 0} tone="blue" /><CompanyMetric label="إجمالي إيراد المشاريع" value={companySummary?.projectRevenue ?? 0} tone="green" /><CompanyMetric label="المصروفات الإدارية" value={companySummary?.administrativeExpenses ?? 0} tone="amber" /><CompanyMetric label="المصروفات النثرية" value={companySummary?.pettyCashExpenses ?? 0} tone="slate" /><CompanyMetric label="الرواتب الإدارية للشركة" value={companySummary?.administrativePayroll ?? 0} tone="violet" /></div>
-            <div className="mt-5 rounded-2xl bg-[#f7f8fa] p-4"><div className="flex flex-wrap items-end justify-between gap-2"><div><h3 className="font-bold text-[#18324b]">تحميل المصروفات الإدارية والرواتب على المشاريع النشطة</h3><p className="mt-1 text-xs text-slate-500">الإجمالي المشترك الموزع: <b className="text-[#18324b]">{money.format(companySummary?.sharedTotal ?? 0)} ر.س</b></p></div><span className="text-xs text-slate-500">لا تُضاف هذه القيم مرة أخرى إلى تكلفة المشروع المباشرة.</span></div><div className="mt-4 overflow-x-auto">{companySummary?.activeProjects?.length ? <table className="w-full min-w-[720px] text-right text-sm"><thead><tr className="border-b border-slate-200 bg-[#18324b] text-white"><th className="p-3">المشروع</th><th className="p-3">قيمة العقد</th><th className="p-3">نسبة التحمل</th><th className="p-3">إداري</th><th className="p-3">نثريات</th><th className="p-3">رواتب إدارية</th><th className="p-3">إجمالي التحميل</th></tr></thead><tbody>{companySummary.activeProjects.map((item) => <tr key={item.projectId} className="border-b border-slate-100 bg-white"><td className="p-3 font-semibold text-[#18324b]">{item.projectName}</td><td className="p-3">{money.format(item.contractValue)} ر.س</td><td className="p-3 font-bold text-[#b28a3b]">{(item.ratio * 100).toFixed(2)}%</td><td className="p-3">{money.format(item.administrativeExpenses ?? 0)} ر.س</td><td className="p-3">{money.format(item.pettyCashExpenses ?? 0)} ر.س</td><td className="p-3">{money.format(item.administrativePayroll ?? 0)} ر.س</td><td className="p-3 font-bold text-[#18324b]">{money.format(item.allocatedAmount)} ر.س</td></tr>)}</tbody></table> : <p className="py-8 text-center text-sm text-slate-500">لا توجد مشاريع نشطة ذات قيمة عقد حتى الآن لتوزيع المصروفات المشتركة.</p>}</div></div>
-          </section>
 
           <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             <MetricCard icon={HardHat} label="تكاليف مقاولي الباطن" value={`${money.format(selectedSummary ? selectedSummary.subcontractorCostsTotal : shortcutTotals.subcontractorCostsTotal)} ر.س`} hint="من إجمالي المستخلصات المعتمدة" tone="slate" onClick={() => setLocation("/operations?tab=certificates")} />
