@@ -1,1 +1,0 @@
-ALTER TABLE `stages` ADD `parentStageId` int;
