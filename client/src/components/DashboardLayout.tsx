@@ -249,7 +249,7 @@ function DashboardLayoutContent({
 
   return (
     <>
-      <div className="relative shrink-0" ref={sidebarRef}>
+      <div className="relative hidden w-[var(--sidebar-width)] shrink-0 md:block" ref={sidebarRef}>
         <Sidebar
           collapsible="icon"
           className="border-r-0"
@@ -345,7 +345,7 @@ function DashboardLayoutContent({
         />
       </div>
 
-      <SidebarInset>
+      <SidebarInset className="min-w-0 flex-1 overflow-x-hidden">
         {isMobile && (
           <div className="flex border-b h-14 items-center justify-between bg-background/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
             <div className="flex items-center gap-2">
