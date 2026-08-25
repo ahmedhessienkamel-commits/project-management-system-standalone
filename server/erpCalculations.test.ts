@@ -114,6 +114,20 @@ describe("ERP financial rules", () => {
     expect(result.paymentVouchers).toHaveLength(1);
   });
 
+  it("does not count a purchase invoice linked to a contractor certificate as a second supplier payable", () => {
+    const result = calculateSupplierStatementTotals({
+      vendorId: 7,
+      expenses: [],
+      certificates: [{ id: 21, vendorId: 7, totalAmount: "18630.00", paidAmount: "0.00" }],
+      invoices: [{ id: 22, contractorId: 7, certificateId: 21, totalAmount: "18630.00", paidAmount: "0.00" }],
+      vouchers: [{ id: 31, purchaseInvoiceId: 22, totalAmount: "18630.00" }],
+    });
+    expect(result.debit).toBe(18630);
+    expect(result.credit).toBe(18630);
+    expect(result.balance).toBe(0);
+    expect(result.invoices).toHaveLength(0);
+  });
+
   it("returns critical for a large cash gap or approval backlog", () => {
     expect(projectHealthStatus({ budgetUsage: 40, progress: 60, delayedStages: 0, cashGapRatio: 0.5 })).toBe("critical");
     expect(projectHealthStatus({ budgetUsage: 40, progress: 60, delayedStages: 0, pendingApprovals: 3 })).toBe("critical");

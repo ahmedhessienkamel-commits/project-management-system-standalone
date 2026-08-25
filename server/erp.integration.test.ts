@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { projects, stages, expenses, collections, approvalRequests, attachments, sales, payroll, vendors, certificates, projectMembers, units, periodLocks, notifications, auditLogs, attendance, approvalPolicies, custodyMovements, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems } from "../drizzle/schema";
+import { projects, stages, expenses, collections, approvalRequests, attachments, sales, payroll, vendors, certificates, projectMembers, units, periodLocks, notifications, auditLogs, attendance, approvalPolicies, custodyMovements, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems, advanceRequests, advanceRepayments, leaveRequests, employees, users, costItems } from "../drizzle/schema";
 
 const state = {
   projects: [] as any[],
@@ -26,10 +26,16 @@ const state = {
   purchaseOrderItems: [] as any[],
   purchaseReceipts: [] as any[],
   purchaseReceiptItems: [] as any[],
+  advanceRequests: [] as any[],
+  advanceRepayments: [] as any[],
+  leaveRequests: [] as any[],
+  employees: [] as any[],
+  users: [] as any[],
+  costItems: [] as any[],
 };
 
 const tableState = new Map<any, keyof typeof state>([
-  [projects, "projects"], [stages, "stages"], [expenses, "expenses"], [collections, "collections"], [approvalRequests, "approvalRequests"], [attachments, "attachments"], [sales, "sales"], [payroll, "payroll"], [vendors, "vendors"], [certificates, "certificates"], [projectMembers, "projectMembers"], [units, "units"], [periodLocks, "periodLocks"], [notifications, "notifications"], [auditLogs, "auditLogs"], [attendance, "attendance"], [approvalPolicies, "approvalPolicies"], [custodyMovements, "custodyMovements"], [materialRequisitions, "materialRequisitions"], [materialRequisitionItems, "materialRequisitionItems"], [purchaseOrders, "purchaseOrders"], [purchaseOrderItems, "purchaseOrderItems"], [purchaseReceipts, "purchaseReceipts"], [purchaseReceiptItems, "purchaseReceiptItems"],
+  [projects, "projects"], [stages, "stages"], [expenses, "expenses"], [collections, "collections"], [approvalRequests, "approvalRequests"], [attachments, "attachments"], [sales, "sales"], [payroll, "payroll"], [vendors, "vendors"], [certificates, "certificates"], [projectMembers, "projectMembers"], [units, "units"], [periodLocks, "periodLocks"], [notifications, "notifications"], [auditLogs, "auditLogs"], [attendance, "attendance"], [approvalPolicies, "approvalPolicies"], [custodyMovements, "custodyMovements"], [materialRequisitions, "materialRequisitions"], [materialRequisitionItems, "materialRequisitionItems"], [purchaseOrders, "purchaseOrders"], [purchaseOrderItems, "purchaseOrderItems"], [purchaseReceipts, "purchaseReceipts"], [purchaseReceiptItems, "purchaseReceiptItems"], [advanceRequests, "advanceRequests"], [advanceRepayments, "advanceRepayments"], [leaveRequests, "leaveRequests"], [employees, "employees"], [users, "users"], [costItems, "costItems"],
 ]);
 
 function rowsFor(table: any) {
@@ -89,6 +95,9 @@ describe("ERP sales and collections API flow", () => {
     state.projectMembers.push({ id: 1, projectId: 1, userId: 1, projectRole: "finance", createdAt: new Date() });
     state.stages.push({ id: 2, projectId: 1, code: "EXC", name: "الحفر", status: "active", plannedBudget: "100000", createdAt: new Date() });
     state.units.push({ id: 10, projectId: 1, unitCode: "A-101", status: "available", createdAt: new Date(), updatedAt: new Date() });
+    state.users.push({ id: 1, name: "مدير الحسابات", email: "owner@example.com" }, { id: 13170001, name: "مصطفى", email: "mostafa@example.com" });
+    state.employees.push({ id: 9, employeeCode: "EMP-009", fullName: "أحمد العامل", employmentType: "employee", status: "active" });
+    state.costItems.push({ id: 12, code: "ADM-01", name: "مصروفات إدارية عامة", category: "administrative", isActive: 1 });
   });
 
   it("creates a confirmed unit sale, received collection, and dashboard summary from the same state", async () => {
@@ -179,6 +188,29 @@ describe("ERP sales and collections API flow", () => {
     expect(statement[0]).toMatchObject({ employeeCode: "EMP-001", movementType: "issue", allocationType: "general_cash", signedAmount: "500.00", balance: 500 });
     expect(statement[1]).toMatchObject({ movementType: "spend", description: "شراء مستلزمات", signedAmount: "-100.00", balance: 400 });
     expect(await caller.erp.custodyMovements.statement({ employeeCode: "EMP-001", allocationType: "general_admin" })).toHaveLength(0);
+  });
+
+  it("shows named employee leave and advance requests to Mostafa for review", async () => {
+    state.leaveRequests.push({ id: 41, requestedBy: 1, employeeId: 9, leaveType: "emergency", startDate: new Date("2026-08-23"), endDate: new Date("2026-08-28"), days: "6.00", reason: "حالة طارئة", status: "pending", createdAt: new Date("2026-08-20") });
+    state.advanceRequests.push({ id: 42, requestedBy: 1, employeeId: 9, amount: "500.00", reason: "سلفة من العهدة", repaymentMode: "installments", repaymentStartMonth: 9, repaymentStartYear: 2026, installmentCount: 2, status: "pending", createdAt: new Date("2026-08-20") });
+    const mostafa = appRouter.createCaller(context(13170001));
+    const [leaves, advances] = await Promise.all([mostafa.erp.leaveRequests.list(), mostafa.erp.advanceRequests.list()]);
+    expect(leaves).toEqual(expect.arrayContaining([expect.objectContaining({ id: 41, requesterName: "مدير الحسابات", employeeName: "أحمد العامل", employeeCode: "EMP-009" })]));
+    expect(advances).toEqual(expect.arrayContaining([expect.objectContaining({ id: 42, requesterName: "مدير الحسابات", employeeName: "أحمد العامل", repaymentMode: "installments", installmentCount: 2 })]));
+  });
+
+  it("posts an administrative custody expense against the selected administrative cost item", async () => {
+    const caller = appRouter.createCaller(context());
+    const result = await caller.erp.custodyMovements.createAdministrativeExpense({ employeeCode: "EMP-001", employeeName: "أحمد", costItemId: 12, description: "رسوم تجديد رخصة", amount: 750, movementDate: "2026-08-25" });
+    expect(state.custodyMovements.find((row) => row.id === result.id)).toMatchObject({ allocationType: "general_admin", expenseType: "administrative", signedAmount: "-750.00" });
+    expect(state.expenses.find((row) => row.id === result.linkedExpenseId)).toMatchObject({ costItemId: 12, classification: "administrative", expenseType: "administrative", totalAmount: "750.00", paidAmount: "750.00" });
+  });
+
+  it("keeps the custody holder separate from the advance beneficiary", async () => {
+    const caller = appRouter.createCaller(context());
+    const result = await caller.erp.custodyMovements.create({ employeeCode: "CUST-001", employeeName: "أمين العهدة", movementType: "spend", allocationType: "general_cash", description: "سلفة مستفيد آخر", amount: 500, expenseType: "advance", payrollBeneficiaryType: "company_employee", payrollEmployeeId: 9, payrollBeneficiaryName: "أحمد العامل", repaymentMode: "single", repaymentStartMonth: 9, repaymentStartYear: 2026, installmentCount: 1 });
+    expect(state.custodyMovements.find((row) => row.id === result.id)).toMatchObject({ employeeCode: "CUST-001", employeeName: "أمين العهدة", payrollEmployeeId: 9, payrollBeneficiaryName: "أحمد العامل" });
+    expect(state.advanceRequests.find((row) => row.id === result.advanceRequestId)).toMatchObject({ employeeId: 9, amount: "500.00", repaymentMode: "single" });
   });
 
   it("persists configurable approval policy thresholds for administrators", async () => {
