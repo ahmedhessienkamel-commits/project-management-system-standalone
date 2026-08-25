@@ -825,6 +825,22 @@ export const cashAccounts = mysqlTable("cashAccounts", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+export const cashTransfers = mysqlTable("cashTransfers", {
+  id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId").notNull(),
+  transferNumber: varchar("transferNumber", { length: 128 }).notNull().unique(),
+  transferDate: date("transferDate").notNull(),
+  fromCashAccountId: int("fromCashAccountId").notNull(),
+  toCashAccountId: int("toCashAccountId").notNull(),
+  amount: decimal("amount", { precision: 14, scale: 2 }).notNull(),
+  accountingDocumentId: int("accountingDocumentId"),
+  status: mysqlEnum("status", ["posted", "cancelled"]).notNull().default("posted"),
+  notes: text("notes"),
+  createdBy: int("createdBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
 export const accounts = mysqlTable("accounts", {
   id: int("id").autoincrement().primaryKey(),
   companyId: int("companyId"),

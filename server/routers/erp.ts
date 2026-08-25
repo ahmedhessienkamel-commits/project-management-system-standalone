@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray, or } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, dailyTasks, leaveRequests, advanceRequests, advanceRepayments, employees, employeeWorkStarts, expenses, notifications, complianceDocuments, payroll, payrollRuns, payrollSettlements, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, sales, stages, units, users, userInvitations, vendors, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems, inventoryItems, inventoryMovements, accounts, accountingDocuments, accountingDocumentLines, costItems, fixedAssets, fixedAssetDepreciation, companies, companyMembers, companyProfiles, cashAccounts, contractorContracts, serviceContractEntries, userOperationPermissions } from "../../drizzle/schema";
+import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, dailyTasks, leaveRequests, advanceRequests, advanceRepayments, employees, employeeWorkStarts, expenses, notifications, complianceDocuments, payroll, payrollRuns, payrollSettlements, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, sales, stages, units, users, userInvitations, vendors, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems, inventoryItems, inventoryMovements, accounts, accountingDocuments, accountingDocumentLines, costItems, fixedAssets, fixedAssetDepreciation, companies, companyMembers, companyProfiles, cashAccounts, cashTransfers, contractorContracts, serviceContractEntries, userOperationPermissions } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
@@ -75,7 +75,7 @@ type ErpDb = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
 async function resolveActiveCompanyId(db: ErpDb, ctx: { user: { id: number; role: string }; req: { cookies?: Record<string, string> } }) {
   const requestedId = Number(ctx.req.cookies?.active_company_id || 0);
-  if (ctx.user.role === "admin" || ctx.user.role === "general_manager") {
+  if (ctx.user.role === "admin" || ctx.user.role === "general_manager" || Number(ctx.user.id) === 13170001) {
     const rows = await db.select({ id: companies.id }).from(companies).where(eq(companies.isActive, 1));
     return rows.find((row) => row.id === requestedId)?.id || rows[0]?.id || null;
   }
@@ -374,6 +374,31 @@ export const erpRouter = router({
     create: protectedProcedure.input(z.object({ code: z.string().trim().min(1).max(32), name: z.string().trim().min(1).max(255), accountType: z.enum(["bank", "cash"]), bankName: z.string().max(255).optional(), accountNumber: z.string().max(128).optional(), iban: z.string().max(64).optional(), currency: z.string().max(8).default("SAR"), accountId: z.number().int().positive().optional(), openingBalance: z.number().default(0) })).mutation(async ({ ctx, input }) => { const db = requireDb(await getDb()); await assertOperationPermission(db, ctx, "edit"); const duplicate = await db.select({ id: cashAccounts.id }).from(cashAccounts).where(eq(cashAccounts.code, input.code)).limit(1); if (duplicate.length) throw new TRPCError({ code: "CONFLICT", message: "كود الحساب مستخدم بالفعل" }); const companyId = await resolveActiveCompanyId(db, ctx); if (!companyId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "لا توجد شركة نشطة" }); const result = await db.insert(cashAccounts).values({ ...input, companyId, bankName: input.bankName || null, accountNumber: input.accountNumber || null, iban: input.iban || null, accountId: input.accountId || null, openingBalance: input.openingBalance.toFixed(2), createdBy: ctx.user.id }); const id = Number(result[0].insertId); await db.insert(auditLogs).values({ entityType: "cashAccount", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) }); return { id }; }),
     update: protectedProcedure.input(z.object({ id: z.number().int().positive(), code: z.string().trim().min(1).max(32), name: z.string().trim().min(1).max(255), accountType: z.enum(["bank", "cash"]), bankName: z.string().max(255).optional(), accountNumber: z.string().max(128).optional(), iban: z.string().max(64).optional(), currency: z.string().max(8).default("SAR"), accountId: z.number().int().positive().optional(), openingBalance: z.number().default(0) })).mutation(async ({ ctx, input }) => { const db = requireDb(await getDb()); await assertOperationPermission(db, ctx, "edit"); const companyId = await resolveActiveCompanyId(db, ctx); const before = (await db.select().from(cashAccounts).where(and(eq(cashAccounts.id, input.id), companyId ? eq(cashAccounts.companyId, companyId) : eq(cashAccounts.id, -1))).limit(1))[0]; if (!before) throw new TRPCError({ code: "NOT_FOUND", message: "الحساب النقدي غير موجود ضمن الشركة الحالية" }); await db.update(cashAccounts).set({ code: input.code, name: input.name, accountType: input.accountType, bankName: input.bankName || null, accountNumber: input.accountNumber || null, iban: input.iban || null, currency: input.currency, accountId: input.accountId || null, openingBalance: input.openingBalance.toFixed(2) }).where(and(eq(cashAccounts.id, input.id), companyId ? eq(cashAccounts.companyId, companyId) : eq(cashAccounts.id, -1))); await db.insert(auditLogs).values({ entityType: "cashAccount", entityId: input.id, action: "updated", actorId: ctx.user.id, beforeJson: JSON.stringify(before), afterJson: JSON.stringify(input) }); return { id: input.id }; }),
     deactivate: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => { const db = requireDb(await getDb()); await assertOperationPermission(db, ctx, "edit"); const companyId = await resolveActiveCompanyId(db, ctx); await db.update(cashAccounts).set({ isActive: 0 }).where(and(eq(cashAccounts.id, input.id), companyId ? eq(cashAccounts.companyId, companyId) : eq(cashAccounts.id, -1))); await db.insert(auditLogs).values({ entityType: "cashAccount", entityId: input.id, action: "deactivated", actorId: ctx.user.id }); return { id: input.id }; }),
+    transfers: router({
+      list: protectedProcedure.query(async ({ ctx }) => { const db = requireDb(await getDb()); const companyId = await resolveActiveCompanyId(db, ctx); if (!companyId) return []; const [rows, accountRows] = await Promise.all([db.select().from(cashTransfers).where(eq(cashTransfers.companyId, companyId)).orderBy(desc(cashTransfers.transferDate), desc(cashTransfers.id)), db.select().from(cashAccounts).where(eq(cashAccounts.companyId, companyId))]); return rows.map((row) => ({ ...row, fromAccountName: accountRows.find((account) => account.id === row.fromCashAccountId)?.name || `حساب #${row.fromCashAccountId}`, toAccountName: accountRows.find((account) => account.id === row.toCashAccountId)?.name || `حساب #${row.toCashAccountId}` })); }),
+      create: protectedProcedure.input(z.object({ transferDate: z.string().min(10).max(10), fromCashAccountId: z.number().int().positive(), toCashAccountId: z.number().int().positive(), amount: z.number().positive(), notes: z.string().max(1000).optional() })).mutation(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        await assertOperationPermission(db, ctx, "edit");
+        const companyId = await resolveActiveCompanyId(db, ctx);
+        if (!companyId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "لا توجد شركة نشطة" });
+        if (input.fromCashAccountId === input.toCashAccountId) throw new TRPCError({ code: "BAD_REQUEST", message: "يجب اختيار حسابين مختلفين للتحويل" });
+        const accountRows = await db.select().from(cashAccounts).where(eq(cashAccounts.companyId, companyId));
+        const fromAccount = accountRows.find((account) => account.id === input.fromCashAccountId && account.isActive === 1);
+        const toAccount = accountRows.find((account) => account.id === input.toCashAccountId && account.isActive === 1);
+        if (!fromAccount || !toAccount) throw new TRPCError({ code: "NOT_FOUND", message: "حساب التحويل غير موجود أو غير نشط داخل الشركة الحالية" });
+        if (!fromAccount.accountId || !toAccount.accountId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "اربط الحسابين بحسابين محاسبيين من شجرة الحسابات أولًا" });
+        if (fromAccount.currency !== toAccount.currency) throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن التحويل بين عملتين مختلفتين في العملية المختصرة" });
+        const transferNumber = `BT-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        const amount = input.amount.toFixed(2);
+        const documentResult = await db.insert(accountingDocuments).values({ companyId, documentType: "journal_entry", documentNumber: transferNumber, documentDate: new Date(input.transferDate), amount, taxAmount: "0.00", totalAmount: amount, paidAmount: "0.00", paymentStatus: "unpaid", status: "posted", notes: input.notes?.trim() || `تحويل داخلي من ${fromAccount.name} إلى ${toAccount.name}`, createdBy: ctx.user.id });
+        const accountingDocumentId = Number(documentResult[0].insertId);
+        await db.insert(accountingDocumentLines).values([{ documentId: accountingDocumentId, accountId: toAccount.accountId, description: `استلام تحويل داخلي إلى ${toAccount.name}`, debit: amount, credit: "0.00" }, { documentId: accountingDocumentId, accountId: fromAccount.accountId, description: `تحويل داخلي من ${fromAccount.name}`, debit: "0.00", credit: amount }]);
+        const transferResult = await db.insert(cashTransfers).values({ companyId, transferNumber, transferDate: new Date(input.transferDate), fromCashAccountId: fromAccount.id, toCashAccountId: toAccount.id, amount, accountingDocumentId, status: "posted", notes: input.notes?.trim() || null, createdBy: ctx.user.id });
+        const id = Number(transferResult[0].insertId);
+        await db.insert(auditLogs).values({ entityType: "cashTransfer", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify({ ...input, companyId, accountingDocumentId, transferNumber }) });
+        return { id, transferNumber, accountingDocumentId };
+      }),
+    }),
   }),
   employees: router({
     list: protectedProcedure.query(async () => {
@@ -1019,16 +1044,25 @@ export const erpRouter = router({
         db.select().from(administrativePayroll),
         db.select().from(payrollAllocations),
         db.select().from(inventoryMovements),
-        db.select({ id: accountingDocuments.id, status: accountingDocuments.status }).from(accountingDocuments),
+        db.select().from(accountingDocuments),
         db.select().from(accountingDocumentLines),
       ]);
       const postedAccountingDocumentIds = new Set(accountingDocumentRows.filter((document) => document.status === "posted").map((document) => document.id));
       const projectRows = allProjectRows.filter((row) => (!activeCompanyId || row.companyId === activeCompanyId) && (!allowed || allowed.has(row.id)));
       const approvedExpenseStatuses = new Set(["approved", "posted"]);
-      const sharedAdministrativeExpenses = expenseRows.filter((expense) => expense.projectId === null && (!activeCompanyId || expense.companyId === activeCompanyId) && (expense.classification === "administrative" || expense.expenseType === "administrative") && approvedExpenseStatuses.has(expense.status)).reduce((sum, expense) => sum + Number(expense.totalAmount || 0), 0);
-      const sharedAdministrativePaid = expenseRows.filter((expense) => expense.projectId === null && (!activeCompanyId || expense.companyId === activeCompanyId) && (expense.classification === "administrative" || expense.expenseType === "administrative") && approvedExpenseStatuses.has(expense.status)).reduce((sum, expense) => sum + Number(expense.paidAmount || 0), 0);
-      const sharedAdministrativeAllocation = allocateAdministrativeAmount(sharedAdministrativeExpenses, projectRows.filter((project) => project.status !== "archived" && Number(project.contractValue || 0) > 0).map((project) => ({ projectId: project.id, projectName: project.name, contractValue: Number(project.contractValue || 0) })));
-      const sharedAdministrativePaidAllocation = allocateAdministrativeAmount(sharedAdministrativePaid, projectRows.filter((project) => project.status !== "archived" && Number(project.contractValue || 0) > 0).map((project) => ({ projectId: project.id, projectName: project.name, contractValue: Number(project.contractValue || 0) })));
+      const sharedAdministrativeExpenseRows = expenseRows.filter((expense) => expense.projectId === null && (!activeCompanyId || expense.companyId === activeCompanyId) && (expense.classification === "administrative" || expense.expenseType === "administrative") && approvedExpenseStatuses.has(expense.status));
+      const sharedPettyCashExpenseRows = expenseRows.filter((expense) => expense.projectId === null && (!activeCompanyId || expense.companyId === activeCompanyId) && expense.classification === "petty_cash" && approvedExpenseStatuses.has(expense.status));
+      const sharedAdministrativeVoucherRows = accountingDocumentRows.filter((document) => document.documentType === "payment_voucher" && document.status === "posted" && document.projectId === null && (!activeCompanyId || document.companyId === activeCompanyId) && document.voucherCategory === "administrative");
+      const sharedPettyCashVoucherRows = accountingDocumentRows.filter((document) => document.documentType === "payment_voucher" && document.status === "posted" && document.projectId === null && (!activeCompanyId || document.companyId === activeCompanyId) && document.voucherCategory === "petty_cash");
+      const sharedAdministrativeExpenses = sharedAdministrativeExpenseRows.reduce((sum, expense) => sum + Number(expense.totalAmount || 0), 0) + sharedAdministrativeVoucherRows.reduce((sum, document) => sum + Number(document.totalAmount || 0), 0);
+      const sharedAdministrativePaid = sharedAdministrativeExpenseRows.reduce((sum, expense) => sum + Number(expense.paidAmount || 0), 0) + sharedAdministrativeVoucherRows.reduce((sum, document) => sum + Number(document.totalAmount || 0), 0);
+      const sharedPettyCashExpenses = sharedPettyCashExpenseRows.reduce((sum, expense) => sum + Number(expense.totalAmount || 0), 0) + sharedPettyCashVoucherRows.reduce((sum, document) => sum + Number(document.totalAmount || 0), 0);
+      const sharedPettyCashPaid = sharedPettyCashExpenseRows.reduce((sum, expense) => sum + Number(expense.paidAmount || 0), 0) + sharedPettyCashVoucherRows.reduce((sum, document) => sum + Number(document.totalAmount || 0), 0);
+      const allocationProjects = projectRows.filter((project) => project.status !== "archived" && Number(project.contractValue || 0) > 0).map((project) => ({ projectId: project.id, projectName: project.name, contractValue: Number(project.contractValue || 0) }));
+      const sharedAdministrativeAllocation = allocateAdministrativeAmount(sharedAdministrativeExpenses, allocationProjects);
+      const sharedAdministrativePaidAllocation = allocateAdministrativeAmount(sharedAdministrativePaid, allocationProjects);
+      const sharedPettyCashAllocation = allocateAdministrativeAmount(sharedPettyCashExpenses, allocationProjects);
+      const sharedPettyCashPaidAllocation = allocateAdministrativeAmount(sharedPettyCashPaid, allocationProjects);
       const summary = projectRows.map((project) => {
         const projectStages = stageRows.filter((stage) => stage.projectId === project.id);
         const wipLines = accountingLineRows.filter((line) => line.projectId === project.id && project.wipAccountId && line.accountId === project.wipAccountId && postedAccountingDocumentIds.has(line.documentId));
@@ -1045,9 +1079,13 @@ export const erpRouter = router({
         const documentCompleteness = calculateDocumentCompleteness({ vendors: projectVendors, attachments: projectAttachments });
         const projectCertificates = certificateRows.filter((certificate) => certificate.projectId === project.id && Boolean(certificate.vendorId || certificate.contractId) && certificate.status !== "rejected");
         const projectInventoryIssues = inventoryMovementRows.filter((movement) => movement.projectId === project.id && movement.status === "posted" && (movement.movementType === "issue" || movement.movementType === "adjustment_out"));
+        const projectVoucherRows = accountingDocumentRows.filter((document) => document.documentType === "payment_voucher" && document.status === "posted" && document.projectId === project.id);
+        const projectAdministrativeVoucherTotal = projectVoucherRows.filter((document) => document.voucherCategory === "administrative").reduce((sum, document) => sum + Number(document.totalAmount || 0), 0);
+        const projectPettyCashVoucherTotal = projectVoucherRows.filter((document) => document.voucherCategory === "petty_cash").reduce((sum, document) => sum + Number(document.totalAmount || 0), 0);
+        const projectCertificatePaymentData = calculateCashOutFromPaymentVouchers({ certificates: projectCertificates, accountingDocuments: projectVoucherRows });
         const inventoryIssuedTotal = projectInventoryIssues.reduce((sum, movement) => sum + Number(movement.totalAmount || 0), 0);
         const subcontractorCostsTotal = projectCertificates.reduce((sum, certificate) => sum + Number(certificate.totalAmount || 0), 0);
-        const subcontractorCostsPaid = projectCertificates.reduce((sum, certificate) => sum + Number(certificate.paidAmount || 0), 0);
+        const subcontractorCostsPaid = projectCertificates.reduce((sum, certificate) => sum + Math.max(Number(certificate.paidAmount || 0), projectCertificatePaymentData.voucherPaidByCertificate.get(certificate.id) || 0), 0);
         const subcontractorCostsOutstanding = Math.max(subcontractorCostsTotal - subcontractorCostsPaid, 0);
         const missingCertificateDocuments = projectCertificates.filter((certificate) => !certificate.vendorId || !projectAttachments.some((attachment) => attachment.entityType === "certificate" && attachment.entityId === certificate.id)).length;
         const paymentRequests = approvalRows.filter((approval) => approval.projectId === project.id && ["expense", "collection"].includes(approval.entityType));
@@ -1058,9 +1096,16 @@ export const erpRouter = router({
         const overdueStages = projectStages.filter((stage) => stage.status !== "completed" && stage.plannedEnd && new Date(stage.plannedEnd) < now);
         const projectTime = calculateStageTimeVariance(project.plannedEnd, project.status, now);
         const projectDurationDays = project.plannedStart && project.plannedEnd ? Math.max(1, Math.ceil((new Date(project.plannedEnd).getTime() - new Date(project.plannedStart).getTime()) / 86400000)) : 0;
+        const stageProgressPct = (stage: typeof projectStages[number]) => {
+          const manualProgress = Number(stage.actualProgress || 0);
+          if (manualProgress > 0 || stage.status === "completed") return Math.min(100, Math.max(0, manualProgress || 100));
+          const certifiedAmount = certificateRows.filter((certificate) => certificate.projectId === project.id && certificate.stageId === stage.id && certificate.status !== "rejected" && Boolean(certificate.vendorId || certificate.contractId)).reduce((sum, certificate) => sum + Number(certificate.totalAmount || 0), 0);
+          const plannedBudget = Number(stage.plannedBudget || 0);
+          return plannedBudget > 0 ? Math.min(100, (certifiedAmount / plannedBudget) * 100) : 0;
+        };
         const timeline = projectStages.reduce((acc, stage) => {
           const weight = Number(stage.plannedBudget || 0) || 1;
-          const actualRatio = Math.min(1, Math.max(0, Number(stage.actualProgress || (stage.status === "completed" ? 100 : 0)) / 100));
+          const actualRatio = stageProgressPct(stage) / 100;
           let expectedRatio = 0;
           if (stage.plannedStart && stage.plannedEnd) {
             const start = new Date(stage.plannedStart).getTime();
@@ -1069,27 +1114,31 @@ export const erpRouter = router({
           }
           return { weight: acc.weight + weight, actual: acc.actual + actualRatio * weight, expected: acc.expected + expectedRatio * weight };
         }, { weight: 0, actual: 0, expected: 0 });
-        const completedStageCount = projectStages.filter((stage) => stage.status === "completed" || Number(stage.actualProgress || 0) >= 100).length;
-        const progress = projectStages.length ? Math.round((completedStageCount / projectStages.length) * 100) : 0;
+        const progress = timeline.weight ? Math.round((timeline.actual / timeline.weight) * 100) : 0;
         const expectedScheduleProgress = timeline.weight ? Math.round((timeline.expected / timeline.weight) * 100) : 0;
         const scheduleVariancePct = projectTime.timeVarianceDays > 0 && projectDurationDays > 0 ? Math.round((projectTime.timeVarianceDays / projectDurationDays) * 100) : 0;
         const planned = projectStages.reduce((sum, stage) => sum + Number(stage.plannedBudget || 0), 0);
         const activeStage = [...projectStages].sort((a, b) => (a.plannedStart ? new Date(a.plannedStart).getTime() : Number.MAX_SAFE_INTEGER) - (b.plannedStart ? new Date(b.plannedStart).getTime() : Number.MAX_SAFE_INTEGER)).find((stage) => stage.status !== "completed" && Number(stage.actualProgress || 0) < 100) ?? null;
         const administrativeExpenseRows = expenseRows.filter((expense) => expense.projectId === project.id && approvedExpenseStatuses.has(expense.status) && (expense.classification === "administrative" || expense.expenseType === "administrative"));
+        const pettyCashExpenseRows = expenseRows.filter((expense) => expense.projectId === project.id && approvedExpenseStatuses.has(expense.status) && expense.classification === "petty_cash");
         const allocatedAdministrativeExpenses = sharedAdministrativeAllocation.find((item) => item.projectId === project.id)?.allocatedAmount || 0;
         const allocatedAdministrativePaid = sharedAdministrativePaidAllocation.find((item) => item.projectId === project.id)?.allocatedAmount || 0;
+        const allocatedPettyCashExpenses = sharedPettyCashAllocation.find((item) => item.projectId === project.id)?.allocatedAmount || 0;
+        const allocatedPettyCashPaid = sharedPettyCashPaidAllocation.find((item) => item.projectId === project.id)?.allocatedAmount || 0;
         const directAdministrativePaid = administrativeExpenseRows.reduce((sum, expense) => sum + Number(expense.paidAmount || 0), 0);
-        const materialsExpenseRows = projectExpenses.filter((expense) => expense.classification !== "administrative" && expense.expenseType === "materials");
-        const operationalExpenseRows = projectExpenses.filter((expense) => expense.classification !== "administrative" && expense.expenseType !== "administrative" && expense.expenseType !== "materials");
+        const directPettyCashPaid = pettyCashExpenseRows.reduce((sum, expense) => sum + Number(expense.paidAmount || 0), 0);
+        const materialsExpenseRows = projectExpenses.filter((expense) => expense.classification !== "administrative" && expense.classification !== "petty_cash" && expense.expenseType === "materials");
+        const operationalExpenseRows = projectExpenses.filter((expense) => expense.classification !== "administrative" && expense.classification !== "petty_cash" && expense.expenseType !== "administrative" && expense.expenseType !== "materials");
         const materialsExpensesTotal = materialsExpenseRows.reduce((sum, expense) => sum + Number(expense.totalAmount || 0), 0);
         const operationalExpensesTotal = operationalExpenseRows.reduce((sum, expense) => sum + Number(expense.totalAmount || 0), 0);
-        const administrativeExpensesTotal = administrativeExpenseRows.reduce((sum, expense) => sum + Number(expense.totalAmount || 0), 0) + allocatedAdministrativeExpenses;
+        const administrativeExpensesTotal = administrativeExpenseRows.reduce((sum, expense) => sum + Number(expense.totalAmount || 0), 0) + allocatedAdministrativeExpenses + projectAdministrativeVoucherTotal;
+        const pettyCashExpensesTotal = pettyCashExpenseRows.reduce((sum, expense) => sum + Number(expense.totalAmount || 0), 0) + allocatedPettyCashExpenses + projectPettyCashVoucherTotal;
         const projectExpensesPreTax = projectExpenses.reduce((sum, expense) => sum + Number(expense.preTaxAmount || 0), 0);
         const projectExpensesWithTax = projectExpenses.reduce((sum, expense) => sum + Number(expense.totalAmount || 0), 0);
         const administrativeExpensesPreTax = administrativeExpenseRows.reduce((sum, expense) => sum + Number(expense.preTaxAmount || 0), 0) + allocatedAdministrativeExpenses;
         const financialTotals = calculateFinancialSummaryTotals({ sales: projectSales, collections: projectCollections, expenses: projectExpenses, payroll: [...projectPayroll, ...projectAdministrativePayroll.map((row) => ({ preTaxAmount: row.allocatedAmount, totalAmount: row.allocatedAmount, paidAmount: "0", status: "approved" as const }))] });
-        const actual = financialTotals.expensesTotal + financialTotals.payrollTotal + subcontractorCostsTotal + inventoryIssuedTotal + administrativeExpensesTotal;
-        const paid = financialTotals.expensesPaid + financialTotals.payrollPaid + subcontractorCostsPaid + directAdministrativePaid + allocatedAdministrativePaid;
+        const actual = financialTotals.expensesTotal + financialTotals.payrollTotal + subcontractorCostsTotal + inventoryIssuedTotal + administrativeExpensesTotal + pettyCashExpensesTotal;
+        const paid = financialTotals.expensesPaid + financialTotals.payrollPaid + subcontractorCostsPaid + directAdministrativePaid + allocatedAdministrativePaid + directPettyCashPaid + allocatedPettyCashPaid + projectAdministrativeVoucherTotal + projectPettyCashVoucherTotal;
         const collectionsReceived = financialTotals.collectionsReceived;
         const recognizedRevenue = financialTotals.revenue;
         const payrollOutstanding = financialTotals.payrollOutstanding;
@@ -1120,11 +1169,12 @@ export const erpRouter = router({
            materialsExpensesTotal,
            operationalExpensesTotal,
            administrativeExpensesTotal,
+           pettyCashExpensesTotal,
            projectExpensesPreTax,
            projectExpensesWithTax,
            administrativeExpensesPreTax,
            payrollTotal: financialTotals.payrollTotal,
-           totalExpenses: materialsExpensesTotal + operationalExpensesTotal + administrativeExpensesTotal + financialTotals.payrollTotal + subcontractorCostsTotal + inventoryIssuedTotal,
+           totalExpenses: materialsExpensesTotal + operationalExpensesTotal + administrativeExpensesTotal + pettyCashExpensesTotal + financialTotals.payrollTotal + subcontractorCostsTotal + inventoryIssuedTotal,
            cashGap,
           pendingApprovals: projectApprovals.length,
           overdueApprovals,
@@ -1139,7 +1189,7 @@ export const erpRouter = router({
           reasons,
           delayedStages,
           missingDocumentCount: documentCompleteness.missing.length + missingCertificateDocuments + missingPaymentDocuments,
-          activeStage: activeStage ? { id: activeStage.id, code: activeStage.code, name: activeStage.name, status: activeStage.status, plannedStart: activeStage.plannedStart, plannedEnd: activeStage.plannedEnd, actualProgress: Number(activeStage.actualProgress || 0), plannedBudget: activeStagePlannedBudget, actualCost: activeStageActualCost } : null,
+          activeStage: activeStage ? { id: activeStage.id, code: activeStage.code, name: activeStage.name, status: activeStage.status, plannedStart: activeStage.plannedStart, plannedEnd: activeStage.plannedEnd, actualProgress: stageProgressPct(activeStage), plannedBudget: activeStagePlannedBudget, actualCost: activeStageActualCost } : null,
         };
       });
       for (const item of summary) {
@@ -1874,6 +1924,55 @@ export const erpRouter = router({
         await db.insert(auditLogs).values({ entityType: "approval", entityId: request.id, action: "reminder_sent", actorId: ctx.user.id, afterJson: JSON.stringify({ recipients: withEmail.map((user) => user.id), message }) });
         return { success: true, recipients: withEmail.map((user) => user.name) } as const;
       }),
+    }),
+    history: protectedProcedure.query(async ({ ctx }) => {
+      const db = requireDb(await getDb());
+      const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
+      const companyId = await resolveActiveCompanyId(db, ctx);
+      const projectRows = companyId ? await db.select({ id: projects.id, name: projects.name }).from(projects).where(eq(projects.companyId, companyId)) : [];
+      const projectIds = new Set(projectRows.map((project) => project.id));
+      const [requests, userRows, certificateRows, documentRows, requisitionRows, leaveRows, advanceRows] = await Promise.all([
+        db.select().from(approvalRequests).where(inArray(approvalRequests.status, ["approved", "rejected"])).orderBy(desc(approvalRequests.reviewedAt), desc(approvalRequests.id)),
+        db.select({ id: users.id, name: users.name, role: users.role }).from(users),
+        db.select({ id: certificates.id, certificateNumber: certificates.certificateNumber, description: certificates.description, totalAmount: certificates.totalAmount, certificateDate: certificates.certificateDate }).from(certificates),
+        db.select({ id: accountingDocuments.id, documentNumber: accountingDocuments.documentNumber, documentType: accountingDocuments.documentType, partyName: accountingDocuments.partyName, totalAmount: accountingDocuments.totalAmount, documentDate: accountingDocuments.documentDate, notes: accountingDocuments.notes }).from(accountingDocuments),
+        db.select({ id: materialRequisitions.id, requestNumber: materialRequisitions.requestNumber, description: materialRequisitions.description, createdAt: materialRequisitions.createdAt }).from(materialRequisitions),
+        db.select({ id: leaveRequests.id, leaveType: leaveRequests.leaveType, startDate: leaveRequests.startDate, endDate: leaveRequests.endDate, reason: leaveRequests.reason, requestedBy: leaveRequests.requestedBy }).from(leaveRequests),
+        db.select({ id: advanceRequests.id, amount: advanceRequests.amount, reason: advanceRequests.reason, requestedBy: advanceRequests.requestedBy, createdAt: advanceRequests.createdAt }).from(advanceRequests),
+      ]);
+      const projectMap = new Map(projectRows.map((project) => [project.id, project.name]));
+      const userMap = new Map(userRows.map((user) => [user.id, user]));
+      const certificatesMap = new Map(certificateRows.map((row) => [row.id, row]));
+      const documentsMap = new Map(documentRows.map((row) => [row.id, row]));
+      const requisitionsMap = new Map(requisitionRows.map((row) => [row.id, row]));
+      const leavesMap = new Map(leaveRows.map((row) => [row.id, row]));
+      const advancesMap = new Map(advanceRows.map((row) => [row.id, row]));
+      const hasFullHistoryAccess = ctx.user.role === "admin" || ctx.user.role === "general_manager" || Number(ctx.user.id) === 13170001;
+      const visible = hasFullHistoryAccess ? requests.filter((row) => row.projectId === null || projectIds.has(row.projectId)) : allowed ? requests.filter((row) => row.projectId === null || (projectIds.has(row.projectId) && allowed.has(row.projectId))) : requests;
+      return visible.map((request) => {
+        const certificate = request.entityType === "certificate" ? certificatesMap.get(request.entityId) : undefined;
+        const document = ["payment_voucher", "purchase_payment"].includes(request.entityType) ? documentsMap.get(request.entityId) : undefined;
+        const requisition = request.entityType === "materialRequisition" ? requisitionsMap.get(request.entityId) : undefined;
+        const leave = request.entityType === "leaveRequest" ? leavesMap.get(request.entityId) : undefined;
+        const advance = request.entityType === "advanceRequest" ? advancesMap.get(request.entityId) : undefined;
+        const source: any = certificate || document || requisition || leave || advance;
+        const requestedBy = request.requestedBy || source?.requestedBy || null;
+        const title = certificate?.certificateNumber || document?.documentNumber || requisition?.requestNumber || (leave ? `طلب ${leave.leaveType}` : advance ? `سلفة ${Number(advance.amount || 0).toFixed(2)} ر.س` : `${request.entityType} #${request.entityId}`);
+        const description = certificate?.description || document?.notes || requisition?.description || leave?.reason || advance?.reason || "—";
+        return { ...request, title, description, typeLabel: certificate ? "مستخلص" : document ? (document.documentType === "payment_voucher" ? "سند صرف" : "مستند محاسبي") : requisition ? "طلب شراء مواد" : leave ? "طلب إجازة" : advance ? "طلب سلفة" : request.entityType, amount: Number(certificate?.totalAmount || document?.totalAmount || advance?.amount || 0), documentDate: certificate?.certificateDate || document?.documentDate || leave?.startDate || advance?.createdAt || request.createdAt, requesterName: requestedBy ? userMap.get(requestedBy)?.name || `مستخدم #${requestedBy}` : "غير محدد", reviewerName: request.reviewedBy ? userMap.get(request.reviewedBy)?.name || `مستخدم #${request.reviewedBy}` : "غير محدد", projectName: request.projectId ? projectMap.get(request.projectId) || `مشروع #${request.projectId}` : "عام للشركة", statusLabel: request.status === "approved" ? "معتمد" : "مرفوض", sourceExists: Boolean(source) };
+      }).filter((item) => item.sourceExists);
+    }),
+    deleteHistory: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      const db = requireDb(await getDb());
+      const canDelete = ctx.user.role === "admin" || ctx.user.role === "general_manager" || Number(ctx.user.id) === 13170001;
+      if (!canDelete) throw new TRPCError({ code: "FORBIDDEN", message: "حذف سجل الموافقة متاح للإدارة ولمصطفى فقط" });
+      const request = (await db.select().from(approvalRequests).where(eq(approvalRequests.id, input.id)).limit(1))[0];
+      if (!request || request.status === "pending") throw new TRPCError({ code: "NOT_FOUND", message: "سجل الموافقة المنتهي غير موجود" });
+      const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
+      if (request.projectId && allowed && !allowed.has(request.projectId)) throw new TRPCError({ code: "FORBIDDEN", message: "لا تملك صلاحية على هذا المشروع" });
+      await db.delete(approvalRequests).where(eq(approvalRequests.id, input.id));
+      await db.insert(auditLogs).values({ entityType: "approval", entityId: input.id, action: "history_deleted", actorId: ctx.user.id, beforeJson: JSON.stringify(request) });
+      return { success: true } as const;
     }),
     decide: protectedProcedure
       .input(z.object({ id: z.number().int().positive(), decision: z.enum(["approved", "rejected"]), note: z.string().max(1000).optional() }))
@@ -3126,19 +3225,41 @@ export const erpRouter = router({
     projectStageDetail: protectedProcedure.input(z.object({ projectId: z.number().int().positive() })).query(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
       await assertProjectAccess(db, ctx, input.projectId);
-      const [stageRows, expenseRows, payrollRows, certificateRows, costCatalogRows, vendorRows] = await Promise.all([
+      const activeCompanyId = await resolveActiveCompanyId(db, ctx);
+      const [stageRows, expenseRows, payrollRows, certificateRows, costCatalogRows, vendorRows, accountingDocumentRows, allProjectRows] = await Promise.all([
         db.select().from(stages).where(eq(stages.projectId, input.projectId)),
-        db.select().from(expenses).where(eq(expenses.projectId, input.projectId)),
+        db.select().from(expenses),
         db.select().from(payroll).where(eq(payroll.projectId, input.projectId)),
         db.select().from(certificates).where(eq(certificates.projectId, input.projectId)),
         db.select().from(costItems),
         db.select().from(vendors).where(eq(vendors.projectId, input.projectId)),
+        db.select().from(accountingDocuments),
+        db.select({ id: projects.id, name: projects.name, contractValue: projects.contractValue, status: projects.status }).from(projects),
       ]);
       const vendorName = (ids: Array<number | null>) => Array.from(new Set(ids.filter((id): id is number => Boolean(id)).map((id) => vendorRows.find((vendor) => vendor.id === id)?.name).filter((name): name is string => Boolean(name)))).join("، ");
-      const activeExpenses = expenseRows.filter((row) => row.status !== "rejected" && row.status !== "draft");
+      const projectExpenseRows = expenseRows.filter((row) => row.projectId === input.projectId);
+      const activeExpenses = projectExpenseRows.filter((row) => row.status !== "rejected" && row.status !== "draft");
+      const approvedShared = (row: typeof expenseRows[number]) => row.projectId === null && (!activeCompanyId || row.companyId === activeCompanyId) && ["approved", "posted"].includes(row.status);
+      const sharedAdministrativeExpenseRows = expenseRows.filter((row) => approvedShared(row) && (row.classification === "administrative" || row.expenseType === "administrative"));
+      const sharedPettyCashExpenseRows = expenseRows.filter((row) => approvedShared(row) && row.classification === "petty_cash");
+      const sharedVoucherRows = accountingDocumentRows.filter((row) => row.documentType === "payment_voucher" && row.status === "posted" && row.projectId === null && (!activeCompanyId || row.companyId === activeCompanyId));
+      const sharedAdministrativeTotal = sharedAdministrativeExpenseRows.reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) + sharedVoucherRows.filter((row) => row.voucherCategory === "administrative").reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+      const sharedAdministrativePaid = sharedAdministrativeExpenseRows.reduce((sum, row) => sum + Number(row.paidAmount || 0), 0) + sharedVoucherRows.filter((row) => row.voucherCategory === "administrative").reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+      const sharedPettyCashTotal = sharedPettyCashExpenseRows.reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) + sharedVoucherRows.filter((row) => row.voucherCategory === "petty_cash").reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+      const sharedPettyCashPaid = sharedPettyCashExpenseRows.reduce((sum, row) => sum + Number(row.paidAmount || 0), 0) + sharedVoucherRows.filter((row) => row.voucherCategory === "petty_cash").reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+      const allocationProjects = allProjectRows.filter((row) => row.status !== "archived" && Number(row.contractValue || 0) > 0);
+      const targetProject = allocationProjects.find((row) => row.id === input.projectId);
+      const totalContractValue = allocationProjects.reduce((sum, row) => sum + Number(row.contractValue || 0), 0);
+      const allocationRatio = targetProject && totalContractValue > 0 ? Number(targetProject.contractValue || 0) / totalContractValue : 0;
+      const sharedAdministrativeAllocated = Number((sharedAdministrativeTotal * allocationRatio).toFixed(2));
+      const sharedAdministrativePaidAllocated = Number((sharedAdministrativePaid * allocationRatio).toFixed(2));
+      const sharedPettyCashAllocated = Number((sharedPettyCashTotal * allocationRatio).toFixed(2));
+      const sharedPettyCashPaidAllocated = Number((sharedPettyCashPaid * allocationRatio).toFixed(2));
       const actualForStage = (stageId: number) => activeExpenses.filter((row) => row.stageId === stageId);
       const payrollForStage = (stageId: number) => payrollRows.filter((row) => row.stageId === stageId);
       const certificateForStage = (stageId: number) => certificateRows.filter((row) => row.stageId === stageId && row.status !== "rejected" && Boolean(row.vendorId || row.contractId));
+      const certificatePaymentData = calculateCashOutFromPaymentVouchers({ certificates: certificateRows.filter((row) => Boolean(row.vendorId || row.contractId)), accountingDocuments: accountingDocumentRows });
+      const certificatePaid = (certificate: typeof certificateRows[number]) => Math.max(Number(certificate.paidAmount || 0), certificatePaymentData.voucherPaidByCertificate.get(certificate.id) || 0);
       const timeMetrics = (plannedEnd: Date | string | null, status: string) => calculateStageTimeVariance(plannedEnd, status);
       const makeMetrics = (plannedBudget: number, rows: typeof activeExpenses, stageId?: number) => {
         const expenseTotal = rows.reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
@@ -3146,9 +3267,9 @@ export const erpRouter = router({
         const payrollTotal = stageId ? payrollForStage(stageId).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) : 0;
         const payrollPaid = stageId ? payrollForStage(stageId).reduce((sum, row) => sum + Number(row.paidAmount || 0), 0) : 0;
         const certificateTotal = stageId ? certificateForStage(stageId).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) : 0;
-        const certificatePaid = stageId ? certificateForStage(stageId).reduce((sum, row) => sum + Number(row.paidAmount || 0), 0) : 0;
+        const certificatePaidTotal = stageId ? certificateForStage(stageId).reduce((sum, row) => sum + certificatePaid(row), 0) : 0;
         const actual = expenseTotal + payrollTotal + certificateTotal;
-        const paidAmount = paid + payrollPaid + certificatePaid;
+        const paidAmount = paid + payrollPaid + certificatePaidTotal;
         const outstanding = Math.max(actual - paidAmount, 0);
         return { plannedBudget, actual, paidAmount, outstanding, variance: plannedBudget - actual, consumptionPct: plannedBudget > 0 ? (actual / plannedBudget) * 100 : 0 };
       };
@@ -3165,11 +3286,16 @@ export const erpRouter = router({
         const stage = stageRows.find((candidate) => itemExpenses.some((row) => row.stageId === candidate.id));
         return { rowType: "costItem" as const, id: item.id, code: item.code, name: item.name, stageId: stage?.id ?? null, stageName: stage?.name ?? "غير محدد", plannedBudgetTaxBasis: null, status: stage?.status ?? "planned", plannedStart: stage?.plannedStart ?? null, plannedEnd: stage?.plannedEnd ?? null, actualProgress: stage ? Number(stage.actualProgress || 0) : 0, contractor: vendorName(itemExpenses.map((row) => row.vendorId)), notes: itemExpenses.map((row) => row.description).filter(Boolean).slice(0, 3).join("، "), ...timeMetrics(stage?.plannedEnd ?? null, stage?.status ?? "planned"), ...metrics };
       });
-      const total = rows.reduce((acc, row) => ({ plannedBudget: acc.plannedBudget + row.plannedBudget, actual: acc.actual + row.actual, paidAmount: acc.paidAmount + row.paidAmount, outstanding: acc.outstanding + row.outstanding }), { plannedBudget: 0, actual: 0, paidAmount: 0, outstanding: 0 });
+      const sharedRows = [
+        { rowType: "costItem" as const, id: -input.projectId, code: "OH-ADMIN", name: "نصيب المشروع من المصروفات الإدارية العامة", stageId: null, stageName: "مشترك", plannedBudget: 0, plannedBudgetTaxBasis: null, actual: sharedAdministrativeAllocated, paidAmount: sharedAdministrativePaidAllocated, outstanding: Math.max(sharedAdministrativeAllocated - sharedAdministrativePaidAllocated, 0), variance: -sharedAdministrativeAllocated, consumptionPct: 0, status: "posted", plannedStart: null, plannedEnd: null, actualProgress: 0, contractor: "", notes: "موزع حسب قيمة العقد", timeVarianceDays: 0, timeStatus: "on_track" as const },
+        { rowType: "costItem" as const, id: -(input.projectId * 10), code: "OH-PETTY", name: "نصيب المشروع من المصروفات النثرية العامة", stageId: null, stageName: "مشترك", plannedBudget: 0, plannedBudgetTaxBasis: null, actual: sharedPettyCashAllocated, paidAmount: sharedPettyCashPaidAllocated, outstanding: Math.max(sharedPettyCashAllocated - sharedPettyCashPaidAllocated, 0), variance: -sharedPettyCashAllocated, consumptionPct: 0, status: "posted", plannedStart: null, plannedEnd: null, actualProgress: 0, contractor: "", notes: "موزع حسب قيمة العقد", timeVarianceDays: 0, timeStatus: "on_track" as const },
+      ].filter((row) => row.actual > 0 || row.paidAmount > 0);
+      const allRows = [...rows, ...costItemRows, ...sharedRows];
+      const total = allRows.reduce((acc, row) => ({ plannedBudget: acc.plannedBudget + row.plannedBudget, actual: acc.actual + row.actual, paidAmount: acc.paidAmount + row.paidAmount, outstanding: acc.outstanding + row.outstanding }), { plannedBudget: 0, actual: 0, paidAmount: 0, outstanding: 0 });
       const stageTotal = rows.reduce((acc, row) => ({ plannedBudget: acc.plannedBudget + row.plannedBudget, actual: acc.actual + row.actual, paidAmount: acc.paidAmount + row.paidAmount, outstanding: acc.outstanding + row.outstanding }), { plannedBudget: 0, actual: 0, paidAmount: 0, outstanding: 0 });
       const materialsTotal = costItemRows.reduce((acc, row) => ({ plannedBudget: acc.plannedBudget + row.plannedBudget, actual: acc.actual + row.actual, paidAmount: acc.paidAmount + row.paidAmount, outstanding: acc.outstanding + row.outstanding }), { plannedBudget: 0, actual: 0, paidAmount: 0, outstanding: 0 });
       const withVariance = (value: typeof total) => ({ ...value, variance: value.plannedBudget - value.actual, consumptionPct: value.plannedBudget > 0 ? (value.actual / value.plannedBudget) * 100 : 0 });
-      return { rows: [...rows, ...costItemRows], total: withVariance(total), stageTotal: withVariance(stageTotal), materialsTotal: withVariance(materialsTotal) };
+      return { rows: allRows, total: withVariance(total), stageTotal: withVariance(stageTotal), materialsTotal: withVariance(materialsTotal) };
     }),
     cashFlow: protectedProcedure.input(z.object({ projectId: z.number().int().positive() })).query(async ({ ctx, input }) => {
       const db = requireDb(await getDb());

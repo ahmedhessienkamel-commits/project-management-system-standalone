@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { projects, stages, expenses, collections, approvalRequests, attachments, sales, payroll, vendors, certificates, projectMembers, units, periodLocks, notifications, auditLogs, attendance, approvalPolicies, custodyMovements, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems, advanceRequests, advanceRepayments, leaveRequests, employees, users, costItems } from "../drizzle/schema";
+import { projects, stages, expenses, collections, approvalRequests, attachments, sales, payroll, vendors, certificates, projectMembers, units, periodLocks, notifications, auditLogs, attendance, approvalPolicies, custodyMovements, cashAccounts, companies, cashTransfers, accountingDocuments, accountingDocumentLines, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems, advanceRequests, advanceRepayments, leaveRequests, employees, users, costItems } from "../drizzle/schema";
 
 const state = {
+  companies: [] as any[],
   projects: [] as any[],
   stages: [] as any[],
   expenses: [] as any[],
@@ -20,6 +21,10 @@ const state = {
   attendance: [] as any[],
   approvalPolicies: [] as any[],
   custodyMovements: [] as any[],
+  cashAccounts: [] as any[],
+  cashTransfers: [] as any[],
+  accountingDocuments: [] as any[],
+  accountingDocumentLines: [] as any[],
   materialRequisitions: [] as any[],
   materialRequisitionItems: [] as any[],
   purchaseOrders: [] as any[],
@@ -35,7 +40,8 @@ const state = {
 };
 
 const tableState = new Map<any, keyof typeof state>([
-  [projects, "projects"], [stages, "stages"], [expenses, "expenses"], [collections, "collections"], [approvalRequests, "approvalRequests"], [attachments, "attachments"], [sales, "sales"], [payroll, "payroll"], [vendors, "vendors"], [certificates, "certificates"], [projectMembers, "projectMembers"], [units, "units"], [periodLocks, "periodLocks"], [notifications, "notifications"], [auditLogs, "auditLogs"], [attendance, "attendance"], [approvalPolicies, "approvalPolicies"], [custodyMovements, "custodyMovements"], [materialRequisitions, "materialRequisitions"], [materialRequisitionItems, "materialRequisitionItems"], [purchaseOrders, "purchaseOrders"], [purchaseOrderItems, "purchaseOrderItems"], [purchaseReceipts, "purchaseReceipts"], [purchaseReceiptItems, "purchaseReceiptItems"], [advanceRequests, "advanceRequests"], [advanceRepayments, "advanceRepayments"], [leaveRequests, "leaveRequests"], [employees, "employees"], [users, "users"], [costItems, "costItems"],
+  [companies, "companies"],
+  [projects, "projects"], [stages, "stages"], [expenses, "expenses"], [collections, "collections"], [approvalRequests, "approvalRequests"], [attachments, "attachments"], [sales, "sales"], [payroll, "payroll"], [vendors, "vendors"], [certificates, "certificates"], [projectMembers, "projectMembers"], [units, "units"], [periodLocks, "periodLocks"], [notifications, "notifications"], [auditLogs, "auditLogs"], [attendance, "attendance"], [approvalPolicies, "approvalPolicies"], [custodyMovements, "custodyMovements"], [cashAccounts, "cashAccounts"], [cashTransfers, "cashTransfers"], [accountingDocuments, "accountingDocuments"], [accountingDocumentLines, "accountingDocumentLines"], [materialRequisitions, "materialRequisitions"], [materialRequisitionItems, "materialRequisitionItems"], [purchaseOrders, "purchaseOrders"], [purchaseOrderItems, "purchaseOrderItems"], [purchaseReceipts, "purchaseReceipts"], [purchaseReceiptItems, "purchaseReceiptItems"], [advanceRequests, "advanceRequests"], [advanceRepayments, "advanceRepayments"], [leaveRequests, "leaveRequests"], [employees, "employees"], [users, "users"], [costItems, "costItems"],
 ]);
 
 function rowsFor(table: any) {
@@ -58,9 +64,10 @@ function fakeDb() {
     insert: (table: any) => ({
       values: (value: any) => {
         const rows = rowsFor(table);
-        const next = { ...value, id: ++id, createdAt: new Date(), updatedAt: new Date() };
-        rows.push(next);
-        return Promise.resolve([{ insertId: next.id }]);
+        const values = Array.isArray(value) ? value : [value];
+        const inserted = values.map((entry) => ({ ...entry, id: ++id, createdAt: new Date(), updatedAt: new Date() }));
+        rows.push(...inserted);
+        return Promise.resolve([{ insertId: inserted[0]?.id }]);
       },
     }),
     update: (table: any) => ({
@@ -72,6 +79,7 @@ function fakeDb() {
         },
       }),
     }),
+    delete: (table: any) => ({ where: async () => { const rows = rowsFor(table); rows.shift(); return []; } }),
   };
 }
 
@@ -91,7 +99,8 @@ function context(userId = 1, role: "admin" | "user" = "user"): TrpcContext {
 describe("ERP sales and collections API flow", () => {
   beforeEach(() => {
     for (const key of Object.keys(state) as Array<keyof typeof state>) state[key].splice(0);
-    state.projects.push({ id: 1, code: "WN-001", name: "وادي نمار", classification: "operational", status: "active", location: "الرياض", createdAt: new Date(), updatedAt: new Date() });
+    state.companies.push({ id: 1, legalName: "شركة الاختبار", name: "شركة الاختبار", isActive: 1, createdAt: new Date(), updatedAt: new Date() });
+    state.projects.push({ id: 1, code: "WN-001", name: "وادي نمار", companyId: 1, classification: "operational", status: "active", location: "الرياض", createdAt: new Date(), updatedAt: new Date() });
     state.projectMembers.push({ id: 1, projectId: 1, userId: 1, projectRole: "finance", createdAt: new Date() });
     state.stages.push({ id: 2, projectId: 1, code: "EXC", name: "الحفر", status: "active", plannedBudget: "100000", createdAt: new Date() });
     state.units.push({ id: 10, projectId: 1, unitCode: "A-101", status: "available", createdAt: new Date(), updatedAt: new Date() });
@@ -211,6 +220,27 @@ describe("ERP sales and collections API flow", () => {
     const result = await caller.erp.custodyMovements.create({ employeeCode: "CUST-001", employeeName: "أمين العهدة", movementType: "spend", allocationType: "general_cash", description: "سلفة مستفيد آخر", amount: 500, expenseType: "advance", payrollBeneficiaryType: "company_employee", payrollEmployeeId: 9, payrollBeneficiaryName: "أحمد العامل", repaymentMode: "single", repaymentStartMonth: 9, repaymentStartYear: 2026, installmentCount: 1 });
     expect(state.custodyMovements.find((row) => row.id === result.id)).toMatchObject({ employeeCode: "CUST-001", employeeName: "أمين العهدة", payrollEmployeeId: 9, payrollBeneficiaryName: "أحمد العامل" });
     expect(state.advanceRequests.find((row) => row.id === result.advanceRequestId)).toMatchObject({ employeeId: 9, amount: "500.00", repaymentMode: "single" });
+  });
+
+  it("shows completed approval history to Mostafa and deletes only the archive row", async () => {
+    state.leaveRequests.push({ id: 31, requestedBy: 13170001, leaveType: "annual", startDate: "2026-08-20", endDate: "2026-08-22", reason: "إجازة سنوية", status: "approved" });
+    state.approvalRequests.push({ id: 51, entityType: "leaveRequest", entityId: 31, projectId: 1, requestedBy: 13170001, reviewedBy: 13170001, status: "approved", approvalStage: "general_manager", note: "تم الاعتماد", createdAt: new Date("2026-08-18"), reviewedAt: new Date("2026-08-19") });
+    const caller = appRouter.createCaller(context(13170001));
+    const history = await caller.erp.approvals.history();
+    expect(history.find((row) => row.id === 51)).toMatchObject({ title: "طلب annual", requesterName: "مصطفى", reviewerName: "مصطفى", statusLabel: "معتمد" });
+    await caller.erp.approvals.deleteHistory({ id: 51 });
+    expect(state.approvalRequests.find((row) => row.id === 51)).toBeUndefined();
+    expect(state.leaveRequests.find((row) => row.id === 31)).toBeDefined();
+  });
+
+  it("creates an internal bank transfer with balanced accounting lines", async () => {
+    state.cashAccounts.push({ id: 21, companyId: 1, code: "BANK-001", name: "البنك الرئيسي", accountType: "bank", currency: "SAR", accountId: 101, isActive: 1 });
+    state.cashAccounts.push({ id: 22, companyId: 1, code: "BANK-002", name: "بنك المشاريع", accountType: "bank", currency: "SAR", accountId: 102, isActive: 1 });
+    const caller = appRouter.createCaller(context(1, "admin"));
+    const result = await caller.erp.cashAccounts.transfers.create({ transferDate: "2026-08-25", fromCashAccountId: 21, toCashAccountId: 22, amount: 1250, notes: "تمويل حساب المشاريع" });
+    expect(state.cashTransfers.find((row) => row.id === result.id)).toMatchObject({ companyId: 1, fromCashAccountId: 21, toCashAccountId: 22, amount: "1250.00", status: "posted" });
+    expect(state.accountingDocuments.find((row) => row.id === result.accountingDocumentId)).toMatchObject({ documentType: "journal_entry", documentNumber: result.transferNumber, totalAmount: "1250.00", status: "posted" });
+    expect(state.accountingDocumentLines.filter((row) => row.documentId === result.accountingDocumentId)).toEqual(expect.arrayContaining([expect.objectContaining({ accountId: 102, debit: "1250.00", credit: "0.00" }), expect.objectContaining({ accountId: 101, debit: "0.00", credit: "1250.00" })]));
   });
 
   it("persists configurable approval policy thresholds for administrators", async () => {
