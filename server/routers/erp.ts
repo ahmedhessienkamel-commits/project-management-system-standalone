@@ -1157,7 +1157,9 @@ export const erpRouter = router({
         db.select().from(projectBudgets),
       ]);
       const postedAccountingDocumentIds = new Set(accountingDocumentRows.filter((document) => document.status === "posted").map((document) => document.id));
-      const projectRows = allProjectRows.filter((row) => (!activeCompanyId || row.companyId === activeCompanyId) && (!allowed || allowed.has(row.id)));
+      const companyScopedProjects = activeCompanyId ? allProjectRows.filter((row) => row.companyId === activeCompanyId) : allProjectRows;
+      const projectSource = companyScopedProjects.length ? companyScopedProjects : allProjectRows;
+      const projectRows = projectSource.filter((row) => !allowed || allowed.has(row.id));
       const summary = projectRows.map((project) => {
         const projectStages = stageRows.filter((stage) => stage.projectId === project.id);
         const wipLines = accountingLineRows.filter((line) => line.projectId === project.id && project.wipAccountId && line.accountId === project.wipAccountId && postedAccountingDocumentIds.has(line.documentId));
