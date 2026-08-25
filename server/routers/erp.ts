@@ -1,19 +1,17 @@
 import { and, desc, eq, inArray, or } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, dailyTasks, leaveRequests, advanceRequests, advanceRepayments, employees, employeeWorkStarts, expenses, notifications, complianceDocuments, payroll, payrollRuns, payrollSettlements, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, projectBudgets, projectBudgetLines, sales, stages, units, users, userInvitations, vendors, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems, inventoryItems, inventoryMovements, accounts, accountingDocuments, accountingDocumentLines, costItems, fixedAssets, fixedAssetDepreciation, companies, companyMembers, companyProfiles, cashAccounts, contractorContracts, estimates, estimateLines, serviceContractEntries, userOperationPermissions, projectWorkLocations } from "../../drizzle/schema";
+import { approvalPolicies, approvalRequests, auditLogs, attendance, attachments, certificates, collections, custody, custodyMovements, dailyTasks, leaveRequests, advanceRequests, advanceRepayments, employees, employeeWorkStarts, expenses, notifications, complianceDocuments, payroll, payrollRuns, payrollSettlements, administrativePayroll, payrollAllocations, periodLocks, projectMembers, projects, sales, stages, units, users, userInvitations, vendors, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems, inventoryItems, inventoryMovements, accounts, accountingDocuments, accountingDocumentLines, costItems, fixedAssets, fixedAssetDepreciation, companies, companyMembers, companyProfiles, cashAccounts, contractorContracts, serviceContractEntries, userOperationPermissions } from "../../drizzle/schema";
 import { getDb } from "../db";
-import { calculateEstimateLine } from "../../shared/estimateMath";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
-import { distanceMetersBetween } from "../../shared/geo";
 import { getSessionCookieOptions } from "../_core/cookies";
-import { calculateCertificateProgress, calculateDocumentCompleteness, calculateExpenseTotals, calculateFinancialSummaryTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, calculateStraightLineDepreciation, calculateParentBudgetMetrics, allocateAdministrativeAmount, canAccessProject, canWriteProject, projectHealthReasons, projectHealthStatus, projectNotificationTriggers } from "../erpCalculations";
+import { calculateCertificateProgress, calculateDocumentCompleteness, calculateExpenseTotals, calculateFinancialSummaryTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, calculateStraightLineDepreciation, allocateAdministrativeAmount, canAccessProject, canWriteProject, projectHealthReasons, projectHealthStatus, projectNotificationTriggers } from "../erpCalculations";
 import { accountingTotals } from "../accountingCalculations";
 import { calculateStageTimeVariance } from "../../shared/stageTiming";
 import { allocateAdministrativeExpense, normalizeExpenseTaxRate, validateExpenseAllocation } from "../../shared/expenseAllocation";
 import { calculateInventoryBalance, canReceiveContractQuantity, canReviewInventoryStage, nextInventoryApprovalStage, remainingContractQuantity, selectPurchaseInvoiceForIssue, calculateServiceEntryTotal, remainingServiceContractAmount, calculateMaterialReceiptCost, materialReceiptExpenseReference, materialIssueExpenseReference, isMaterialContractType, isInventoryBelowMinimum, resolveMaterialCostAccount, requiresSupplierInvoicePaymentApproval } from "../../shared/inventory";
-import { canReviewCertificateApproval, getApprovalWorkflowStages, getCertificateInitialApproval, nextCertificateApproval, nextMaterialRequisitionApproval } from "../../shared/approvalWorkflows";
+import { canReviewCertificateApproval, getCertificateInitialApproval, nextCertificateApproval, nextMaterialRequisitionApproval } from "../../shared/approvalWorkflows";
 import { payrollRunPaymentStatus } from "../../shared/payrollRun";
 import { advanceOutstandingAmount, buildAdvanceSchedule, calculateAdvanceDeduction, calculatePayrollAdvanceAccrualAmounts, isRepaymentDue } from "../../shared/advanceRepayment";
 import { calculateWipBalance, buildWipClosingLines } from "../../shared/wip";
@@ -320,64 +318,6 @@ async function loadAccountingLedger(db: NonNullable<Awaited<ReturnType<typeof ge
 }
 
 export const erpRouter = router({
-  estimates: router({
-    list: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional(), status: z.enum(["draft", "submitted", "approved", "archived"]).optional(), search: z.string().trim().max(255).optional() }).optional()).query(async ({ ctx, input }) => {
-      const db = requireDb(await getDb());
-      const companyId = await resolveActiveCompanyId(db, ctx);
-      const rows = companyId ? await db.select().from(estimates).where(eq(estimates.companyId, companyId)).orderBy(desc(estimates.updatedAt)) : await db.select().from(estimates).orderBy(desc(estimates.updatedAt));
-      const search = input?.search?.toLowerCase() || "";
-      return rows.filter((row) => (!input?.projectId || row.projectId === input.projectId) && (!input?.status || row.status === input.status) && (!search || `${row.code} ${row.name} ${row.clientName || ""} ${row.siteLocation || ""}`.toLowerCase().includes(search)));
-    }),
-    linkedRecords: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional() }).optional()).query(async ({ input }) => {
-      const db = requireDb(await getDb());
-      const contracts = await db.select({ id: contractorContracts.id, projectId: contractorContracts.projectId, contractNumber: contractorContracts.contractNumber, description: contractorContracts.description, status: contractorContracts.status }).from(contractorContracts).orderBy(desc(contractorContracts.createdAt));
-      const certificatesRows = await db.select({ id: certificates.id, projectId: certificates.projectId, certificateNumber: certificates.certificateNumber, description: certificates.description, status: certificates.status }).from(certificates).orderBy(desc(certificates.createdAt));
-      return { contracts: input?.projectId ? contracts.filter((row) => row.projectId === input.projectId) : contracts, certificates: input?.projectId ? certificatesRows.filter((row) => row.projectId === input.projectId) : certificatesRows };
-    }),
-    get: protectedProcedure.input(z.object({ id: z.number().int().positive() })).query(async ({ ctx, input }) => {
-      const db = requireDb(await getDb());
-      const companyId = await resolveActiveCompanyId(db, ctx);
-      const estimate = (await db.select().from(estimates).where(and(eq(estimates.id, input.id), companyId ? eq(estimates.companyId, companyId) : eq(estimates.id, input.id))).limit(1))[0];
-      if (!estimate) throw new TRPCError({ code: "NOT_FOUND", message: "المقايسة غير موجودة" });
-      if (estimate.projectId) await assertProjectAccess(db, ctx, estimate.projectId);
-      const lines = await db.select().from(estimateLines).where(eq(estimateLines.estimateId, estimate.id)).orderBy(estimateLines.id);
-      return { estimate, lines };
-    }),
-    create: protectedProcedure.input(z.object({ code: z.string().trim().min(2).max(64), name: z.string().trim().min(2).max(255), projectId: z.number().int().positive().nullable().optional(), contractId: z.number().int().positive().nullable().optional(), certificateId: z.number().int().positive().nullable().optional(), estimateType: z.enum(["contracting", "development", "general"]).default("contracting"), status: z.enum(["draft", "submitted"]).default("draft"), version: z.number().int().positive().default(1), clientName: z.string().trim().max(255).optional(), siteLocation: z.string().trim().max(255).optional(), notes: z.string().max(4000).optional(), lines: z.array(z.object({ parentId: z.number().int().positive().nullable().optional(), costItemId: z.number().int().positive().nullable().optional(), itemCode: z.string().trim().max(64).optional(), category: z.string().trim().max(128).default("أعمال عامة"), description: z.string().trim().min(2).max(2000), unit: z.string().trim().min(1).max(64), quantity: z.number().nonnegative(), materialCost: z.number().nonnegative().default(0), laborCost: z.number().nonnegative().default(0), equipmentCost: z.number().nonnegative().default(0), otherCost: z.number().nonnegative().default(0), unitRate: z.number().nonnegative().default(0), alternativeGroup: z.string().trim().max(128).optional(), isAlternative: z.boolean().default(false), notes: z.string().max(2000).optional() })).max(1000).default([]) })).mutation(async ({ ctx, input }) => {
-      const db = requireDb(await getDb());
-      const companyId = await resolveActiveCompanyId(db, ctx);
-      if (input.projectId) await assertProjectAccess(db, ctx, input.projectId);
-      const duplicate = await db.select({ id: estimates.id }).from(estimates).where(eq(estimates.code, input.code)).limit(1);
-      if (duplicate.length) throw new TRPCError({ code: "CONFLICT", message: "كود المقايسة مستخدم بالفعل" });
-      const result = await db.insert(estimates).values({ companyId: companyId || null, projectId: input.projectId ?? null, contractId: input.contractId ?? null, certificateId: input.certificateId ?? null, code: input.code, name: input.name, estimateType: input.estimateType, status: input.status, version: input.version, clientName: input.clientName || null, siteLocation: input.siteLocation || null, notes: input.notes || null, createdBy: ctx.user.id });
-      const id = Number(result[0].insertId);
-      if (input.lines.length) await db.insert(estimateLines).values(input.lines.map((line) => { const { unitRate, totalCost } = calculateEstimateLine(line); return { estimateId: id, parentId: line.parentId ?? null, costItemId: line.costItemId ?? null, itemCode: line.itemCode || null, category: line.category, description: line.description, unit: line.unit, quantity: line.quantity.toFixed(3), materialCost: line.materialCost.toFixed(2), laborCost: line.laborCost.toFixed(2), equipmentCost: line.equipmentCost.toFixed(2), otherCost: line.otherCost.toFixed(2), unitRate: unitRate.toFixed(2), totalCost: totalCost.toFixed(2), alternativeGroup: line.alternativeGroup || null, isAlternative: line.isAlternative ? 1 : 0, notes: line.notes || null }; }));
-      await db.insert(auditLogs).values({ entityType: "estimate", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify({ ...input, lines: input.lines.length }) });
-      return { id };
-    }),
-    update: protectedProcedure.input(z.object({ id: z.number().int().positive(), code: z.string().trim().min(2).max(64), name: z.string().trim().min(2).max(255), projectId: z.number().int().positive().nullable().optional(), contractId: z.number().int().positive().nullable().optional(), certificateId: z.number().int().positive().nullable().optional(), estimateType: z.enum(["contracting", "development", "general"]), status: z.enum(["draft", "submitted", "approved", "archived"]), version: z.number().int().positive(), clientName: z.string().trim().max(255).optional(), siteLocation: z.string().trim().max(255).optional(), notes: z.string().max(4000).optional(), lines: z.array(z.object({ parentId: z.number().int().positive().nullable().optional(), costItemId: z.number().int().positive().nullable().optional(), itemCode: z.string().trim().max(64).optional(), category: z.string().trim().max(128).default("أعمال عامة"), description: z.string().trim().min(2).max(2000), unit: z.string().trim().min(1).max(64), quantity: z.number().nonnegative(), materialCost: z.number().nonnegative().default(0), laborCost: z.number().nonnegative().default(0), equipmentCost: z.number().nonnegative().default(0), otherCost: z.number().nonnegative().default(0), unitRate: z.number().nonnegative().default(0), alternativeGroup: z.string().trim().max(128).optional(), isAlternative: z.boolean().default(false), notes: z.string().max(2000).optional() })).max(1000) })).mutation(async ({ ctx, input }) => {
-      const db = requireDb(await getDb());
-      const companyId = await resolveActiveCompanyId(db, ctx);
-      const existing = (await db.select().from(estimates).where(and(eq(estimates.id, input.id), companyId ? eq(estimates.companyId, companyId) : eq(estimates.id, input.id))).limit(1))[0];
-      if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "المقايسة غير موجودة" });
-      if (input.projectId) await assertProjectAccess(db, ctx, input.projectId);
-      await db.update(estimates).set({ code: input.code, name: input.name, projectId: input.projectId ?? null, contractId: input.contractId ?? null, certificateId: input.certificateId ?? null, estimateType: input.estimateType, status: input.status, version: input.version, clientName: input.clientName || null, siteLocation: input.siteLocation || null, notes: input.notes || null }).where(eq(estimates.id, input.id));
-      await db.delete(estimateLines).where(eq(estimateLines.estimateId, input.id));
-      if (input.lines.length) await db.insert(estimateLines).values(input.lines.map((line) => { const { unitRate, totalCost } = calculateEstimateLine(line); return { estimateId: input.id, parentId: line.parentId ?? null, costItemId: line.costItemId ?? null, itemCode: line.itemCode || null, category: line.category, description: line.description, unit: line.unit, quantity: line.quantity.toFixed(3), materialCost: line.materialCost.toFixed(2), laborCost: line.laborCost.toFixed(2), equipmentCost: line.equipmentCost.toFixed(2), otherCost: line.otherCost.toFixed(2), unitRate: unitRate.toFixed(2), totalCost: totalCost.toFixed(2), alternativeGroup: line.alternativeGroup || null, isAlternative: line.isAlternative ? 1 : 0, notes: line.notes || null }; }));
-      await db.insert(auditLogs).values({ entityType: "estimate", entityId: input.id, action: "updated", actorId: ctx.user.id, afterJson: JSON.stringify({ ...input, lines: input.lines.length }) });
-      return { success: true } as const;
-    }),
-    delete: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
-      const db = requireDb(await getDb());
-      const companyId = await resolveActiveCompanyId(db, ctx);
-      const existing = (await db.select().from(estimates).where(and(eq(estimates.id, input.id), companyId ? eq(estimates.companyId, companyId) : eq(estimates.id, input.id))).limit(1))[0];
-      if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "المقايسة غير موجودة" });
-      await db.delete(estimateLines).where(eq(estimateLines.estimateId, input.id));
-      await db.delete(estimates).where(eq(estimates.id, input.id));
-      await db.insert(auditLogs).values({ entityType: "estimate", entityId: input.id, action: "deleted", actorId: ctx.user.id, beforeJson: JSON.stringify(existing) });
-      return { success: true } as const;
-    }),
-  }),
   companies: router({
     list: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
@@ -407,7 +347,7 @@ export const erpRouter = router({
       ctx.res.cookie("active_company_id", String(input.companyId), { ...getSessionCookieOptions(ctx.req), maxAge: 60 * 60 * 24 * 30 });
       return { companyId: input.companyId };
     }),
-    create: adminProcedure.input(z.object({ legalName: z.string().trim().min(1).max(255), businessType: z.enum(["real_estate_developer", "contractor"]).default("real_estate_developer"), tradeName: z.string().max(255).optional(), commercialRegistration: z.string().max(128).optional(), taxNumber: z.string().max(128).optional(), nationalAddress: z.string().max(4000).optional(), phone: z.string().max(64).optional(), email: z.string().email().optional().or(z.literal("")), logoUrl: z.string().max(2000).optional() })).mutation(async ({ ctx, input }) => {
+    create: adminProcedure.input(z.object({ legalName: z.string().trim().min(1).max(255), tradeName: z.string().max(255).optional(), commercialRegistration: z.string().max(128).optional(), taxNumber: z.string().max(128).optional(), nationalAddress: z.string().max(4000).optional(), phone: z.string().max(64).optional(), email: z.string().email().optional().or(z.literal("")), logoUrl: z.string().max(2000).optional() })).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
       const result = await db.insert(companies).values({ ...input, email: input.email || null, tradeName: input.tradeName || null, commercialRegistration: input.commercialRegistration || null, taxNumber: input.taxNumber || null, nationalAddress: input.nationalAddress || null, phone: input.phone || null, logoUrl: input.logoUrl || null, createdBy: ctx.user.id });
       const companyId = Number(result[0].insertId);
@@ -963,41 +903,6 @@ export const erpRouter = router({
     }),
   }),
 
-  budgets: router({
-    list: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional() }).optional()).query(async ({ ctx, input }) => {
-      const db = requireDb(await getDb());
-      const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
-      const budgetRows = await db.select().from(projectBudgets).orderBy(projectBudgets.createdAt);
-      const lineRows = await db.select().from(projectBudgetLines).orderBy(projectBudgetLines.sortOrder, projectBudgetLines.id);
-      return budgetRows.filter((budget) => (!input?.projectId || budget.projectId === input.projectId) && (!allowed || allowed.has(budget.projectId))).map((budget) => ({ ...budget, lines: lineRows.filter((line) => line.budgetId === budget.id) }));
-    }),
-    save: protectedProcedure.input(z.object({
-      projectId: z.number().int().positive(), budgetCode: z.string().trim().min(1).max(64), name: z.string().trim().min(2).max(255),
-      plannedRevenue: z.number().nonnegative(), plannedCost: z.number().nonnegative(), plannedTax: z.number().nonnegative(), plannedZakat: z.number().nonnegative(), plannedProfit: z.number(), notes: z.string().optional(),
-      lines: z.array(z.object({ lineType: z.enum(["revenue", "cost", "tax", "zakat", "profit"]), code: z.string().trim().min(1).max(64), name: z.string().trim().min(2).max(255), amount: z.number().nonnegative(), stageId: z.number().int().positive().nullable().optional(), costItemId: z.number().int().positive().nullable().optional(), accountId: z.number().int().positive().nullable().optional(), taxBasis: z.enum(["pre_tax", "inclusive", "not_applicable"]).default("pre_tax"), source: z.string().max(64).default("user_import"), sortOrder: z.number().int().default(0), notes: z.string().optional() })).min(1),
-    })).mutation(async ({ ctx, input }) => {
-      const db = requireDb(await getDb());
-      await assertProjectAccess(db, ctx, input.projectId);
-      const existing = (await db.select().from(projectBudgets).where(eq(projectBudgets.budgetCode, input.budgetCode)).limit(1))[0];
-      if (existing && existing.projectId !== input.projectId) throw new TRPCError({ code: "CONFLICT", message: "كود الموازنة مستخدم في مشروع آخر" });
-      const budgetValues = { companyId: await resolveActiveCompanyId(db, ctx), projectId: input.projectId, budgetCode: input.budgetCode, name: input.name, plannedRevenue: input.plannedRevenue.toFixed(2), plannedCost: input.plannedCost.toFixed(2), plannedTax: input.plannedTax.toFixed(2), plannedZakat: input.plannedZakat.toFixed(2), plannedProfit: input.plannedProfit.toFixed(2), notes: input.notes || null, createdBy: ctx.user.id };
-      let budgetId: number;
-      if (existing) { budgetId = existing.id; await db.update(projectBudgets).set(budgetValues).where(eq(projectBudgets.id, existing.id)); await db.delete(projectBudgetLines).where(eq(projectBudgetLines.budgetId, existing.id)); }
-      else { const inserted = await db.insert(projectBudgets).values(budgetValues); budgetId = Number(inserted[0].insertId); }
-      await db.insert(projectBudgetLines).values(input.lines.map((line) => ({ ...line, budgetId, projectId: input.projectId, stageId: line.stageId ?? null, costItemId: line.costItemId ?? null, accountId: line.accountId ?? null, amount: line.amount.toFixed(2), createdBy: ctx.user.id })));
-      await db.insert(auditLogs).values({ entityType: "project_budget", entityId: budgetId, action: existing ? "updated" : "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
-      return { id: budgetId } as const;
-    }),
-    detail: protectedProcedure.input(z.object({ projectId: z.number().int().positive() })).query(async ({ ctx, input }) => {
-      const db = requireDb(await getDb());
-      await assertProjectAccess(db, ctx, input.projectId);
-      const budget = (await db.select().from(projectBudgets).where(eq(projectBudgets.projectId, input.projectId)).orderBy(projectBudgets.createdAt).limit(1))[0] ?? null;
-      if (!budget) return null;
-      const lines = await db.select().from(projectBudgetLines).where(eq(projectBudgetLines.budgetId, budget.id)).orderBy(projectBudgetLines.sortOrder, projectBudgetLines.id);
-      return { ...budget, lines };
-    }),
-  }),
-
   stages: router({
     list: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
@@ -1018,32 +923,24 @@ export const erpRouter = router({
       });
     }),
     create: protectedProcedure
-      .input(z.object({ projectId: z.number().int().positive(), code: z.string().trim().min(1).max(64), name: z.string().trim().min(2).max(255), plannedBudget: z.number().nonnegative(), plannedBudgetTaxBasis: z.enum(["pre_tax", "inclusive"]).default("pre_tax"), budgetParentCostItemId: z.number().int().positive().nullable().optional(), plannedStart: z.string().optional(), plannedEnd: z.string().optional() }))
+      .input(z.object({ projectId: z.number().int().positive(), code: z.string().trim().min(1).max(64), name: z.string().trim().min(2).max(255), plannedBudget: z.number().nonnegative(), plannedBudgetTaxBasis: z.enum(["pre_tax", "inclusive"]).default("pre_tax"), plannedStart: z.string().optional(), plannedEnd: z.string().optional() }))
       .mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
         await assertProjectAccess(db, ctx, input.projectId);
-        if (input.budgetParentCostItemId) {
-          const parent = (await db.select().from(costItems).where(eq(costItems.id, input.budgetParentCostItemId)).limit(1))[0];
-          if (!parent || !parent.isActive || (parent.projectId && parent.projectId !== input.projectId)) throw new TRPCError({ code: "BAD_REQUEST", message: "اختر حسابًا أبًا نشطًا ومتاحًا للمشروع" });
-        }
-        const result = await db.insert(stages).values({ projectId: input.projectId, code: input.code, name: input.name, plannedBudget: input.plannedBudget.toFixed(2), plannedBudgetTaxBasis: input.plannedBudgetTaxBasis, budgetParentCostItemId: input.budgetParentCostItemId ?? null, plannedStart: input.plannedStart ? new Date(input.plannedStart) : null, plannedEnd: input.plannedEnd ? new Date(input.plannedEnd) : null, actualProgress: "0", status: "planned" });
+        const result = await db.insert(stages).values({ projectId: input.projectId, code: input.code, name: input.name, plannedBudget: input.plannedBudget.toFixed(2), plannedBudgetTaxBasis: input.plannedBudgetTaxBasis, plannedStart: input.plannedStart ? new Date(input.plannedStart) : null, plannedEnd: input.plannedEnd ? new Date(input.plannedEnd) : null, actualProgress: "0", status: "planned" });
         const stageId = Number(result[0].insertId);
         await db.insert(auditLogs).values({ entityType: "stage", entityId: stageId, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
         return { id: stageId };
       }),
     updateSchedule: protectedProcedure
-      .input(z.object({ id: z.number().int().positive(), code: z.string().trim().min(1).max(64), name: z.string().trim().min(2).max(255), plannedBudget: z.number().nonnegative(), plannedBudgetTaxBasis: z.enum(["pre_tax", "inclusive"]).default("pre_tax"), budgetParentCostItemId: z.number().int().positive().nullable().optional(), plannedStart: z.string().optional(), plannedEnd: z.string().optional(), actualProgress: z.number().min(0).max(100), status: z.enum(["planned", "active", "completed", "delayed"]) }))
+      .input(z.object({ id: z.number().int().positive(), code: z.string().trim().min(1).max(64), name: z.string().trim().min(2).max(255), plannedBudget: z.number().nonnegative(), plannedBudgetTaxBasis: z.enum(["pre_tax", "inclusive"]).default("pre_tax"), plannedStart: z.string().optional(), plannedEnd: z.string().optional(), actualProgress: z.number().min(0).max(100), status: z.enum(["planned", "active", "completed", "delayed"]) }))
       .mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
         const before = (await db.select().from(stages).where(eq(stages.id, input.id)).limit(1))[0];
         if (!before) throw new TRPCError({ code: "NOT_FOUND", message: "المرحلة غير موجودة" });
         await assertProjectAccess(db, ctx, before.projectId);
         if (input.plannedStart && input.plannedEnd && new Date(input.plannedEnd) < new Date(input.plannedStart)) throw new TRPCError({ code: "BAD_REQUEST", message: "نهاية المرحلة لا يمكن أن تسبق بدايتها" });
-        if (input.budgetParentCostItemId) {
-          const parent = (await db.select().from(costItems).where(eq(costItems.id, input.budgetParentCostItemId)).limit(1))[0];
-          if (!parent || !parent.isActive || (parent.projectId && parent.projectId !== before.projectId)) throw new TRPCError({ code: "BAD_REQUEST", message: "اختر حسابًا أبًا نشطًا ومتاحًا للمشروع" });
-        }
-        await db.update(stages).set({ code: input.code, name: input.name, plannedBudget: input.plannedBudget.toFixed(2), plannedBudgetTaxBasis: input.plannedBudgetTaxBasis, budgetParentCostItemId: input.budgetParentCostItemId ?? null, plannedStart: input.plannedStart ? new Date(input.plannedStart) : null, plannedEnd: input.plannedEnd ? new Date(input.plannedEnd) : null, actualProgress: input.actualProgress.toFixed(2), status: input.status }).where(eq(stages.id, input.id));
+        await db.update(stages).set({ code: input.code, name: input.name, plannedBudget: input.plannedBudget.toFixed(2), plannedBudgetTaxBasis: input.plannedBudgetTaxBasis, plannedStart: input.plannedStart ? new Date(input.plannedStart) : null, plannedEnd: input.plannedEnd ? new Date(input.plannedEnd) : null, actualProgress: input.actualProgress.toFixed(2), status: input.status }).where(eq(stages.id, input.id));
         await db.insert(auditLogs).values({ entityType: "stage", entityId: input.id, action: "schedule_updated", actorId: ctx.user.id, beforeJson: JSON.stringify(before), afterJson: JSON.stringify(input) });
         return { success: true } as const;
       }),
@@ -1061,49 +958,12 @@ export const erpRouter = router({
       }),
   }),
 
-  projectWorkLocations: router({
-    list: protectedProcedure.input(z.object({ projectId: z.number().int().positive() })).query(async ({ ctx, input }) => {
-      const db = requireDb(await getDb());
-      await assertProjectAccess(db, ctx, input.projectId);
-      return db.select().from(projectWorkLocations).where(eq(projectWorkLocations.projectId, input.projectId)).orderBy(projectWorkLocations.createdAt);
-    }),
-    create: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), name: z.string().trim().min(2).max(255), latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180), allowedRadiusMeters: z.number().positive().max(10000).default(150) })).mutation(async ({ ctx, input }) => {
-      const db = requireDb(await getDb());
-      await assertProjectAccess(db, ctx, input.projectId);
-      await assertProjectWrite(db, ctx, input.projectId);
-      const result = await db.insert(projectWorkLocations).values({ projectId: input.projectId, name: input.name, latitude: input.latitude.toFixed(7), longitude: input.longitude.toFixed(7), allowedRadiusMeters: input.allowedRadiusMeters.toFixed(2), isActive: true, createdBy: ctx.user.id });
-      const id = Number(result[0].insertId);
-      await db.insert(auditLogs).values({ entityType: "projectWorkLocation", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
-      return { id };
-    }),
-    update: protectedProcedure.input(z.object({ id: z.number().int().positive(), name: z.string().trim().min(2).max(255), latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180), allowedRadiusMeters: z.number().positive().max(10000), isActive: z.boolean() })).mutation(async ({ ctx, input }) => {
-      const db = requireDb(await getDb());
-      const current = (await db.select().from(projectWorkLocations).where(eq(projectWorkLocations.id, input.id)).limit(1))[0];
-      if (!current) throw new TRPCError({ code: "NOT_FOUND", message: "موقع العمل غير موجود" });
-      await assertProjectAccess(db, ctx, current.projectId);
-      await assertProjectWrite(db, ctx, current.projectId);
-      await db.update(projectWorkLocations).set({ name: input.name, latitude: input.latitude.toFixed(7), longitude: input.longitude.toFixed(7), allowedRadiusMeters: input.allowedRadiusMeters.toFixed(2), isActive: input.isActive }).where(eq(projectWorkLocations.id, input.id));
-      await db.insert(auditLogs).values({ entityType: "projectWorkLocation", entityId: input.id, action: "updated", actorId: ctx.user.id, beforeJson: JSON.stringify(current), afterJson: JSON.stringify(input) });
-      return { success: true } as const;
-    }),
-    delete: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
-      const db = requireDb(await getDb());
-      const current = (await db.select().from(projectWorkLocations).where(eq(projectWorkLocations.id, input.id)).limit(1))[0];
-      if (!current) throw new TRPCError({ code: "NOT_FOUND", message: "موقع العمل غير موجود" });
-      await assertProjectAccess(db, ctx, current.projectId);
-      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "حذف موقع العمل متاح للمالك فقط" });
-      await db.delete(projectWorkLocations).where(eq(projectWorkLocations.id, input.id));
-      await db.insert(auditLogs).values({ entityType: "projectWorkLocation", entityId: input.id, action: "deleted", actorId: ctx.user.id, beforeJson: JSON.stringify(current) });
-      return { success: true } as const;
-    }),
-  }),
-
   dashboard: router({
     summary: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
       const activeCompanyId = await resolveActiveCompanyId(db, ctx);
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
-      const [allProjectRows, stageRows, expenseRows, collectionRows, approvalRows, attachmentRows, salesRows, payrollRows, vendorRows, certificateRows, administrativePayrollRows, payrollAllocationRows, inventoryMovementRows, accountingDocumentRows, accountingLineRows, projectBudgetRows] = await Promise.all([
+      const [allProjectRows, stageRows, expenseRows, collectionRows, approvalRows, attachmentRows, salesRows, payrollRows, vendorRows, certificateRows, administrativePayrollRows, payrollAllocationRows, inventoryMovementRows, accountingDocumentRows, accountingLineRows] = await Promise.all([
         db.select().from(projects),
         db.select().from(stages),
         db.select().from(expenses),
@@ -1119,7 +979,6 @@ export const erpRouter = router({
         db.select().from(inventoryMovements),
         db.select({ id: accountingDocuments.id, status: accountingDocuments.status }).from(accountingDocuments),
         db.select().from(accountingDocumentLines),
-        db.select().from(projectBudgets),
       ]);
       const postedAccountingDocumentIds = new Set(accountingDocumentRows.filter((document) => document.status === "posted").map((document) => document.id));
       const projectRows = allProjectRows.filter((row) => (!activeCompanyId || row.companyId === activeCompanyId) && (!allowed || allowed.has(row.id)));
@@ -1167,8 +1026,7 @@ export const erpRouter = router({
         const progress = projectStages.length ? Math.round((completedStageCount / projectStages.length) * 100) : 0;
         const expectedScheduleProgress = timeline.weight ? Math.round((timeline.expected / timeline.weight) * 100) : 0;
         const scheduleVariancePct = projectTime.timeVarianceDays > 0 && projectDurationDays > 0 ? Math.round((projectTime.timeVarianceDays / projectDurationDays) * 100) : 0;
-        const projectBudget = projectBudgetRows.find((budget) => budget.projectId === project.id && budget.status !== "draft") ?? null;
-        const planned = projectBudget ? Number(projectBudget.plannedCost || 0) : projectStages.reduce((sum, stage) => sum + Number(stage.plannedBudget || 0), 0);
+        const planned = projectStages.reduce((sum, stage) => sum + Number(stage.plannedBudget || 0), 0);
         const activeStage = [...projectStages].sort((a, b) => (a.plannedStart ? new Date(a.plannedStart).getTime() : Number.MAX_SAFE_INTEGER) - (b.plannedStart ? new Date(b.plannedStart).getTime() : Number.MAX_SAFE_INTEGER)).find((stage) => stage.status !== "completed" && Number(stage.actualProgress || 0) < 100) ?? null;
         const administrativeExpenseRows = expenseRows.filter((expense) => expense.projectId === project.id && ["approved", "posted"].includes(expense.status) && (expense.classification === "administrative" || expense.expenseType === "administrative"));
         const materialsExpenseRows = projectExpenses.filter((expense) => expense.classification !== "administrative" && expense.expenseType === "materials");
@@ -1199,9 +1057,6 @@ export const erpRouter = router({
           wipBalance: wipTotals.balance,
           wipClosed: Boolean(project.wipClosedAt),
           plannedBudget: planned,
-          plannedRevenue: projectBudget ? Number(projectBudget.plannedRevenue || 0) : 0,
-          plannedZakat: projectBudget ? Number(projectBudget.plannedZakat || 0) : 0,
-          plannedProfit: projectBudget ? Number(projectBudget.plannedProfit || 0) : 0,
           actualCost: actual,
           paidCost: paid,
           outstandingCost: Math.max(actual - paid, 0),
@@ -1292,10 +1147,9 @@ export const erpRouter = router({
   }),
 
   costItems: router({
-    list: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional() }).optional()).query(async ({ input }) => {
+    list: protectedProcedure.query(async () => {
       const db = requireDb(await getDb());
-      const rows = await db.select().from(costItems).where(eq(costItems.isActive, 1)).orderBy(costItems.code);
-      return input?.projectId ? rows.filter((row) => row.projectId === null || row.projectId === input.projectId) : rows;
+      return db.select().from(costItems).where(eq(costItems.isActive, 1)).orderBy(costItems.code);
     }),
     create: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional(), parentId: z.number().int().positive().optional(), accountId: z.number().int().positive().optional(), code: z.string().trim().min(1).max(32), name: z.string().trim().min(2).max(255), category: z.string().trim().min(2).max(64) })).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
@@ -1587,13 +1441,12 @@ export const erpRouter = router({
       const rows = companyId ? await db.select().from(sales).where(eq(sales.companyId, companyId)).orderBy(sales.createdAt) : [];
       return allowed ? rows.filter((row) => allowed.has(row.projectId)) : rows;
     }),
-          update: protectedProcedure.input(z.object({ id: z.number().int().positive(), projectId: z.number().int().positive(), unitId: z.number().int().positive(), costItemId: z.number().int().positive().optional(), customerName: z.string().trim().min(2), customerPhone: z.string().max(64).optional(), saleDate: z.string().optional(), preTaxAmount: z.number().positive(), taxRate: z.number().min(0).max(100).default(15) })).mutation(async ({ ctx, input }) => {
+          update: protectedProcedure.input(z.object({ id: z.number().int().positive(), projectId: z.number().int().positive(), unitId: z.number().int().positive(), customerName: z.string().trim().min(2), customerPhone: z.string().max(64).optional(), saleDate: z.string().optional(), preTaxAmount: z.number().positive(), taxRate: z.number().min(0).max(100).default(15) })).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb()); await assertOperationPermission(db, ctx, "edit");
       const before = (await db.select().from(sales).where(eq(sales.id, input.id)).limit(1))[0]; if (!before) throw new TRPCError({ code: "NOT_FOUND", message: "عملية البيع غير موجودة" });
       await assertProjectAccess(db, ctx, input.projectId); await assertProjectWrite(db, ctx, input.projectId);
-      if (input.costItemId) { const costItem = (await db.select({ id: costItems.id, projectId: costItems.projectId }).from(costItems).where(eq(costItems.id, input.costItemId)).limit(1))[0]; if (!costItem || (costItem.projectId !== null && costItem.projectId !== input.projectId)) throw new TRPCError({ code: "BAD_REQUEST", message: "بند التكلفة لا يتبع المشروع المحدد" }); }
       const totals = calculateExpenseTotals(input.preTaxAmount, input.taxRate);
-      await db.update(sales).set({ projectId: input.projectId, unitId: input.unitId, customerName: input.customerName, customerPhone: input.customerPhone || null, saleDate: input.saleDate ? new Date(input.saleDate) : null, preTaxAmount: totals.preTaxAmount.toFixed(2), taxAmount: totals.taxAmount.toFixed(2), totalAmount: totals.totalAmount.toFixed(2), costItemId: input.costItemId ?? before.costItemId ?? null, recognizedRevenue: before.status === "confirmed" ? totals.preTaxAmount.toFixed(2) : before.recognizedRevenue }).where(eq(sales.id, input.id));
+      await db.update(sales).set({ projectId: input.projectId, unitId: input.unitId, customerName: input.customerName, customerPhone: input.customerPhone || null, saleDate: input.saleDate ? new Date(input.saleDate) : null, preTaxAmount: totals.preTaxAmount.toFixed(2), taxAmount: totals.taxAmount.toFixed(2), totalAmount: totals.totalAmount.toFixed(2), recognizedRevenue: before.status === "confirmed" ? totals.preTaxAmount.toFixed(2) : before.recognizedRevenue }).where(eq(sales.id, input.id));
       await db.insert(auditLogs).values({ entityType: "sale", entityId: input.id, action: "updated", actorId: ctx.user.id, beforeJson: JSON.stringify(before), afterJson: JSON.stringify({ ...input, ...totals }) });
       return { id: input.id, totalAmount: totals.totalAmount } as const;
     }),
@@ -1608,7 +1461,7 @@ export const erpRouter = router({
       return { id: input.id } as const;
     }),
     create: protectedProcedure
-      .input(z.object({ projectId: z.number().int().positive(), unitId: z.number().int().positive(), stageId: z.number().int().positive().optional(), costItemId: z.number().int().positive().optional(), customerName: z.string().trim().min(2), customerPhone: z.string().max(64).optional(), saleDate: z.string().optional(), preTaxAmount: z.number().positive(), taxRate: z.number().min(0).max(100).default(15) }))
+      .input(z.object({ projectId: z.number().int().positive(), unitId: z.number().int().positive(), stageId: z.number().int().positive().optional(), customerName: z.string().trim().min(2), customerPhone: z.string().max(64).optional(), saleDate: z.string().optional(), preTaxAmount: z.number().positive(), taxRate: z.number().min(0).max(100).default(15) }))
       .mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
         let companyId = await resolveActiveCompanyId(db, ctx);
@@ -1616,7 +1469,6 @@ export const erpRouter = router({
         await assertProjectWrite(db, ctx, input.projectId);
         if (!companyId) { const projectCompany = (await db.select({ companyId: projects.companyId }).from(projects).where(eq(projects.id, input.projectId)).limit(1))[0]; companyId = projectCompany?.companyId ?? null; }
         await assertPeriodOpen(db, ctx, input.projectId, input.saleDate ? new Date(input.saleDate) : new Date());
-        if (input.costItemId) { const costItem = (await db.select({ id: costItems.id, projectId: costItems.projectId }).from(costItems).where(eq(costItems.id, input.costItemId)).limit(1))[0]; if (!costItem || (costItem.projectId !== null && costItem.projectId !== input.projectId)) throw new TRPCError({ code: "BAD_REQUEST", message: "بند التكلفة لا يتبع المشروع المحدد" }); }
         if (input.stageId) {
           const stage = (await db.select().from(stages).where(eq(stages.id, input.stageId)).limit(1))[0];
           if (!stage || stage.projectId !== input.projectId) throw new TRPCError({ code: "BAD_REQUEST", message: "المرحلة لا تتبع المشروع المحدد" });
@@ -1625,7 +1477,7 @@ export const erpRouter = router({
         const approvalPolicy = await findApprovalPolicy(db, input.projectId, "sale");
         const approvalStatus = approvalPolicy && totals.preTaxAmount <= Number(approvalPolicy.thresholdAmount) ? "approved" as const : "pending" as const;
         const finalized = !approvalPolicy || approvalStatus === "approved";
-        const result = await db.insert(sales).values({ companyId, projectId: input.projectId, unitId: input.unitId, stageId: input.stageId || null, costItemId: input.costItemId || null, customerName: input.customerName, customerPhone: input.customerPhone || null, saleDate: input.saleDate ? new Date(input.saleDate) : null, preTaxAmount: totals.preTaxAmount.toFixed(2), taxAmount: totals.taxAmount.toFixed(2), totalAmount: totals.totalAmount.toFixed(2), recognizedRevenue: finalized ? totals.preTaxAmount.toFixed(2) : "0.00", status: finalized ? "confirmed" : "reserved", createdBy: ctx.user.id });
+        const result = await db.insert(sales).values({ companyId, projectId: input.projectId, unitId: input.unitId, stageId: input.stageId || null, customerName: input.customerName, customerPhone: input.customerPhone || null, saleDate: input.saleDate ? new Date(input.saleDate) : null, preTaxAmount: totals.preTaxAmount.toFixed(2), taxAmount: totals.taxAmount.toFixed(2), totalAmount: totals.totalAmount.toFixed(2), recognizedRevenue: finalized ? totals.preTaxAmount.toFixed(2) : "0.00", status: finalized ? "confirmed" : "reserved", createdBy: ctx.user.id });
         const saleId = Number(result[0].insertId);
         await db.update(units).set({ status: finalized ? "sold" : "reserved" }).where(eq(units.id, input.unitId));
         await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "sale", entityId: saleId, requestedBy: ctx.user.id, status: approvalStatus });
@@ -1794,20 +1646,18 @@ export const erpRouter = router({
         const filtered = rows.filter((row) => companyProjectIds.has(row.projectId) && (!input?.projectId || row.projectId === input.projectId) && (!allowed || allowed.has(row.projectId)));
         return Promise.all(filtered.map(async (row) => ({ ...row, items: await db.select().from(purchaseOrderItems).where(eq(purchaseOrderItems.purchaseOrderId, row.id)) })));
       }),
-      create: protectedProcedure.input(z.object({ requisitionId: z.number().int().positive(), vendorId: z.number().int().positive(), orderDate: z.string().optional(), expectedDate: z.string().optional(), items: z.array(z.object({ description: z.string().min(1).max(255), unit: z.string().max(64).optional(), inventoryItemId: z.number().int().positive().optional(), costItemId: z.number().int().positive().optional(), quantity: z.number().positive(), unitCost: z.number().nonnegative() })).min(1) })).mutation(async ({ ctx, input }) => {
+      create: protectedProcedure.input(z.object({ requisitionId: z.number().int().positive(), vendorId: z.number().int().positive(), orderDate: z.string().optional(), expectedDate: z.string().optional(), items: z.array(z.object({ description: z.string().min(1).max(255), unit: z.string().max(64).optional(), quantity: z.number().positive(), unitCost: z.number().nonnegative() })).min(1) })).mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
         const requisition = (await db.select().from(materialRequisitions).where(eq(materialRequisitions.id, input.requisitionId)).limit(1))[0];
         if (!requisition || requisition.status !== "approved") throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن إنشاء أمر شراء إلا لطلب مواد معتمد" });
         await assertProjectWrite(db, ctx, requisition.projectId);
         const vendor = (await db.select().from(vendors).where(eq(vendors.id, input.vendorId)).limit(1))[0];
         if (!vendor) throw new TRPCError({ code: "NOT_FOUND", message: "المورد غير موجود" });
-        const requisitionItems = await db.select().from(materialRequisitionItems).where(eq(materialRequisitionItems.requisitionId, requisition.id));
-        for (let index = 0; index < input.items.length; index += 1) { const item = input.items[index]; const requisitionItem = requisitionItems[index]; const costItemId = item.costItemId ?? requisitionItem?.costItemId ?? null; if (costItemId) { const costItem = (await db.select({ id: costItems.id, projectId: costItems.projectId }).from(costItems).where(eq(costItems.id, costItemId)).limit(1))[0]; if (!costItem || (costItem.projectId !== null && costItem.projectId !== requisition.projectId)) throw new TRPCError({ code: "BAD_REQUEST", message: "بند التكلفة لا يتبع مشروع طلب المواد" }); } }
         const subtotal = input.items.reduce((sum, item) => sum + item.quantity * item.unitCost, 0);
         const orderNumber = `PO-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
         const result = await db.insert(purchaseOrders).values({ projectId: requisition.projectId, stageId: requisition.stageId || null, vendorId: input.vendorId, requisitionId: requisition.id, orderNumber, status: "pending_approval", subtotal: subtotal.toFixed(2), taxAmount: "0.00", totalAmount: subtotal.toFixed(2), orderDate: input.orderDate ? new Date(input.orderDate) : null, expectedDate: input.expectedDate ? new Date(input.expectedDate) : null, createdBy: ctx.user.id });
         const id = Number(result[0].insertId);
-        for (let index = 0; index < input.items.length; index += 1) { const item = input.items[index]; const requisitionItem = requisitionItems[index]; await db.insert(purchaseOrderItems).values({ purchaseOrderId: id, inventoryItemId: item.inventoryItemId ?? requisitionItem?.inventoryItemId ?? null, costItemId: item.costItemId ?? requisitionItem?.costItemId ?? null, description: item.description, unit: item.unit || null, quantity: item.quantity.toFixed(3), unitCost: item.unitCost.toFixed(2), receivedQuantity: "0.000", totalAmount: (item.quantity * item.unitCost).toFixed(2) }); }
+        for (const item of input.items) await db.insert(purchaseOrderItems).values({ purchaseOrderId: id, description: item.description, unit: item.unit || null, quantity: item.quantity.toFixed(3), unitCost: item.unitCost.toFixed(2), receivedQuantity: "0.000", totalAmount: (item.quantity * item.unitCost).toFixed(2) });
         await db.update(materialRequisitions).set({ status: "converted" }).where(eq(materialRequisitions.id, requisition.id));
         await db.insert(approvalRequests).values({ projectId: requisition.projectId, entityType: "purchaseOrder", entityId: id, requestedBy: ctx.user.id, status: "pending", approvalStage: "project_manager", stageOrder: 1 });
         await db.insert(auditLogs).values({ entityType: "purchaseOrder", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
@@ -1943,12 +1793,10 @@ export const erpRouter = router({
           const requestedBy = request.requestedBy || (source as { createdBy?: number | null } | undefined)?.createdBy || requisition?.requestedBy || null;
           const recipients = recipientsFor(request);
           const description = certificate?.description || requisition?.description || document?.notes || (sale ? `بيع وحدة للعميل ${sale.customerName}` : payrollRun ? `مسير ${payrollRun.month}/${payrollRun.year} بقيمة إجمالية ${Number(payrollRun.totalAmount || 0).toFixed(2)} ر.س` : payrollRow ? `راتب شهر ${payrollRow.month}/${payrollRow.year} — ${payrollRow.employeeName}` : "—");
-          const workflow = getApprovalWorkflowStages(request.entityType, requestedBy);
-          const workflowLabel = workflow.map((step) => step.label).join(" ← ");
-          const workflowStages = workflow.map((step) => ({ ...step, status: step.stage === request.approvalStage ? "current" as const : request.stageOrder && step.order < request.stageOrder ? "approved" as const : "upcoming" as const, responsibleUsers: recipientsFor({ ...request, approvalStage: step.stage }) }));
+          const workflowLabel = request.entityType === "payroll_run" || request.entityType === "payroll" ? "المالك ← المدير العام" : request.entityType === "certificate" ? "مصطفى ← المالك ← مدير المشاريع ← المدير العام" : request.entityType === "materialRequisition" ? "موظف الموقع ← مصطفى ← المالك ← مدير المشاريع ← المدير العام" : "منشئ المستند ← المسؤول المعتمد";
           const recordLabel = `${title} ${description}`.includes("تجريبي") ? "سجل تجريبي" : "مستند فعلي";
           const sourceExists = Boolean(source);
-          return { ...request, title, typeLabel, description, amount: Number(certificate?.totalAmount || payrollRun?.totalAmount || payrollRow?.totalAmount || document?.totalAmount || sale?.totalAmount || 0), documentDate: certificate?.certificateDate || payrollRun?.createdAt || payrollRow?.createdAt || requisition?.createdAt || document?.documentDate || sale?.saleDate || request.createdAt, requesterName: requestedBy ? userMap.get(requestedBy)?.name || `مستخدم #${requestedBy}` : "غير محدد", requestedBy, workflowLabel, workflowStages, recordLabel, sourceExists, projectName: request.projectId ? projectMap.get(request.projectId)?.name || `مشروع #${request.projectId}` : "مسير عام للشركة", stageLabel: stageLabel(request.approvalStage), responsibleUsers: recipients, isCurrentUserResponsible: recipients.some((user) => user.id === ctx.user.id), waitingDays: Math.max(0, Math.floor((Date.now() - new Date(request.createdAt).getTime()) / 86400000)) };
+          return { ...request, title, typeLabel, description, amount: Number(certificate?.totalAmount || payrollRun?.totalAmount || payrollRow?.totalAmount || document?.totalAmount || sale?.totalAmount || 0), documentDate: certificate?.certificateDate || payrollRun?.createdAt || payrollRow?.createdAt || requisition?.createdAt || document?.documentDate || sale?.saleDate || request.createdAt, requesterName: requestedBy ? userMap.get(requestedBy)?.name || `مستخدم #${requestedBy}` : "غير محدد", requestedBy, workflowLabel, recordLabel, sourceExists, projectName: request.projectId ? projectMap.get(request.projectId)?.name || `مشروع #${request.projectId}` : "مسير عام للشركة", stageLabel: stageLabel(request.approvalStage), responsibleUsers: recipients, isCurrentUserResponsible: recipients.some((user) => user.id === ctx.user.id), waitingDays: Math.max(0, Math.floor((Date.now() - new Date(request.createdAt).getTime()) / 86400000)) };
         }).filter((item) => item.sourceExists);
       }),
       sendReminder: protectedProcedure.input(z.object({ approvalId: z.number().int().positive(), message: z.string().trim().max(1000).optional() })).mutation(async ({ ctx, input }) => {
@@ -2742,23 +2590,11 @@ export const erpRouter = router({
       const rows = await db.select().from(attendance).orderBy(attendance.attendanceDate);
       return allowed ? rows.filter((row) => allowed.has(row.projectId)) : rows;
     }),
-    create: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), stageId: z.number().int().positive().optional(), employeeCode: z.string().max(64).optional(), employeeName: z.string().trim().min(2), attendanceDate: z.string(), checkIn: z.string().max(16).optional(), checkOut: z.string().max(16).optional(), status: z.enum(["present", "absent", "late", "leave"]).default("present"), source: z.enum(["manual", "biometric", "mobile_location", "import"]).default("manual"), latitude: z.number().min(-90).max(90).optional(), longitude: z.number().min(-180).max(180).optional(), locationAccuracyMeters: z.number().positive().max(10000).optional(), locationCapturedAt: z.string().datetime().optional(), notes: z.string().max(1000).optional() })).mutation(async ({ ctx, input }) => {
+    create: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), stageId: z.number().int().positive().optional(), employeeCode: z.string().max(64).optional(), employeeName: z.string().trim().min(2), attendanceDate: z.string(), checkIn: z.string().max(16).optional(), checkOut: z.string().max(16).optional(), status: z.enum(["present", "absent", "late", "leave"]).default("present"), notes: z.string().max(1000).optional() })).mutation(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
       await assertProjectAccess(db, ctx, input.projectId);
       await assertProjectWrite(db, ctx, input.projectId);
-      if ((input.source === "mobile_location") !== (input.latitude !== undefined && input.longitude !== undefined)) throw new TRPCError({ code: "BAD_REQUEST", message: "تسجيل الموقع يتطلب إحداثيات الحضور كاملة" });
-      const activeLocations = await db.select().from(projectWorkLocations).where(and(eq(projectWorkLocations.projectId, input.projectId), eq(projectWorkLocations.isActive, true)));
-      let locationDistanceMeters: number | undefined;
-      let locationMatchStatus: "not_checked" | "within_range" | "outside_range" | "no_site_configured" = "not_checked";
-      if (input.source === "mobile_location" && input.latitude !== undefined && input.longitude !== undefined) {
-        if (!activeLocations.length) locationMatchStatus = "no_site_configured";
-        else {
-          locationDistanceMeters = Math.min(...activeLocations.map((site) => distanceMetersBetween(input.latitude!, input.longitude!, Number(site.latitude), Number(site.longitude))));
-          const nearest = activeLocations.find((site) => Math.abs(distanceMetersBetween(input.latitude!, input.longitude!, Number(site.latitude), Number(site.longitude)) - locationDistanceMeters!) < 0.01);
-          locationMatchStatus = nearest && locationDistanceMeters <= Number(nearest.allowedRadiusMeters) ? "within_range" : "outside_range";
-        }
-      }
-      const result = await db.insert(attendance).values({ projectId: input.projectId, stageId: input.stageId || null, employeeCode: input.employeeCode || null, employeeName: input.employeeName, attendanceDate: new Date(input.attendanceDate), checkIn: input.checkIn || null, checkOut: input.checkOut || null, status: input.status, source: input.source, latitude: input.latitude?.toFixed(7) || null, longitude: input.longitude?.toFixed(7) || null, locationAccuracyMeters: input.locationAccuracyMeters?.toFixed(2) || null, locationDistanceMeters: locationDistanceMeters?.toFixed(2) || null, locationMatchStatus, locationCapturedAt: input.locationCapturedAt ? new Date(input.locationCapturedAt) : null, notes: input.notes || null });
+      const result = await db.insert(attendance).values({ projectId: input.projectId, stageId: input.stageId || null, employeeCode: input.employeeCode || null, employeeName: input.employeeName, attendanceDate: new Date(input.attendanceDate), checkIn: input.checkIn || null, checkOut: input.checkOut || null, status: input.status, notes: input.notes || null });
       const id = Number(result[0].insertId);
       await db.insert(auditLogs).values({ entityType: "attendance", entityId: id, action: "created", actorId: ctx.user.id, afterJson: JSON.stringify(input) });
       return { id };
@@ -3195,14 +3031,13 @@ export const erpRouter = router({
     projectStageDetail: protectedProcedure.input(z.object({ projectId: z.number().int().positive() })).query(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
       await assertProjectAccess(db, ctx, input.projectId);
-      const [stageRows, expenseRows, payrollRows, certificateRows, costCatalogRows, vendorRows, budgetLineRows] = await Promise.all([
+      const [stageRows, expenseRows, payrollRows, certificateRows, costCatalogRows, vendorRows] = await Promise.all([
         db.select().from(stages).where(eq(stages.projectId, input.projectId)),
         db.select().from(expenses).where(eq(expenses.projectId, input.projectId)),
         db.select().from(payroll).where(eq(payroll.projectId, input.projectId)),
         db.select().from(certificates).where(eq(certificates.projectId, input.projectId)),
         db.select().from(costItems),
         db.select().from(vendors).where(eq(vendors.projectId, input.projectId)),
-        db.select().from(projectBudgetLines).where(eq(projectBudgetLines.projectId, input.projectId)),
       ]);
       const vendorName = (ids: Array<number | null>) => Array.from(new Set(ids.filter((id): id is number => Boolean(id)).map((id) => vendorRows.find((vendor) => vendor.id === id)?.name).filter((name): name is string => Boolean(name)))).join("، ");
       const activeExpenses = expenseRows.filter((row) => row.status !== "rejected" && row.status !== "draft");
@@ -3227,8 +3062,7 @@ export const erpRouter = router({
         const metrics = makeMetrics(Number(stage.plannedBudget || 0), stageExpenseRows, stage.id);
         const approvedStageCertificates = certificateForStage(stage.id).filter((certificate) => ["approved", "paid"].includes(certificate.status));
         const progress = calculateCertificateProgress({ plannedBudget: Number(stage.plannedBudget || 0), certifiedAmounts: approvedStageCertificates.map((certificate) => certificate.totalAmount) });
-        const budgetParent = stage.budgetParentCostItemId ? costCatalogRows.find((item) => item.id === stage.budgetParentCostItemId) ?? null : null;
-        return { rowType: "stage" as const, id: stage.id, code: stage.code, name: stage.name, stageId: stage.id, stageName: stage.name, budgetParentCostItemId: stage.budgetParentCostItemId ?? null, budgetParentCode: budgetParent?.code ?? null, budgetParentName: budgetParent?.name ?? null, plannedBudgetTaxBasis: stage.plannedBudgetTaxBasis, status: stage.status, plannedStart: stage.plannedStart, plannedEnd: stage.plannedEnd, actualProgress: approvedStageCertificates.length ? progress.progressPct : Number(stage.actualProgress || 0), certifiedAmount: progress.certifiedAmount, certificateCount: approvedStageCertificates.length, progressSource: approvedStageCertificates.length ? "contractor_certificates" as const : "manual" as const, contractor: vendorName(stageExpenseRows.map((row) => row.vendorId)), notes: stageExpenseRows.map((row) => row.description).filter(Boolean).slice(0, 3).join("، "), ...timeMetrics(stage.plannedEnd, stage.status), ...metrics };
+        return { rowType: "stage" as const, id: stage.id, code: stage.code, name: stage.name, stageId: stage.id, stageName: stage.name, plannedBudgetTaxBasis: stage.plannedBudgetTaxBasis, status: stage.status, plannedStart: stage.plannedStart, plannedEnd: stage.plannedEnd, actualProgress: approvedStageCertificates.length ? progress.progressPct : Number(stage.actualProgress || 0), certifiedAmount: progress.certifiedAmount, certificateCount: approvedStageCertificates.length, progressSource: approvedStageCertificates.length ? "contractor_certificates" as const : "manual" as const, contractor: vendorName(stageExpenseRows.map((row) => row.vendorId)), notes: stageExpenseRows.map((row) => row.description).filter(Boolean).slice(0, 3).join("، "), ...timeMetrics(stage.plannedEnd, stage.status), ...metrics };
       });
       const costItemRows = costCatalogRows.filter((item) => item.isActive === 1 && (item.projectId === null || item.projectId === input.projectId)).map((item) => {
         const itemExpenses = activeExpenses.filter((row) => row.costItemId === item.id);
@@ -3236,18 +3070,11 @@ export const erpRouter = router({
         const stage = stageRows.find((candidate) => itemExpenses.some((row) => row.stageId === candidate.id));
         return { rowType: "costItem" as const, id: item.id, code: item.code, name: item.name, stageId: stage?.id ?? null, stageName: stage?.name ?? "غير محدد", plannedBudgetTaxBasis: null, status: stage?.status ?? "planned", plannedStart: stage?.plannedStart ?? null, plannedEnd: stage?.plannedEnd ?? null, actualProgress: stage ? Number(stage.actualProgress || 0) : 0, contractor: vendorName(itemExpenses.map((row) => row.vendorId)), notes: itemExpenses.map((row) => row.description).filter(Boolean).slice(0, 3).join("، "), ...timeMetrics(stage?.plannedEnd ?? null, stage?.status ?? "planned"), ...metrics };
       });
-      const parentIds = Array.from(new Set(rows.map((row) => row.budgetParentCostItemId).filter((id): id is number => Boolean(id))));
-      const budgetParents = parentIds.map((parentId) => {
-        const parent = costCatalogRows.find((item) => item.id === parentId);
-        const plannedBudget = budgetLineRows.filter((line) => line.lineType === "cost" && line.costItemId === parentId).reduce((sum, line) => sum + Number(line.amount || 0), 0);
-        const metrics = calculateParentBudgetMetrics({ plannedBudget, children: rows.filter((row) => row.budgetParentCostItemId === parentId) });
-        return { id: parentId, code: parent?.code ?? `PARENT-${parentId}`, name: parent?.name ?? "حساب أب غير مسمى", ...metrics };
-      });
       const total = rows.reduce((acc, row) => ({ plannedBudget: acc.plannedBudget + row.plannedBudget, actual: acc.actual + row.actual, paidAmount: acc.paidAmount + row.paidAmount, outstanding: acc.outstanding + row.outstanding }), { plannedBudget: 0, actual: 0, paidAmount: 0, outstanding: 0 });
       const stageTotal = rows.reduce((acc, row) => ({ plannedBudget: acc.plannedBudget + row.plannedBudget, actual: acc.actual + row.actual, paidAmount: acc.paidAmount + row.paidAmount, outstanding: acc.outstanding + row.outstanding }), { plannedBudget: 0, actual: 0, paidAmount: 0, outstanding: 0 });
       const materialsTotal = costItemRows.reduce((acc, row) => ({ plannedBudget: acc.plannedBudget + row.plannedBudget, actual: acc.actual + row.actual, paidAmount: acc.paidAmount + row.paidAmount, outstanding: acc.outstanding + row.outstanding }), { plannedBudget: 0, actual: 0, paidAmount: 0, outstanding: 0 });
       const withVariance = (value: typeof total) => ({ ...value, variance: value.plannedBudget - value.actual, consumptionPct: value.plannedBudget > 0 ? (value.actual / value.plannedBudget) * 100 : 0 });
-      return { rows: [...rows, ...costItemRows], budgetParents, total: withVariance(total), stageTotal: withVariance(stageTotal), materialsTotal: withVariance(materialsTotal) };
+      return { rows: [...rows, ...costItemRows], total: withVariance(total), stageTotal: withVariance(stageTotal), materialsTotal: withVariance(materialsTotal) };
     }),
     cashFlow: protectedProcedure.input(z.object({ projectId: z.number().int().positive() })).query(async ({ ctx, input }) => {
       const db = requireDb(await getDb());
