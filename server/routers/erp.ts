@@ -317,6 +317,35 @@ async function loadAccountingLedger(db: NonNullable<Awaited<ReturnType<typeof ge
   return lineRows.filter((line) => documentMap.has(line.documentId)).map((line) => ({ ...line, document: documentMap.get(line.documentId)!, account: accountMap.get(line.accountId) || null, costItem: line.costItemId ? costItemMap.get(line.costItemId) || null : null }));
 }
 
+const boqItemInput = z.object({
+  kind: z.enum(["main", "sub"]),
+  code: z.string().trim().max(64).optional(),
+  name: z.string().trim().min(1).max(255),
+  parentCode: z.string().trim().max(64).optional(),
+  unit: z.string().trim().max(64).optional(),
+  quantity: z.number().nonnegative().optional(),
+  unitRate: z.number().nonnegative().optional(),
+  plannedAmount: z.number().nonnegative(),
+  stageId: z.number().int().positive().optional(),
+  costItemId: z.number().int().positive().optional(),
+  notes: z.string().max(2000).optional(),
+});
+
+function normalizeBoqItems(items: Array<z.infer<typeof boqItemInput>>) {
+  const codes = new Set<string>();
+  for (const item of items) {
+    if (item.code) {
+      if (codes.has(item.code)) throw new TRPCError({ code: "BAD_REQUEST", message: `كود المقايسة مكرر: ${item.code}` });
+      codes.add(item.code);
+    }
+    if (item.kind === "sub" && !item.parentCode) throw new TRPCError({ code: "BAD_REQUEST", message: `البند الفرعي «${item.name}» يجب أن يرتبط ببند رئيسي` });
+  }
+  for (const item of items.filter((row) => row.kind === "sub")) {
+    if (item.parentCode && !items.some((row) => row.kind === "main" && row.code === item.parentCode)) throw new TRPCError({ code: "BAD_REQUEST", message: `البند الرئيسي المرتبط غير موجود للبند «${item.name}»` });
+  }
+  return items.map((item) => ({ ...item, plannedAmount: Number(item.plannedAmount.toFixed(2)), quantity: item.quantity === undefined ? undefined : Number(item.quantity.toFixed(3)), unitRate: item.unitRate === undefined ? undefined : Number(item.unitRate.toFixed(2)) }));
+}
+
 export const erpRouter = router({
   companies: router({
     list: protectedProcedure.query(async ({ ctx }) => {
@@ -813,8 +842,12 @@ export const erpRouter = router({
         escrowTrusteeName: z.string().trim().max(255).optional(),
         escrowStatementReference: z.string().trim().max(128).optional(),
         contractValue: z.number().nonnegative().default(0),
+        plannedBudget: z.number().nonnegative().default(0),
         plannedStart: z.string().optional(),
         plannedEnd: z.string().optional(),
+        boqItems: z.array(boqItemInput).default([]),
+        plannedSalaryBudget: z.number().nonnegative().default(0),
+        plannedAdminExpenseBudget: z.number().nonnegative().default(0),
       }))
       .mutation(async ({ ctx, input }) => {
         if (ctx.user.role === "general_manager") throw new TRPCError({ code: "FORBIDDEN", message: "المدير العام يملك صلاحية الاطلاع والتقارير فقط ولا يمكنه إنشاء مشروع" });
@@ -825,6 +858,10 @@ export const erpRouter = router({
           escrowTrusteeName: input.projectType === "off_plan_sales" ? input.escrowTrusteeName || null : null,
           escrowStatementReference: input.projectType === "off_plan_sales" ? input.escrowStatementReference || null : null,
           contractValue: input.contractValue.toFixed(2),
+          plannedBudget: input.plannedBudget.toFixed(2),
+          boqItems: normalizeBoqItems(input.boqItems),
+          plannedSalaryBudget: input.plannedSalaryBudget.toFixed(2),
+          plannedAdminExpenseBudget: input.plannedAdminExpenseBudget.toFixed(2),
           location: input.location || null,
           plannedStart: input.plannedStart ? new Date(input.plannedStart) : null,
           plannedEnd: input.plannedEnd ? new Date(input.plannedEnd) : null,
@@ -842,7 +879,7 @@ export const erpRouter = router({
         return { id: projectId, wipAccountId };
       }),
     update: protectedProcedure
-      .input(z.object({ id: z.number().int().positive(), code: z.string().trim().min(2).max(64), name: z.string().trim().min(2).max(255), location: z.string().trim().max(255).optional(), status: projectStatus, classification: projectClassification, projectType: projectType, escrowCashAccountId: z.number().int().positive().nullable().optional(), escrowTrusteeName: z.string().trim().max(255).optional(), escrowStatementReference: z.string().trim().max(128).optional(), contractValue: z.number().nonnegative(), plannedStart: z.string().optional(), plannedEnd: z.string().optional() }))
+      .input(z.object({ id: z.number().int().positive(), code: z.string().trim().min(2).max(64), name: z.string().trim().min(2).max(255), location: z.string().trim().max(255).optional(), status: projectStatus, classification: projectClassification, projectType: projectType, escrowCashAccountId: z.number().int().positive().nullable().optional(), escrowTrusteeName: z.string().trim().max(255).optional(), escrowStatementReference: z.string().trim().max(128).optional(), contractValue: z.number().nonnegative(), plannedStart: z.string().optional(), plannedEnd: z.string().optional(), plannedBudget: z.number().nonnegative().default(0), boqItems: z.array(boqItemInput).default([]), plannedSalaryBudget: z.number().nonnegative().default(0), plannedAdminExpenseBudget: z.number().nonnegative().default(0) }))
       .mutation(async ({ ctx, input }) => {
         if (ctx.user.role === "general_manager") throw new TRPCError({ code: "FORBIDDEN", message: "المدير العام يملك صلاحية الاطلاع والتقارير فقط ولا يمكنه تعديل المشروع" });
         const db = requireDb(await getDb());
@@ -851,7 +888,7 @@ export const erpRouter = router({
         const before = (await db.select().from(projects).where(eq(projects.id, input.id)).limit(1))[0];
         if (!before) throw new TRPCError({ code: "NOT_FOUND", message: "المشروع غير موجود" });
         await ensureProjectWipAccount(db, { id: input.id, code: input.code, name: input.name }, ctx.user.id);
-          await db.update(projects).set({ code: input.code, name: input.name, location: input.location || null, status: input.status, classification: input.classification, projectType: input.projectType, escrowCashAccountId: input.projectType === "off_plan_sales" ? input.escrowCashAccountId || null : null, escrowTrusteeName: input.projectType === "off_plan_sales" ? input.escrowTrusteeName || null : null, escrowStatementReference: input.projectType === "off_plan_sales" ? input.escrowStatementReference || null : null, contractValue: input.contractValue.toFixed(2), plannedStart: input.plannedStart ? new Date(input.plannedStart) : null, plannedEnd: input.plannedEnd ? new Date(input.plannedEnd) : null }).where(eq(projects.id, input.id));
+          await db.update(projects).set({ code: input.code, name: input.name, location: input.location || null, status: input.status, classification: input.classification, projectType: input.projectType, escrowCashAccountId: input.projectType === "off_plan_sales" ? input.escrowCashAccountId || null : null, escrowTrusteeName: input.projectType === "off_plan_sales" ? input.escrowTrusteeName || null : null, escrowStatementReference: input.projectType === "off_plan_sales" ? input.escrowStatementReference || null : null, contractValue: input.contractValue.toFixed(2), plannedBudget: input.plannedBudget.toFixed(2), boqItems: normalizeBoqItems(input.boqItems), plannedSalaryBudget: input.plannedSalaryBudget.toFixed(2), plannedAdminExpenseBudget: input.plannedAdminExpenseBudget.toFixed(2), plannedStart: input.plannedStart ? new Date(input.plannedStart) : null, plannedEnd: input.plannedEnd ? new Date(input.plannedEnd) : null }).where(eq(projects.id, input.id));
         await db.insert(auditLogs).values({ entityType: "project", entityId: input.id, action: "updated", actorId: ctx.user.id, beforeJson: JSON.stringify(before), afterJson: JSON.stringify(input) });
         return { success: true } as const;
       }),

@@ -36116,3 +36116,35 @@
 - [x] إدراج سندات الصرف الإدارية والنثرية وتوزيع المصروفات العامة على المشروع في مركز التكلفة.
 - [x] إظهار السداد المرتبط بالمستخلص داخل المدفوع لمرحلة مركز التكلفة.
 - [ ] التحقق الحي من كشف المورد وترتيب الحركات والرصيد التراكمي بعد النشر.
+
+- [x] تثبيت 1420c9ac كمرجع أساسي باسم erp-baseline-1420c9ac والاحتفاظ به لاسترجاع المشروع عند حدوث خطأ.
+
+- [ ] جعل أرشيف العقود قابلًا للتعديل مع حماية المستندات المعتمدة من التعديل غير المصرح.
+- [ ] إضافة شجرة بنود تكلفة رئيسية وفرعية قابلة للاختيار داخل تفاصيل المشروع والمراحل.
+- [ ] إضافة موازنة تشغيلية للعقد تشمل الرواتب والمصروفات الإدارية وبقية البنود التي يحددها المستخدم.
+- [ ] ربط البنود الرئيسية والفرعية والموازنة التشغيلية بأساس المقارنة في مراحل التنفيذ والتقارير دون افتراض قيم لم يرسلها المستخدم.
+
+## Hierarchical contract operational budgeting
+
+- [ ] Add editable planned budget lines to contract archive with main/sub-item hierarchy and stage linkage
+- [ ] Add planned operational budgets for salaries and administrative expenses to project/contract details
+- [ ] Validate budget line ownership, company/project scope, and prevent invalid parent-child links
+- [ ] Expose planned hierarchy and operational totals in contract list/detail responses
+- [ ] Compare actual project/stage spending against planned main/sub items and operational categories without double counting
+- [ ] Add RTL contract archive editor for main items, sub-items, salaries, and administrative budgets
+- [ ] Add Vitest coverage for hierarchy validation, budget totals, and actual-vs-planned aggregation
+- [ ] Verify RTL rendering and run the complete test suite before checkpoint
+
+## Baseline reference
+
+- [x] Preserve stable ERP baseline 1420c9ac as rollback reference for this feature
+
+- [x] Use project details as the sole manual entry point for main/sub budget items and operational planned budgets
+- [ ] Keep contract archive and execution reports read-linked to the project detail baseline rather than duplicating manual entry
+- [x] Treat the project-detail budget editor as a BoQ/quantity-survey register with main items, sub-items, quantities, units, unit rates, totals, stage links, and operational sections
+- [ ] Make sub-items optional and calculate each main item either from its own amount or from its sub-items, never both
+- [ ] Add tests proving no double counting when a main item has one or more sub-items
+- [ ] Add advanced filters to each relevant approval/archive section
+- [ ] Add full document preview for archived records
+- [ ] Show responsible employee, submission date, approval/rejection date, and rejection reason where applicable
+- [ ] Preserve role visibility for owner and Mostafa while keeping decision permissions unchanged

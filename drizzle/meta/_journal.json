@@ -603,6 +603,27 @@
       "when": 1787665931204,
       "tag": "0086_lazy_black_crow",
       "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "5",
+      "when": 1787671275434,
+      "tag": "0087_opposite_forgotten_one",
+      "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "5",
+      "when": 1787674270395,
+      "tag": "0088_thick_mongu",
+      "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "5",
+      "when": 1787674423926,
+      "tag": "0089_high_kronos",
+      "breakpoints": true
     }
   ]
 }
