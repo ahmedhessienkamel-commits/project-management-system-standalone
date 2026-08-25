@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/sidebar";
 import { trpc } from "@/lib/trpc";
 import { useIsMobile } from "@/hooks/useMobile";
-import { BarChart3, Bell, BookOpen, Boxes, Calculator, ClipboardList, FileText, Landmark, LayoutDashboard, LogOut, PanelLeft, Plus, Search, Settings2, ShieldAlert, ShieldCheck, Users, UserRound, WalletCards, Video, Megaphone } from "lucide-react";
+import { BarChart3, Bell, BookOpen, Boxes, ClipboardList, FileText, Landmark, LayoutDashboard, LogOut, PanelLeft, Plus, Search, Settings2, ShieldAlert, ShieldCheck, Users, UserRound, WalletCards } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -35,7 +35,6 @@ const menuItems = [
   { icon: LayoutDashboard, label: "لوحة التنفيذ", path: "/" },
   { section: true, label: "التشغيل الأساسي" },
   { icon: ClipboardList, label: "المشاريع والمراحل", path: "/projects" },
-  { icon: Calculator, label: "المقايسات التفصيلية", path: "/estimates" },
   { icon: Boxes, label: "تقرير الخامات والكميات", path: "/inventory" },
   { icon: ClipboardList, label: "طلبات المواد", path: "/operations?tab=procurement" },
   { icon: WalletCards, label: "المبيعات والتحصيلات", path: "/sales" },
@@ -43,14 +42,12 @@ const menuItems = [
   { icon: ClipboardList, label: "الموردون والمقاولون", path: "/operations?tab=vendors" },
   { icon: FileText, label: "العقود والمستخلصات", path: "/operations?tab=certificates" },
   { icon: FileText, label: "كشوف حساب الموردين", path: "/supplier-statements" },
-  { section: true, label: "الموظفون والموارد البشرية" },
   { icon: UserRound, label: "دليل الموظفين", path: "/employees" },
   { icon: WalletCards, label: "سلف الموظفين", path: "/employee-advances" },
   { icon: FileText, label: "سجل الوثائق والرخص", path: "/compliance-documents" },
   { icon: WalletCards, label: "مسير الرواتب", path: "/payroll" },
   { icon: WalletCards, label: "تسجيل / صرف عهدة", path: "/custody" },
   { icon: FileText, label: "كشوف حساب العهد", path: "/custody?tab=custodyStatement" },
-  { icon: ClipboardList, label: "الحضور والانصراف", path: "/attendance" },
   { icon: ShieldCheck, label: "الموافقات والمستندات", path: "/approvals" },
   { icon: FileText, label: "طلباتي", path: "/my-requests" },
   { section: true, label: "التقارير المحاسبية" },
@@ -62,8 +59,8 @@ const menuItems = [
   { icon: BookOpen, label: "شجرة الحسابات", path: "/accounting-settings#chart-of-accounts" },
   { icon: Boxes, label: "الأصول الثابتة", path: "/accounting-settings#fixed-assets" },
   { section: true, label: "الإدارة والمتابعة" },
+  { icon: ClipboardList, label: "الحضور والانصراف", path: "/attendance" },
   { icon: ClipboardList, label: "إسناد ومتابعة مهام الفريق", path: "/tasks" },
-  { icon: Video, label: "غرفة الاجتماعات", path: "/meetings" },
   { icon: Users, label: "المستخدمون والصلاحيات", path: "/users" },
   { icon: ShieldAlert, label: "مركز جودة البيانات", path: "/data-quality" },
   { icon: Settings2, label: "الإعدادات", path: "/settings" },
@@ -175,13 +172,13 @@ function DashboardLayoutContent({
     { label: "إسناد مهمة للفريق", path: "/tasks" },
   ];
   const roleLabelAllowList: Record<string, string[] | undefined> = {
-    general_manager: ["لوحة التنفيذ", "الموافقات والمستندات", "المقايسات التفصيلية", "العقود والمستخلصات", "المبيعات والتحصيلات", "تقرير الخامات والكميات", "قائمة دخل المشاريع", "إسناد ومتابعة مهام الفريق", "غرفة الاجتماعات"],
-    project_manager: ["لوحة التنفيذ", "المشاريع والمراحل", "المقايسات التفصيلية", "العقود والمستخلصات", "الموردون والمقاولون", "الموافقات والمستندات"],
+    general_manager: ["لوحة التنفيذ", "الموافقات والمستندات", "العقود والمستخلصات", "المبيعات والتحصيلات", "تقرير الخامات والكميات", "قائمة دخل المشاريع", "إسناد ومتابعة مهام الفريق"],
+    project_manager: ["لوحة التنفيذ", "المشاريع والمراحل", "العقود والمستخلصات", "الموردون والمقاولون", "الموافقات والمستندات"],
     procurement_manager: ["تقرير الخامات والكميات", "طلبات المواد", "طلباتي"],
     site_worker: ["تقرير الخامات والكميات", "طلبات المواد", "طلباتي"],
   };
   const allowedLabels = roleLabelAllowList[user?.role || ""];
-  const generalManagerOrder = ["لوحة التنفيذ", "الموافقات والمستندات", "المقايسات التفصيلية", "العقود والمستخلصات", "المبيعات والتحصيلات", "تقرير الخامات والكميات", "قائمة دخل المشاريع", "إسناد ومتابعة مهام الفريق", "غرفة الاجتماعات"];
+  const generalManagerOrder = ["لوحة التنفيذ", "الموافقات والمستندات", "العقود والمستخلصات", "المبيعات والتحصيلات", "تقرير الخامات والكميات", "قائمة دخل المشاريع", "إسناد ومتابعة مهام الفريق"];
   const generalManagerMenuItems = generalManagerOrder.flatMap((label) => { const item = menuItems.find((candidate) => "path" in candidate && candidate.label === label); return item ? [item] : []; });
   const visibleMenuItems = user?.role === "general_manager" ? generalManagerMenuItems : allowedLabels ? menuItems.filter((item) => "path" in item && allowedLabels.includes(item.label)) : menuItems;
   const isOperationalOnly = isOperationalOnlyRole(user?.role);
@@ -249,7 +246,7 @@ function DashboardLayoutContent({
 
   return (
     <>
-      <div className="relative hidden w-[var(--sidebar-width)] shrink-0 md:block" ref={sidebarRef}>
+      <div className="relative" ref={sidebarRef}>
         <Sidebar
           collapsible="icon"
           className="border-r-0"
@@ -345,7 +342,7 @@ function DashboardLayoutContent({
         />
       </div>
 
-      <SidebarInset className="min-w-0 flex-1 overflow-x-hidden">
+      <SidebarInset>
         {isMobile && (
           <div className="flex border-b h-14 items-center justify-between bg-background/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
             <div className="flex items-center gap-2">
@@ -373,7 +370,7 @@ function DashboardLayoutContent({
             {!isOperationalOnly && <Button variant="outline" size="icon" aria-label="فتح التنبيهات والموافقات" title={unreadNotifications ? `${unreadNotifications} إشعار غير مقروء` : "التنبيهات والموافقات"} onClick={() => setLocation("/approvals")} className="relative border-slate-200"><Bell className="h-4 w-4 text-[#b28a3b]" />{unreadNotifications > 0 && <Badge className="absolute -right-2 -top-2 min-w-5 justify-center rounded-full bg-rose-600 px-1 text-[10px] text-white">{unreadNotifications > 99 ? "99+" : unreadNotifications}</Badge>}</Button>}
           </div>
         </div>
-        <main className="min-w-0 flex-1 overflow-x-hidden p-4">{children}</main>
+        <main className="flex-1 p-4">{children}</main>
       </SidebarInset>
     </>
   );

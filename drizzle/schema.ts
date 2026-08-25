@@ -1,9 +1,7 @@
 import {
-  boolean,
   date,
   decimal,
   int,
-  index,
   json,
   mysqlEnum,
   mysqlTable,
@@ -15,7 +13,6 @@ import {
 export const companies = mysqlTable("companies", {
   id: int("id").autoincrement().primaryKey(),
   legalName: varchar("legalName", { length: 255 }).notNull(),
-  businessType: mysqlEnum("businessType", ["real_estate_developer", "contractor"]).default("real_estate_developer").notNull(),
   tradeName: varchar("tradeName", { length: 255 }),
   commercialRegistration: varchar("commercialRegistration", { length: 128 }),
   taxNumber: varchar("taxNumber", { length: 128 }),
@@ -105,21 +102,6 @@ export const projects = mysqlTable("projects", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
-export const projectWorkLocations = mysqlTable("projectWorkLocations", {
-  id: int("id").autoincrement().primaryKey(),
-  companyId: int("companyId"),
-  projectId: int("projectId"),
-  locationType: mysqlEnum("locationType", ["project", "administrative_office"]).default("project").notNull(),
-  name: varchar("name", { length: 255 }).notNull(),
-  latitude: decimal("latitude", { precision: 10, scale: 7 }).notNull(),
-  longitude: decimal("longitude", { precision: 10, scale: 7 }).notNull(),
-  allowedRadiusMeters: decimal("allowedRadiusMeters", { precision: 10, scale: 2 }).notNull().default("150"),
-  isActive: boolean("isActive").default(true).notNull(),
-  createdBy: int("createdBy"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-}, (table) => ({ projectIdIdx: index("projectWorkLocations_projectId_idx").on(table.projectId) }));
-
 export const projectMembers = mysqlTable("projectMembers", {
   id: int("id").autoincrement().primaryKey(),
   projectId: int("projectId").notNull(),
@@ -146,52 +128,10 @@ export const stages = mysqlTable("stages", {
   status: mysqlEnum("status", ["planned", "active", "completed", "delayed"]).default("planned").notNull(),
   plannedBudget: decimal("plannedBudget", { precision: 14, scale: 2 }).default("0").notNull(),
   plannedBudgetTaxBasis: mysqlEnum("plannedBudgetTaxBasis", ["pre_tax", "inclusive"]).default("pre_tax").notNull(),
-  budgetParentCostItemId: int("budgetParentCostItemId"),
-  parentStageId: int("parentStageId"),
   plannedStart: date("plannedStart"),
   plannedEnd: date("plannedEnd"),
   actualProgress: decimal("actualProgress", { precision: 5, scale: 2 }).default("0").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
-
-export const projectBudgets = mysqlTable("projectBudgets", {
-
-  id: int("id").autoincrement().primaryKey(),
-  companyId: int("companyId"),
-  projectId: int("projectId").notNull(),
-  budgetCode: varchar("budgetCode", { length: 64 }).notNull().unique(),
-  name: varchar("name", { length: 255 }).notNull(),
-  currency: varchar("currency", { length: 8 }).notNull().default("SAR"),
-  status: mysqlEnum("status", ["draft", "approved", "locked"]).default("approved").notNull(),
-  plannedRevenue: decimal("plannedRevenue", { precision: 14, scale: 2 }).notNull().default("0"),
-  plannedCost: decimal("plannedCost", { precision: 14, scale: 2 }).notNull().default("0"),
-  plannedTax: decimal("plannedTax", { precision: 14, scale: 2 }).notNull().default("0"),
-  plannedZakat: decimal("plannedZakat", { precision: 14, scale: 2 }).notNull().default("0"),
-  plannedProfit: decimal("plannedProfit", { precision: 14, scale: 2 }).notNull().default("0"),
-  notes: text("notes"),
-  createdBy: int("createdBy"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-}, (table) => ({ projectIdIdx: index("projectBudgets_projectId_idx").on(table.projectId), companyIdIdx: index("projectBudgets_companyId_idx").on(table.companyId) }));
-
-export const projectBudgetLines = mysqlTable("projectBudgetLines", {
-  id: int("id").autoincrement().primaryKey(),
-  budgetId: int("budgetId").notNull(),
-  projectId: int("projectId").notNull(),
-  stageId: int("stageId"),
-  costItemId: int("costItemId"),
-  accountId: int("accountId"),
-  lineType: mysqlEnum("lineType", ["revenue", "cost", "tax", "zakat", "profit"]).notNull(),
-  code: varchar("code", { length: 64 }).notNull(),
-  name: varchar("name", { length: 255 }).notNull(),
-  amount: decimal("amount", { precision: 14, scale: 2 }).notNull().default("0"),
-  taxBasis: mysqlEnum("taxBasis", ["pre_tax", "inclusive", "not_applicable"]).default("pre_tax").notNull(),
-  source: varchar("source", { length: 64 }).default("user_import").notNull(),
-  sortOrder: int("sortOrder").default(0).notNull(),
-  notes: text("notes"),
-  createdBy: int("createdBy"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 export const vendors = mysqlTable("vendors", {
@@ -352,7 +292,6 @@ export const sales = mysqlTable("sales", {
   projectId: int("projectId").notNull(),
   unitId: int("unitId").notNull(),
   stageId: int("stageId"),
-  costItemId: int("costItemId"),
   customerName: varchar("customerName", { length: 255 }).notNull(),
   customerPhone: varchar("customerPhone", { length: 64 }),
   saleDate: date("saleDate"),
@@ -628,13 +567,6 @@ export const attendance = mysqlTable("attendance", {
   checkIn: varchar("checkIn", { length: 16 }),
   checkOut: varchar("checkOut", { length: 16 }),
   status: mysqlEnum("status", ["present", "absent", "late", "leave"]).default("present").notNull(),
-  source: mysqlEnum("source", ["manual", "biometric", "mobile_location", "import"]).default("manual").notNull(),
-  latitude: decimal("latitude", { precision: 10, scale: 7 }),
-  longitude: decimal("longitude", { precision: 10, scale: 7 }),
-  locationAccuracyMeters: decimal("locationAccuracyMeters", { precision: 10, scale: 2 }),
-  locationDistanceMeters: decimal("locationDistanceMeters", { precision: 10, scale: 2 }),
-  locationMatchStatus: mysqlEnum("locationMatchStatus", ["not_checked", "within_range", "outside_range", "no_site_configured"]).default("not_checked").notNull(),
-  locationCapturedAt: timestamp("locationCapturedAt"),
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
@@ -817,8 +749,6 @@ export const purchaseOrders = mysqlTable("purchaseOrders", {
 export const purchaseOrderItems = mysqlTable("purchaseOrderItems", {
   id: int("id").autoincrement().primaryKey(),
   purchaseOrderId: int("purchaseOrderId").notNull(),
-  inventoryItemId: int("inventoryItemId"),
-  costItemId: int("costItemId"),
   description: varchar("description", { length: 255 }).notNull(),
   unit: varchar("unit", { length: 64 }),
   quantity: decimal("quantity", { precision: 14, scale: 3 }).notNull().default("1"),
@@ -957,48 +887,6 @@ export const costItems = mysqlTable("costItems", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
-export const estimates = mysqlTable("estimates", {
-  id: int("id").autoincrement().primaryKey(),
-  companyId: int("companyId"),
-  projectId: int("projectId"),
-  contractId: int("contractId"),
-  certificateId: int("certificateId"),
-  code: varchar("code", { length: 64 }).notNull().unique(),
-  name: varchar("name", { length: 255 }).notNull(),
-  estimateType: mysqlEnum("estimateType", ["contracting", "development", "general"]).notNull().default("contracting"),
-  status: mysqlEnum("status", ["draft", "submitted", "approved", "archived"]).notNull().default("draft"),
-  version: int("version").notNull().default(1),
-  clientName: varchar("clientName", { length: 255 }),
-  siteLocation: varchar("siteLocation", { length: 255 }),
-  notes: text("notes"),
-  createdBy: int("createdBy"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
-
-export const estimateLines = mysqlTable("estimateLines", {
-  id: int("id").autoincrement().primaryKey(),
-  estimateId: int("estimateId").notNull(),
-  parentId: int("parentId"),
-  costItemId: int("costItemId"),
-  itemCode: varchar("itemCode", { length: 64 }),
-  category: varchar("category", { length: 128 }).notNull().default("أعمال عامة"),
-  description: text("description").notNull(),
-  unit: varchar("unit", { length: 64 }).notNull().default("مقطوعية"),
-  quantity: decimal("quantity", { precision: 14, scale: 3 }).notNull().default("1"),
-  materialCost: decimal("materialCost", { precision: 14, scale: 2 }).notNull().default("0"),
-  laborCost: decimal("laborCost", { precision: 14, scale: 2 }).notNull().default("0"),
-  equipmentCost: decimal("equipmentCost", { precision: 14, scale: 2 }).notNull().default("0"),
-  otherCost: decimal("otherCost", { precision: 14, scale: 2 }).notNull().default("0"),
-  unitRate: decimal("unitRate", { precision: 14, scale: 2 }).notNull().default("0"),
-  totalCost: decimal("totalCost", { precision: 14, scale: 2 }).notNull().default("0"),
-  alternativeGroup: varchar("alternativeGroup", { length: 128 }),
-  isAlternative: int("isAlternative").notNull().default(0),
-  notes: text("notes"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
-
 export const accountingDocumentLines = mysqlTable("accountingDocumentLines", {
   id: int("id").autoincrement().primaryKey(),
   documentId: int("documentId").notNull(),
@@ -1045,56 +933,4 @@ export const fixedAssetDepreciation = mysqlTable("fixedAssetDepreciation", {
   journalDocumentId: int("journalDocumentId"),
   status: mysqlEnum("status", ["planned", "posted"]).notNull().default("planned"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
-
-export const meetings = mysqlTable("meetings", {
-  id: int("id").autoincrement().primaryKey(),
-  companyId: int("companyId"),
-  title: varchar("title", { length: 255 }).notNull(),
-  description: text("description"),
-  scheduledStart: timestamp("scheduledStart").notNull(),
-  scheduledEnd: timestamp("scheduledEnd").notNull(),
-  meetingLink: varchar("meetingLink", { length: 2000 }),
-  status: mysqlEnum("status", ["scheduled", "active", "completed", "archived", "cancelled"]).notNull().default("scheduled"),
-  createdBy: int("createdBy").notNull(),
-  archivedAt: timestamp("archivedAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
-
-export const meetingParticipants = mysqlTable("meetingParticipants", {
-  id: int("id").autoincrement().primaryKey(),
-  meetingId: int("meetingId").notNull(),
-  userId: int("userId").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
-
-export const marketingSites = mysqlTable("marketingSites", {
-  id: int("id").autoincrement().primaryKey(),
-  companyId: int("companyId"),
-  name: varchar("name", { length: 255 }).notNull(),
-  description: text("description"),
-  status: mysqlEnum("status", ["draft", "published", "archived"]).notNull().default("draft"),
-  publicUrl: varchar("publicUrl", { length: 2000 }),
-  customDomain: varchar("customDomain", { length: 255 }),
-  googleMapsUrl: varchar("googleMapsUrl", { length: 2000 }),
-  heroImageUrl: varchar("heroImageUrl", { length: 2000 }),
-  createdBy: int("createdBy").notNull(),
-  archivedAt: timestamp("archivedAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
-
-export const marketingAssets = mysqlTable("marketingAssets", {
-  id: int("id").autoincrement().primaryKey(),
-  siteId: int("siteId"),
-  projectId: int("projectId"),
-  name: varchar("name", { length: 255 }).notNull(),
-  assetType: mysqlEnum("assetType", ["project_mockup", "design", "brochure", "video", "other"]).notNull().default("other"),
-  fileUrl: varchar("fileUrl", { length: 2000 }).notNull(),
-  notes: text("notes"),
-  isArchived: int("isArchived").notNull().default(0),
-  uploadedBy: int("uploadedBy").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

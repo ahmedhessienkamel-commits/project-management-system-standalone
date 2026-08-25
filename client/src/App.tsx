@@ -6,7 +6,6 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import Projects from "./pages/Projects";
-import Estimates from "./pages/Estimates";
 import Finance from "./pages/Finance";
 import Approvals from "./pages/Approvals";
 import ProjectDetails from "./pages/ProjectDetails";
@@ -28,7 +27,6 @@ import Inventory from "./pages/Inventory";
 import MyRequests from "./pages/MyRequests";
 import PasswordAuth, { ResetPassword } from "./pages/PasswordAuth";
 import AccountSecurity from "./pages/AccountSecurity";
-import Meetings from "./pages/Meetings";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { canAccessRoute, defaultRouteForRole } from "@/lib/roleAccess";
 import { useEffect } from "react";
@@ -67,7 +65,6 @@ function Router() {
       <Route path={"/indicators"} component={Reports} />
       <Route path={"/projects/:id"} component={ProjectDetails} />
       <Route path={"/projects"} component={Projects} />
-      <Route path={"/estimates"} component={Estimates} />
       <Route path={"/sales"} component={SalesCollections} />
       <Route path={"/transactions"} component={Accounting} />
       <Route path={"/expenses"} component={Finance} />
@@ -83,7 +80,6 @@ function Router() {
       <Route path={"/attendance"} component={Operations} />
       <Route path={"/custody"} component={Operations} />
       <Route path={"/tasks"} component={Tasks} />
-      <Route path={"/meetings"} component={Meetings} />
       <Route path={"/my-requests"} component={MyRequests} />
       <Route path={"/approvals"} component={Approvals} />
       <Route path={"/supplier-statements"} component={StandaloneFinancialReport} />

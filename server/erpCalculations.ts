@@ -42,13 +42,6 @@ export function calculateFinancialSummaryTotals({ sales, collections, expenses, 
   return { revenue, collectionsReceived, expensesPreTax, expensesTax, expensesTotal, expensesPaid, payrollTotal, payrollPaid, payrollOutstanding: Math.max(payrollTotal - payrollPaid, 0) };
 }
 
-export function calculateProjectDocumentCosts({ purchaseInvoices, paymentVouchers }: { purchaseInvoices: Array<{ status: string; totalAmount: string | number }>; paymentVouchers: Array<{ status: string; settlementType?: string | null; purchaseInvoiceId?: number | null; totalAmount: string | number }> }) {
-  const postedPurchaseInvoiceTotal = purchaseInvoices.filter((row) => row.status === "posted").reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
-  const postedDirectVoucherTotal = paymentVouchers.filter((row) => row.status === "posted" && !(row.settlementType === "invoice" && row.purchaseInvoiceId)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
-  const postedInvoiceSettlementTotal = paymentVouchers.filter((row) => row.status === "posted" && row.settlementType === "invoice" && Boolean(row.purchaseInvoiceId)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
-  return { postedPurchaseInvoiceTotal, postedDirectVoucherTotal, postedInvoiceSettlementTotal, expenseTotal: postedPurchaseInvoiceTotal + postedDirectVoucherTotal };
-}
-
 export function allocateAdministrativeAmount(amount: number, projects: Array<{ projectId: number; projectName: string; contractValue: number }>) {
   const safeAmount = Math.max(0, amount);
   const eligible = projects.filter((project) => project.contractValue > 0);
@@ -146,24 +139,4 @@ export function calculateContractBalance(contractTotal: number, certificateTotal
   const remainingBefore = Math.max(0, contractTotal - usedBefore);
   const remainingAfter = Math.max(0, remainingBefore - Math.max(0, currentCertificateTotal));
   return { usedBefore, remainingBefore, remainingAfter, exceeds: Math.max(0, currentCertificateTotal) > remainingBefore + 0.01 };
-}
-
-export function calculateParentBudgetMetrics({ plannedBudget, children }: { plannedBudget: number; children: Array<{ plannedBudget: number; actual: number; paidAmount: number; outstanding: number }> }) {
-  const safePlanned = Math.max(0, Number(plannedBudget || 0));
-  const allocated = children.reduce((sum, child) => sum + Math.max(0, Number(child.plannedBudget || 0)), 0);
-  const actual = children.reduce((sum, child) => sum + Math.max(0, Number(child.actual || 0)), 0);
-  const paidAmount = children.reduce((sum, child) => sum + Math.max(0, Number(child.paidAmount || 0)), 0);
-  const outstanding = children.reduce((sum, child) => sum + Math.max(0, Number(child.outstanding || 0)), 0);
-  const available = safePlanned - allocated;
-  return {
-    plannedBudget: safePlanned,
-    allocated: Number(allocated.toFixed(2)),
-    available: Number(available.toFixed(2)),
-    actual: Number(actual.toFixed(2)),
-    paidAmount: Number(paidAmount.toFixed(2)),
-    outstanding: Number(outstanding.toFixed(2)),
-    variance: Number((safePlanned - actual).toFixed(2)),
-    allocationPct: safePlanned > 0 ? Number(((allocated / safePlanned) * 100).toFixed(2)) : 0,
-    consumptionPct: safePlanned > 0 ? Number(((actual / safePlanned) * 100).toFixed(2)) : 0,
-  };
 }

@@ -7,9 +7,6 @@ export type AttendanceRegisterRow = {
   employeeName?: string | null;
   stageId?: number | null;
   status?: string | null;
-  source?: "manual" | "biometric" | "mobile_location" | "import" | null;
-  locationDistanceMeters?: number | string | null;
-  locationMatchStatus?: "not_checked" | "within_range" | "outside_range" | "no_site_configured" | null;
   notes?: string | null;
 };
 

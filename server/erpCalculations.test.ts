@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { allocateAdministrativeAmount, calculateCertificateProgress, calculateContractBalance, calculateExpenseTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculateProjectDocumentCosts, calculatePurchaseInvoiceStatus, calculateStraightLineDepreciation, projectHealthStatus } from "./erpCalculations";
+import { allocateAdministrativeAmount, calculateCertificateProgress, calculateContractBalance, calculateExpenseTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, calculateStraightLineDepreciation, projectHealthStatus } from "./erpCalculations";
 import { calculateAttendanceHours, filterAttendanceByMonth, summarizeAttendanceExceptions } from "../shared/attendance";
 import { isProjectActive } from "../shared/projectStatus";
 
@@ -13,16 +13,6 @@ describe("ERP financial rules", () => {
     expect(calculatePurchaseInvoiceStatus(1000, 0)).toBe("received");
     expect(calculatePurchaseInvoiceStatus(1000, 250)).toBe("partially_paid");
     expect(calculatePurchaseInvoiceStatus(1000, 1000)).toBe("paid");
-  });
-
-  it("separates purchase invoice accrual from its settlement", () => {
-    expect(calculateProjectDocumentCosts({
-      purchaseInvoices: [{ status: "posted", totalAmount: "1000.00" }],
-      paymentVouchers: [
-        { status: "posted", settlementType: "invoice", purchaseInvoiceId: 10, totalAmount: "1000.00" },
-        { status: "posted", settlementType: "direct", purchaseInvoiceId: null, totalAmount: "250.00" },
-      ],
-    })).toEqual({ postedPurchaseInvoiceTotal: 1000, postedDirectVoucherTotal: 250, postedInvoiceSettlementTotal: 1000, expenseTotal: 1250 });
   });
 
   it("keeps payroll tax-free", () => {
