@@ -36116,3 +36116,5 @@
 - [x] إدراج سندات الصرف الإدارية والنثرية وتوزيع المصروفات العامة على المشروع في مركز التكلفة.
 - [x] إظهار السداد المرتبط بالمستخلص داخل المدفوع لمرحلة مركز التكلفة.
 - [ ] التحقق الحي من كشف المورد وترتيب الحركات والرصيد التراكمي بعد النشر.
+- [x] Roll back the GitHub main branch connected to Railway to commit 1420c9ac so the live app matches the requested version
+- [x] Verify Railway deploys commit 1420c9ac without changing the MySQL data
