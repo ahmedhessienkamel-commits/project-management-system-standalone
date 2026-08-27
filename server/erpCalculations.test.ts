@@ -1,11 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { allocateAdministrativeAmount, calculateCashOutFromPaymentVouchers, calculateSupplierStatementTotals, calculateCertificateProgress, calculateContractBalance, calculateExpenseTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, calculateStraightLineDepreciation, projectHealthStatus } from "./erpCalculations";
+import { allocateAdministrativeAmount, calculateCashOutFromPaymentVouchers, calculateSupplierStatementTotals, calculateCertificateProgress, calculateContractBalance, calculateExpenseTotals, calculateLinkedAttachmentCompleteness, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, calculateStraightLineDepreciation, projectHealthStatus } from "./erpCalculations";
 import { calculateAttendanceHours, filterAttendanceByMonth, summarizeAttendanceExceptions } from "../shared/attendance";
 import { isProjectActive } from "../shared/projectStatus";
 
 describe("ERP financial rules", () => {
   it("calculates pre-tax, VAT, and total for expenses", () => {
     expect(calculateExpenseTotals(1000, 15)).toEqual({ preTaxAmount: 1000, taxRate: 15, taxAmount: 150, totalAmount: 1150 });
+  });
+
+  it("requires a linked supporting attachment for document completeness", () => {
+    expect(calculateLinkedAttachmentCompleteness({ attachments: [], entityType: "certificate", entityId: 7 })).toEqual({ complete: false, attachmentCount: 0, missing: ["مرفق مؤيد"] });
+    expect(calculateLinkedAttachmentCompleteness({ attachments: [{ entityType: "certificate", entityId: 7, documentType: "مستخلص موقع" }, { entityType: "certificate", entityId: 7, documentType: "" }], entityType: "certificate", entityId: 7 })).toEqual({ complete: true, attachmentCount: 1, missing: [] });
   });
 
   it("calculates purchase invoice payment status", () => {

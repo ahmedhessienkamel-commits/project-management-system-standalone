@@ -12,6 +12,10 @@ export function calculateCertificateProgress({ plannedBudget, certifiedAmounts }
   return { certifiedAmount: Number(certifiedAmount.toFixed(2)), progressPct: safeBudget > 0 ? Number(Math.min(100, (certifiedAmount / safeBudget) * 100).toFixed(2)) : 0 };
 }
 
+export function calculateLinkedAttachmentCompleteness({ attachments, entityType, entityId }: { attachments: Array<{ entityType: string; entityId: number; documentType?: string | null }>; entityType: string; entityId: number }) {
+  const linked = attachments.filter((attachment) => attachment.entityType === entityType && attachment.entityId === entityId && Boolean(attachment.documentType?.trim()));
+  return { complete: linked.length > 0, attachmentCount: linked.length, missing: linked.length ? [] : ["مرفق مؤيد"] };
+}
 export function calculatePurchaseInvoiceStatus(invoicedAmount: number, paidAmount: number): "not_received" | "received" | "partially_paid" | "paid" {
   if (invoicedAmount <= 0) return "not_received";
   if (paidAmount >= invoicedAmount) return "paid";

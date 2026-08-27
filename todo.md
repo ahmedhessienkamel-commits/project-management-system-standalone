@@ -36154,5 +36154,5 @@
 - [ ] Verify mandatory document checks are enforced and visible on certificates and payment requests
 - [ ] Finalize detailed RBAC and project-isolation tests for operational and management roles
 - [ ] Reconcile project WIP, supplier payments, administrative allocations, and income/cash-flow reports using one source-of-truth map
-- [x] Run full local TypeScript, Vitest, and production build verification; 132 Vitest tests passed, TypeScript passed, and production build completed; no Railway deployment performed
+- [x] Run full local TypeScript, Vitest, and production build verification; 133 Vitest tests passed after the document-completeness addition, TypeScript passed, and production build completed; no Railway deployment performed
 - [ ] Perform final browser verification of the local ERP navigation, forms, reports, and bilingual/RTL layout

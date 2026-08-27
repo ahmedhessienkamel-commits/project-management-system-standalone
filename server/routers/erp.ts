@@ -6,7 +6,7 @@ import { getDb } from "../db";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { getSessionCookieOptions } from "../_core/cookies";
-import { calculateCertificateProgress, calculateCashOutFromPaymentVouchers, calculateDocumentCompleteness, calculateExpenseTotals, calculateFinancialSummaryTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, calculateStraightLineDepreciation, calculateSupplierStatementTotals, allocateAdministrativeAmount, canAccessProject, canWriteProject, projectHealthReasons, projectHealthStatus, projectNotificationTriggers } from "../erpCalculations";
+import { calculateCertificateProgress, calculateCashOutFromPaymentVouchers, calculateDocumentCompleteness, calculateExpenseTotals, calculateLinkedAttachmentCompleteness, calculateFinancialSummaryTotals, calculatePayrollTotals, calculatePayrollTotalsWithDeduction, calculatePurchaseInvoiceStatus, calculateStraightLineDepreciation, calculateSupplierStatementTotals, allocateAdministrativeAmount, canAccessProject, canWriteProject, projectHealthReasons, projectHealthStatus, projectNotificationTriggers } from "../erpCalculations";
 import { accountingTotals } from "../accountingCalculations";
 import { calculateStageTimeVariance } from "../../shared/stageTiming";
 import { allocateAdministrativeExpense, normalizeExpenseTaxRate, validateExpenseAllocation } from "../../shared/expenseAllocation";
@@ -2553,6 +2553,7 @@ export const erpRouter = router({
       const visibleRows = allowed ? rows.filter((row) => allowed.has(row.projectId)) : rows;
       if (!visibleRows.length) return [];
       const certificateIds = visibleRows.map((row) => row.id);
+      const attachmentRows = await db.select({ projectId: attachments.projectId, entityType: attachments.entityType, entityId: attachments.entityId, documentType: attachments.documentType }).from(attachments);
       const approvalRows = await db.select().from(approvalRequests).where(eq(approvalRequests.entityType, "certificate"));
       const userRows = await db.select({ id: users.id, name: users.name, email: users.email }).from(users);
       const userMap = new Map(userRows.map((user) => [Number(user.id), user]));
@@ -2563,7 +2564,8 @@ export const erpRouter = router({
         const projectManager = stage("project_manager");
         const generalManager = stage("general_manager");
         const signer = (approval: typeof projectManager) => approval ? { status: approval.status, name: approval.reviewedBy ? userMap.get(Number(approval.reviewedBy))?.name || `مستخدم #${approval.reviewedBy}` : null, userId: approval.reviewedBy ?? null, reviewedAt: approval.reviewedAt, approvalId: approval.id } : null;
-        return { ...row, signatureWorkflow: {
+        const documentCompleteness = calculateLinkedAttachmentCompleteness({ attachments: attachmentRows, entityType: "certificate", entityId: row.id });
+        return { ...row, documentCompleteness, signatureWorkflow: {
           preparedBy: { userId: row.createdBy, name: preparedBy?.name || `مستخدم #${row.createdBy}`, preparedAt: row.createdAt },
           projectManager: signer(projectManager),
           generalManager: signer(generalManager),
@@ -2976,7 +2978,8 @@ export const erpRouter = router({
         const companyId = await resolveActiveCompanyId(db, ctx);
         const rows = companyId ? await db.select().from(accountingDocuments).where(eq(accountingDocuments.companyId, companyId)) : [];
         const filtered = rows.filter((row) => !input?.documentType || row.documentType === input.documentType);
-        return Promise.all(filtered.map(async (row) => { const creditedAmount = row.documentType === "sales_invoice" ? rows.filter((candidate) => candidate.documentType === "credit_note" && candidate.originalDocumentId === row.id).reduce((sum, candidate) => sum + Number(candidate.totalAmount || 0), 0) : 0; const netTotalAmount = Math.max(Number(row.totalAmount || 0) - creditedAmount, 0); return { ...row, creditedAmount, netTotalAmount, netRemainingAmount: Math.max(netTotalAmount - Number(row.paidAmount || 0), 0), lines: await db.select().from(accountingDocumentLines).where(eq(accountingDocumentLines.documentId, row.id)) }; }));
+        const attachmentRows = await db.select({ entityType: attachments.entityType, entityId: attachments.entityId, documentType: attachments.documentType }).from(attachments);
+        return Promise.all(filtered.map(async (row) => { const creditedAmount = row.documentType === "sales_invoice" ? rows.filter((candidate) => candidate.documentType === "credit_note" && candidate.originalDocumentId === row.id).reduce((sum, candidate) => sum + Number(candidate.totalAmount || 0), 0) : 0; const netTotalAmount = Math.max(Number(row.totalAmount || 0) - creditedAmount, 0); return { ...row, creditedAmount, netTotalAmount, netRemainingAmount: Math.max(netTotalAmount - Number(row.paidAmount || 0), 0), documentCompleteness: ["payment_voucher", "purchase_invoice"].includes(row.documentType) ? calculateLinkedAttachmentCompleteness({ attachments: attachmentRows, entityType: "accountingDocument", entityId: row.id }) : null, lines: await db.select().from(accountingDocumentLines).where(eq(accountingDocumentLines.documentId, row.id)) }; }));
       }),
       create: protectedProcedure.input(z.object({ projectId: z.number().int().positive().optional(), documentType: z.enum(["sales_invoice", "purchase_invoice", "purchase_receipt", "credit_note", "journal_entry", "payment_voucher", "receipt_voucher", "quotation", "purchase_order"]), relatedDocumentType: z.enum(["quotation", "certificate"]).optional(), relatedDocumentId: z.number().int().positive().optional(), originalDocumentId: z.number().int().positive().optional(), sourceDocumentId: z.number().int().positive().optional(), returnType: z.enum(["full", "partial"]).optional(), voucherCategory: z.enum(["contractor", "supplier", "materials", "payroll", "operating", "administrative", "petty_cash"]).optional(), contractorId: z.number().int().positive().optional(), supplierId: z.number().int().positive().optional(), purchaseInvoiceId: z.number().int().positive().optional(), settlementType: z.enum(["invoice", "direct"]).optional(), certificateId: z.number().int().positive().optional(), fixedAssetId: z.number().int().positive().optional(), partyName: z.string().max(255).optional(), partyTaxNumber: z.string().max(64).optional(), documentDate: z.string().optional(), dueDate: z.string().optional(), sourceAccountId: z.number().int().positive().optional(), amount: z.number().nonnegative(), taxAmount: z.number().nonnegative(), totalAmount: z.number().nonnegative(), paymentMethod: z.enum(["cash", "bank"]).optional(), notes: z.string().max(2000).optional(), status: z.enum(["draft", "posted"]).default("draft"), lines: z.array(z.object({ accountId: z.number().int().positive(), costItemId: z.number().int().positive().optional(), projectId: z.number().int().positive().optional(), stageId: z.number().int().positive().optional(), description: z.string().max(500).optional(), debit: z.number().nonnegative(), credit: z.number().nonnegative() })).min(1) })).mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
