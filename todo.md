@@ -36155,4 +36155,4 @@
 - [x] Finalize detailed RBAC and project-isolation tests for operational and management roles — added assigned-project read isolation and retained read-only write denial coverage
 - [x] Reconcile project WIP, supplier payments, administrative allocations, and income/cash-flow reports using one source-of-truth map — cash-flow regression now asserts stage totals equal project cash-out and contractor settlement is not double-counted
 - [x] Run full local TypeScript, Vitest, and production build verification; 135 Vitest tests passed after mandatory-document coverage, TypeScript passed, and production build completed; no Railway deployment performed
-- [ ] Perform final browser verification of the local ERP navigation, forms, reports, and bilingual/RTL layout
+- [x] Perform final browser verification of the local ERP navigation, forms, reports, and bilingual/RTL layout — authenticated review completed for dashboard, approvals, projects, reports, and material requests; no sidebar overlap observed
