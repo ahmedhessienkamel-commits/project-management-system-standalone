@@ -303,6 +303,13 @@ describe("ERP sales and collections API flow", () => {
     expect(rows).toEqual([expect.objectContaining({ id: 61, actorName: "مدير الحسابات", projectId: 1 })]);
   });
 
+  it("blocks certificate approval when the supporting attachment is missing", async () => {
+    state.certificates.push({ id: 50, projectId: 1, companyId: 1, certificateNumber: "CERT-50", status: "pending", totalAmount: "100.00", paidAmount: "0.00", createdBy: 1, createdAt: new Date() });
+    state.approvalRequests.push({ id: 50, projectId: 1, entityType: "certificate", entityId: 50, requestedBy: 1, status: "pending", approvalStage: "owner", stageOrder: 1, createdAt: new Date() });
+    await expect(appRouter.createCaller(context(1, "admin")).erp.approvals.decide({ id: 50, decision: "approved" })).rejects.toThrow("لا يمكن اعتماد المستخلص قبل إرفاق مستند مؤيد");
+    expect(state.approvalRequests.find((row) => row.id === 50)?.status).toBe("pending");
+  });
+
   it("isolates project reads to assigned projects", async () => {
     state.projects.push({ id: 99, code: "OTHER-001", name: "مشروع آخر", companyId: 1, classification: "operational", status: "active", location: "الرياض", createdAt: new Date(), updatedAt: new Date() });
     state.projectMembers.push({ id: 2, projectId: 1, userId: 2, projectRole: "viewer", createdAt: new Date() });

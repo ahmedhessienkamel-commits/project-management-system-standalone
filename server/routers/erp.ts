@@ -2005,6 +2005,13 @@ export const erpRouter = router({
         const request = (await db.select().from(approvalRequests).where(eq(approvalRequests.id, input.id)).limit(1))[0];
         if (!request) throw new TRPCError({ code: "NOT_FOUND", message: "طلب الموافقة غير موجود" });
         if (!canReviewApproval(ctx.user, request)) throw new TRPCError({ code: "FORBIDDEN", message: "لا يملك هذا الدور صلاحية اعتماد هذا النوع من المستندات" });
+        if (input.decision === "approved" && ["certificate", "purchase_payment"].includes(request.entityType)) {
+          const source = request.entityType === "certificate"
+            ? (await db.select({ projectId: certificates.projectId }).from(certificates).where(eq(certificates.id, request.entityId)).limit(1))[0]
+            : (await db.select({ projectId: accountingDocuments.projectId }).from(accountingDocuments).where(eq(accountingDocuments.id, request.entityId)).limit(1))[0];
+          const linkedAttachments = await db.select({ id: attachments.id }).from(attachments).where(and(eq(attachments.entityId, request.entityId), eq(attachments.entityType, request.entityType === "certificate" ? "certificate" : "accountingDocument"), source?.projectId ? eq(attachments.projectId, source.projectId) : undefined));
+          if (!linkedAttachments.length) throw new TRPCError({ code: "PRECONDITION_FAILED", message: request.entityType === "certificate" ? "لا يمكن اعتماد المستخلص قبل إرفاق مستند مؤيد" : "لا يمكن اعتماد سند الدفع قبل إرفاق مستند مؤيد" });
+        }
         await db.update(approvalRequests).set({ status: input.decision, reviewedBy: ctx.user.id, note: input.note || null, reviewedAt: new Date() }).where(eq(approvalRequests.id, input.id));
         const approved = input.decision === "approved";
         if (request.entityType === "purchase_payment") {
