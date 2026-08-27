@@ -29,11 +29,11 @@
 - [x] Build centralized data-entry modules with validations and audit-friendly links
 - [x] Build revenue, expense, payroll, tax, supplier statement, cash-flow, and project-performance reports
 - [ ] Import and reconcile legacy Excel data without duplicating transactions
-- [ ] Add collaborative access for administration, project managers, employees, approvers, and future users with role-specific permissions
-- [ ] Write backend and frontend tests for financial calculations and permissions
-- [ ] Verify responsive UI and end-to-end workflows before delivery
+- [ ] Add collaborative access for administration, project managers, employees, approvers, and future users with role-specific permissions — current-role gating exists; full matrix coverage remains in the gap-closure pass
+- [x] Write backend and frontend tests for financial calculations and permissions — 135 Vitest tests pass, including approval, RBAC, project isolation, and financial reconciliation coverage
+- [ ] Verify responsive UI and end-to-end workflows before delivery — desktop authenticated review completed; responsive and interactive flow coverage remains in the gap-closure pass
 - [x] Add approval workflows for expenses, payroll, certificates, and collections
-- [ ] Add audit trail for edits, approvals, reversals, and deletions
+- [ ] Add audit trail for edits, approvals, reversals, and deletions — filtered audit review exists; comprehensive action-family coverage remains in the gap-closure pass
 - [x] Add project health alerts for budget usage, schedule delay, cash gap, and overdue approvals
 - [x] Add project-level access boundaries for all reads/writes and cross-project comparison dashboards
 - [x] Add configurable approval thresholds by project, transaction type, and amount
@@ -36148,11 +36148,20 @@
 - [ ] Implement complete Arabic RTL and English LTR localization with persistent language switching
 
 ## Local ERP completion pass — 2026-08-28
-- [x] Audit Procurement and HR modules end to end in the local environment and close functional gaps — completed for HR archive metadata/filters and procurement approval preview stages
+- [ ] Audit Procurement and HR modules end to end in the local environment and close functional gaps — HR archive and material approval preview are covered; full creation-to-final-effect validation remains
 - [x] Complete approval archive filters, document preview metadata, rejection reasons, current approver, and reminder actions — HR archive now includes status/date/requester/reviewer/current stage/rejection filters and preview fields
 - [x] Implement a non-destructive audit trail for edits, approvals, reversals, and deletions with project/company isolation — existing write-side audit coverage retained; controls.audit now supports entity/action/actor/project/date filters and actor enrichment with active-company project scoping
 - [x] Verify mandatory document checks are enforced and visible on certificates and payment requests — approval blocks missing supporting attachments; certificate and supplier-payment cards show completeness status
 - [x] Finalize detailed RBAC and project-isolation tests for operational and management roles — added assigned-project read isolation and retained read-only write denial coverage
-- [x] Reconcile project WIP, supplier payments, administrative allocations, and income/cash-flow reports using one source-of-truth map — cash-flow regression now asserts stage totals equal project cash-out and contractor settlement is not double-counted
-- [x] Run full local TypeScript, Vitest, and production build verification; 135 Vitest tests passed after mandatory-document coverage, TypeScript passed, and production build completed; no Railway deployment performed
-- [x] Perform final browser verification of the local ERP navigation, forms, reports, and bilingual/RTL layout — authenticated review completed for dashboard, approvals, projects, reports, and material requests; no sidebar overlap observed
+- [ ] Reconcile project WIP, supplier payments, administrative allocations, and income/cash-flow reports using one source-of-truth map — WIP now falls back to approved stage certificates when no posted WIP lines exist and has a regression test; broader cross-report reconciliation remains
+- [x] Run full local TypeScript, Vitest, and production build verification; 136 Vitest tests passed after WIP fallback coverage, TypeScript passed, and production build completed; no Railway deployment performed
+- [ ] Perform final browser verification of the local ERP navigation, forms, reports, and bilingual/RTL layout — Arabic desktop routes reviewed; mobile, interaction, and English verification remain
+
+## Required gap-closure pass — 2026-08-28
+
+- [ ] Complete a role-permission matrix test for admin, general manager, project manager, finance, HR/employee, approver, and cross-project access restrictions
+- [ ] Run browser interaction tests for core ERP forms and reports, including submit, edit, delete, validation errors, loading states, and empty states at desktop and mobile breakpoints
+- [ ] Audit and document write-side audit logging coverage for key entity edits, approvals, reversals, and deletions, then add regression tests for each action family
+- [ ] Validate Procurement and HR end to end beyond archive/preview UI, including creation, approval progression, final effects, and failure cases
+- [ ] Add broader reconciliation tests proving WIP, supplier payments, administrative allocations, and income/cash-flow derive from one consistent source of truth
+- [ ] Verify Arabic/English behavior explicitly, including RTL/LTR layout and core route labels after language switching

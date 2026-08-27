@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { projects, stages, expenses, collections, approvalRequests, attachments, sales, payroll, vendors, certificates, projectMembers, units, periodLocks, notifications, auditLogs, attendance, approvalPolicies, custodyMovements, cashAccounts, companies, cashTransfers, accountingDocuments, accountingDocumentLines, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems, advanceRequests, advanceRepayments, leaveRequests, employees, users, costItems } from "../drizzle/schema";
+import { projects, stages, expenses, collections, approvalRequests, attachments, sales, payroll, vendors, certificates, projectMembers, units, periodLocks, notifications, auditLogs, attendance, approvalPolicies, custodyMovements, cashAccounts, companies, cashTransfers, accountingDocuments, accountingDocumentLines, materialRequisitions, materialRequisitionItems, purchaseOrders, purchaseOrderItems, purchaseReceipts, purchaseReceiptItems, advanceRequests, advanceRepayments, leaveRequests, employees, users, costItems, accounts } from "../drizzle/schema";
 
 const state = {
   companies: [] as any[],
@@ -37,11 +37,12 @@ const state = {
   employees: [] as any[],
   users: [] as any[],
   costItems: [] as any[],
+  accounts: [] as any[],
 };
 
 const tableState = new Map<any, keyof typeof state>([
   [companies, "companies"],
-  [projects, "projects"], [stages, "stages"], [expenses, "expenses"], [collections, "collections"], [approvalRequests, "approvalRequests"], [attachments, "attachments"], [sales, "sales"], [payroll, "payroll"], [vendors, "vendors"], [certificates, "certificates"], [projectMembers, "projectMembers"], [units, "units"], [periodLocks, "periodLocks"], [notifications, "notifications"], [auditLogs, "auditLogs"], [attendance, "attendance"], [approvalPolicies, "approvalPolicies"], [custodyMovements, "custodyMovements"], [cashAccounts, "cashAccounts"], [cashTransfers, "cashTransfers"], [accountingDocuments, "accountingDocuments"], [accountingDocumentLines, "accountingDocumentLines"], [materialRequisitions, "materialRequisitions"], [materialRequisitionItems, "materialRequisitionItems"], [purchaseOrders, "purchaseOrders"], [purchaseOrderItems, "purchaseOrderItems"], [purchaseReceipts, "purchaseReceipts"], [purchaseReceiptItems, "purchaseReceiptItems"], [advanceRequests, "advanceRequests"], [advanceRepayments, "advanceRepayments"], [leaveRequests, "leaveRequests"], [employees, "employees"], [users, "users"], [costItems, "costItems"],
+  [projects, "projects"], [stages, "stages"], [expenses, "expenses"], [collections, "collections"], [approvalRequests, "approvalRequests"], [attachments, "attachments"], [sales, "sales"], [payroll, "payroll"], [vendors, "vendors"], [certificates, "certificates"], [projectMembers, "projectMembers"], [units, "units"], [periodLocks, "periodLocks"], [notifications, "notifications"], [auditLogs, "auditLogs"], [attendance, "attendance"], [approvalPolicies, "approvalPolicies"], [custodyMovements, "custodyMovements"], [cashAccounts, "cashAccounts"], [cashTransfers, "cashTransfers"], [accountingDocuments, "accountingDocuments"], [accountingDocumentLines, "accountingDocumentLines"], [materialRequisitions, "materialRequisitions"], [materialRequisitionItems, "materialRequisitionItems"], [purchaseOrders, "purchaseOrders"], [purchaseOrderItems, "purchaseOrderItems"], [purchaseReceipts, "purchaseReceipts"], [purchaseReceiptItems, "purchaseReceiptItems"], [advanceRequests, "advanceRequests"], [advanceRepayments, "advanceRepayments"], [leaveRequests, "leaveRequests"], [employees, "employees"], [users, "users"], [costItems, "costItems"], [accounts, "accounts"],
 ]);
 
 function rowsFor(table: any) {
@@ -100,7 +101,8 @@ describe("ERP sales and collections API flow", () => {
   beforeEach(() => {
     for (const key of Object.keys(state) as Array<keyof typeof state>) state[key].splice(0);
     state.companies.push({ id: 1, legalName: "شركة الاختبار", name: "شركة الاختبار", isActive: 1, createdAt: new Date(), updatedAt: new Date() });
-    state.projects.push({ id: 1, code: "WN-001", name: "وادي نمار", companyId: 1, classification: "operational", status: "active", location: "الرياض", createdAt: new Date(), updatedAt: new Date() });
+    state.projects.push({ id: 1, code: "WN-001", name: "وادي نمار", companyId: 1, classification: "operational", status: "active", location: "الرياض", wipAccountId: 1001, createdAt: new Date(), updatedAt: new Date() });
+    state.accounts.push({ id: 1000, code: "1400", name: "مشاريع تحت التنفيذ", accountType: "asset", isActive: 1, isPostable: 0 }, { id: 1001, code: "1400-WN-001", name: "مشاريع تحت التنفيذ — وادي نمار", accountType: "asset", isActive: 1, isPostable: 1 });
     state.projectMembers.push({ id: 1, projectId: 1, userId: 1, projectRole: "finance", createdAt: new Date() });
     state.stages.push({ id: 2, projectId: 1, code: "EXC", name: "الحفر", status: "active", plannedBudget: "100000", createdAt: new Date() });
     state.units.push({ id: 10, projectId: 1, unitCode: "A-101", status: "available", createdAt: new Date(), updatedAt: new Date() });
@@ -310,6 +312,12 @@ describe("ERP sales and collections API flow", () => {
     state.approvalRequests.push({ id: 50, projectId: 1, entityType: "certificate", entityId: 50, requestedBy: 1, status: "pending", approvalStage: "owner", stageOrder: 1, createdAt: new Date() });
     await expect(appRouter.createCaller(context(1, "admin")).erp.approvals.decide({ id: 50, decision: "approved" })).rejects.toThrow("لا يمكن اعتماد المستخلص قبل إرفاق مستند مؤيد");
     expect(state.approvalRequests.find((row) => row.id === 50)?.status).toBe("pending");
+  });
+
+  it("includes approved certificate cost in WIP when no posted WIP lines exist", async () => {
+    state.certificates.push({ id: 51, projectId: 1, companyId: 1, certificateNumber: "CERT-WIP", status: "approved", totalAmount: "18630.00", paidAmount: "18630.00", createdBy: 1, createdAt: new Date() });
+    const summary = await appRouter.createCaller(context(1, "admin")).erp.projects.wipSummary({ id: 1 });
+    expect(summary).toMatchObject({ debit: 18630, credit: 0, balance: 18630, breakdown: { stages: 18630, materials: 0, salaries: 0, operating: 0 } });
   });
 
   it("isolates project reads to assigned projects", async () => {

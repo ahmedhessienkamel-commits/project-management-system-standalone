@@ -878,9 +878,24 @@ export const erpRouter = router({
       ]);
       const posted = new Set(documents.filter((document) => document.status === "posted").map((document) => document.id));
       const postedLines = lines.filter((line) => posted.has(line.documentId));
-      const totals = calculateWipBalance(postedLines);
+      let totals = calculateWipBalance(postedLines);
       const documentById = new Map(documents.map((document) => [document.id, document]));
       const breakdown = { stages: 0, materials: 0, salaries: 0, operating: 0 };
+      if (postedLines.length === 0) {
+        const [projectCertificates, projectExpenses, projectPayroll] = await Promise.all([
+          db.select().from(certificates).where(eq(certificates.projectId, project.id)),
+          db.select().from(expenses).where(eq(expenses.projectId, project.id)),
+          db.select().from(payroll).where(eq(payroll.projectId, project.id)),
+        ]);
+        const certificateCost = projectCertificates.filter((row) => ["approved", "paid"].includes(row.status)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+        const expenseCost = projectExpenses.filter((row) => row.classification !== "administrative" && row.expenseType !== "administrative" && ["approved", "posted"].includes(row.status)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+        const payrollCost = projectPayroll.filter((row) => row.classification !== "administrative" && ["approved", "posted", "paid"].includes(row.status)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+        breakdown.stages = certificateCost;
+        breakdown.operating = expenseCost;
+        breakdown.salaries = payrollCost;
+        const sourceCost = certificateCost + expenseCost + payrollCost;
+        totals = { debit: sourceCost, credit: 0, balance: sourceCost };
+      }
       for (const line of postedLines) {
         const amount = Math.max(Number(line.debit || 0) - Number(line.credit || 0), 0);
         const document = documentById.get(line.documentId);

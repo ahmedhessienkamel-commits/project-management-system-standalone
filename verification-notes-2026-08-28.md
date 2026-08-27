@@ -7,3 +7,6 @@
 - Reports: unified reports page exposed project selector, report tabs, date filters, cash flow, financial summary, supplier statement, exports, and comparison table.
 - Material requests: dedicated page exposed project/stage/material/quantity/date/note fields, material receipt and issue cards, and approval-oriented explanatory copy. Existing inventory search returned no matching material in the current data, which is a data-state result rather than a layout error.
 - Screenshots showed no sidebar overlap in the reviewed authenticated pages. Final delivery remains subject to any user-reported functional issue after manual interaction with forms.
+## Legacy workbook import assessment
+
+The uploaded workbook is a substantial operational source with 35 sheets, including 14 stage sheets, the main contract, schedules, contractors, certificates, expenses, accruals, collections, cost center, income statement, cash flow, custody, payroll, and daily tasks. The workbook contains formulas and legacy presentation sheets, so no automatic import was performed. A safe import requires an explicit field-mapping and duplicate-key policy before writing any legacy transactions into the ERP database.
