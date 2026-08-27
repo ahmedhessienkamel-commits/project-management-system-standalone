@@ -303,6 +303,14 @@ describe("ERP sales and collections API flow", () => {
     expect(rows).toEqual([expect.objectContaining({ id: 61, actorName: "مدير الحسابات", projectId: 1 })]);
   });
 
+  it("isolates project reads to assigned projects", async () => {
+    state.projects.push({ id: 99, code: "OTHER-001", name: "مشروع آخر", companyId: 1, classification: "operational", status: "active", location: "الرياض", createdAt: new Date(), updatedAt: new Date() });
+    state.projectMembers.push({ id: 2, projectId: 1, userId: 2, projectRole: "viewer", createdAt: new Date() });
+    const caller = appRouter.createCaller(context(2));
+    await expect(caller.erp.reports.projectStageDetail({ projectId: 1 })).resolves.toMatchObject({ rows: expect.arrayContaining([expect.objectContaining({ stageId: 2 })]) });
+    await expect(caller.erp.reports.projectStageDetail({ projectId: 99 })).rejects.toThrow("ليس لديك صلاحية على هذا المشروع");
+  });
+
   it("blocks read-only project roles from operational writes", async () => {
     state.projectMembers.splice(0);
     state.projectMembers.push({ id: 2, projectId: 1, userId: 2, projectRole: "viewer", createdAt: new Date() });

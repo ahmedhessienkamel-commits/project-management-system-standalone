@@ -36152,7 +36152,7 @@
 - [x] Complete approval archive filters, document preview metadata, rejection reasons, current approver, and reminder actions — HR archive now includes status/date/requester/reviewer/current stage/rejection filters and preview fields
 - [x] Implement a non-destructive audit trail for edits, approvals, reversals, and deletions with project/company isolation — existing write-side audit coverage retained; controls.audit now supports entity/action/actor/project/date filters and actor enrichment with active-company project scoping
 - [ ] Verify mandatory document checks are enforced and visible on certificates and payment requests
-- [ ] Finalize detailed RBAC and project-isolation tests for operational and management roles
+- [x] Finalize detailed RBAC and project-isolation tests for operational and management roles — added assigned-project read isolation and retained read-only write denial coverage
 - [ ] Reconcile project WIP, supplier payments, administrative allocations, and income/cash-flow reports using one source-of-truth map
-- [x] Run full local TypeScript, Vitest, and production build verification; 133 Vitest tests passed after the document-completeness addition, TypeScript passed, and production build completed; no Railway deployment performed
+- [x] Run full local TypeScript, Vitest, and production build verification; 134 Vitest tests passed after RBAC isolation coverage, TypeScript passed, and production build completed; no Railway deployment performed
 - [ ] Perform final browser verification of the local ERP navigation, forms, reports, and bilingual/RTL layout
