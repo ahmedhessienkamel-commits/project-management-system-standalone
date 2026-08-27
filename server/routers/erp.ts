@@ -448,12 +448,20 @@ export const erpRouter = router({
       const db = requireDb(await getDb());
       const [employee] = await db.select().from(employees).where(eq(employees.id, input.employeeId)).limit(1);
       if (!employee) throw new TRPCError({ code: "NOT_FOUND", message: "الموظف غير موجود" });
-      const [workStarts, leaves, advances] = await Promise.all([
+      const [workStarts, leaves, advances, userRows] = await Promise.all([
         db.select().from(employeeWorkStarts).where(eq(employeeWorkStarts.employeeId, input.employeeId)).orderBy(desc(employeeWorkStarts.createdAt)),
         db.select().from(leaveRequests).where(eq(leaveRequests.employeeId, input.employeeId)).orderBy(desc(leaveRequests.createdAt)),
         db.select().from(advanceRequests).where(eq(advanceRequests.employeeId, input.employeeId)).orderBy(desc(advanceRequests.createdAt)),
+        db.select({ id: users.id, name: users.name, email: users.email }).from(users),
       ]);
-      return { employee, workStarts, leaves, advances };
+      const userName = (userId?: number | null) => userId ? userRows.find((user) => user.id === userId)?.name || userRows.find((user) => user.id === userId)?.email || `المستخدم #${userId}` : null;
+      const currentApprover = (status: string, finalLabel: string) => status === "pending" || status === "pending_general_manager" ? finalLabel : status === "approved" || status === "signed" ? "مكتمل" : "—";
+      return {
+        employee,
+        workStarts: workStarts.map((row) => ({ ...row, requesterName: userName(row.createdBy), reviewerName: userName(row.generalManagerUserId), submittedAt: row.createdAt, reviewedAt: row.generalManagerSignedAt, currentApproverLabel: currentApprover(row.status, "المدير العام"), rejectionReason: row.rejectionReason })),
+        leaves: leaves.map((row) => ({ ...row, reviewerName: userName(row.reviewedBy), submittedAt: row.createdAt, reviewedAt: row.reviewedAt, currentApproverLabel: currentApprover(row.status, "المالك أو المدير العام"), rejectionReason: row.rejectionReason })),
+        advances: advances.map((row) => ({ ...row, reviewerName: userName(row.reviewedBy), submittedAt: row.createdAt, reviewedAt: row.reviewedAt, currentApproverLabel: currentApprover(row.status, "المالك أو المدير العام"), rejectionReason: row.rejectionReason })),
+      };
     }),
     workStarts: router({
       list: protectedProcedure.input(z.object({ employeeId: z.number().int().positive().optional() }).optional()).query(async ({ ctx, input }) => {
@@ -1094,7 +1102,7 @@ export const erpRouter = router({
         const projectVoucherRows = accountingDocumentRows.filter((document) => document.documentType === "payment_voucher" && document.status === "posted" && document.projectId === project.id);
         const projectAdministrativeVoucherTotal = projectVoucherRows.filter((document) => document.voucherCategory === "administrative").reduce((sum, document) => sum + Number(document.totalAmount || 0), 0);
         const projectPettyCashVoucherTotal = projectVoucherRows.filter((document) => document.voucherCategory === "petty_cash").reduce((sum, document) => sum + Number(document.totalAmount || 0), 0);
-        const projectCertificatePaymentData = calculateCashOutFromPaymentVouchers({ certificates: projectCertificates, accountingDocuments: projectVoucherRows });
+        const projectCertificatePaymentData = calculateCashOutFromPaymentVouchers({ certificates: projectCertificates, accountingDocuments: accountingDocumentRows.filter((document) => document.status === "posted") });
         const inventoryIssuedTotal = projectInventoryIssues.reduce((sum, movement) => sum + Number(movement.totalAmount || 0), 0);
         const subcontractorCostsTotal = projectCertificates.reduce((sum, certificate) => sum + Number(certificate.totalAmount || 0), 0);
         const subcontractorCostsPaid = projectCertificates.reduce((sum, certificate) => sum + Math.max(Number(certificate.paidAmount || 0), projectCertificatePaymentData.voucherPaidByCertificate.get(certificate.id) || 0), 0);
@@ -1664,10 +1672,14 @@ export const erpRouter = router({
         const companyId = await resolveActiveCompanyId(db, ctx);
         const projectRows = companyId ? await db.select({ id: projects.id }).from(projects).where(eq(projects.companyId, companyId)) : Number(ctx.user.id) === 13170001 ? await db.select({ id: projects.id }).from(projects) : [];
         const companyProjectIds = new Set(projectRows.map((project) => project.id));
-        const rows = await db.select().from(materialRequisitions);
+        const [rows, userRows] = await Promise.all([
+          db.select().from(materialRequisitions),
+          db.select({ id: users.id, name: users.name, email: users.email }).from(users),
+        ]);
+        const userMap = new Map(userRows.map((user) => [user.id, user.name || user.email || `مستخدم #${user.id}`]));
         const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
         const filtered = rows.filter((row) => companyProjectIds.has(row.projectId) && (!input?.projectId || row.projectId === input.projectId) && (!allowed || allowed.has(row.projectId) || Number(ctx.user.id) === 13170001));
-        return Promise.all(filtered.map(async (row) => ({ ...row, items: await db.select().from(materialRequisitionItems).where(eq(materialRequisitionItems.requisitionId, row.id)) })));
+        return Promise.all(filtered.map(async (row) => ({ ...row, requesterName: userMap.get(row.requestedBy) || `مستخدم #${row.requestedBy}`, items: await db.select().from(materialRequisitionItems).where(eq(materialRequisitionItems.requisitionId, row.id)) })));
       }),
       planning: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), stageId: z.number().int().positive().optional(), inventoryItemId: z.number().int().positive(), costItemId: z.number().int().positive().optional(), quantity: z.number().positive() })).query(async ({ ctx, input }) => {
         const db = requireDb(await getDb());

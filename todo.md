@@ -36128,3 +36128,31 @@
 - [x] Split administrative expenses consistently into direct project administration and allocated company administration across every related report
 - [x] Simplify accounting-entry labels and remove invoice-style confusion around payable/status fields
 - [ ] Run local TypeScript, unit tests, and visual verification; do not publish to Railway until the user explicitly says «انشر»
+- [ ] Publish the tested local ERP improvement batch to GitHub and Railway after explicit user approval
+- [ ] Verify the live deployment and preserve the rollback reference 1420c9ac
+- [x] Cancel the latest ERP improvement deployment and restore Railway/GitHub main to the original reference 1420c9ac
+- [x] Verify the original live version is active and the database remains unchanged
+- [ ] Keep 1420c9ac as a protected rollback reference and do not alter Railway during local development
+- [ ] Use a separate development state and a single explicit release action only after the user says «انشر»
+- [ ] Record the published commit and Railway deployment together for every future release
+
+## Commercial Android app productization
+
+- [ ] Define the commercial MVP and customer onboarding flow without changing the current production ERP
+- [ ] Create a separate Expo/React Native Android client that consumes the ERP backend securely
+- [ ] Add tenant/company signup, roles, permissions, subscription entitlements, and account lifecycle
+- [ ] Integrate Google Play subscriptions with server-side purchase verification and entitlement sync
+- [ ] Prepare privacy policy, terms, support contact, store listing, app icon, screenshots, and signed Android App Bundle
+- [ ] Test internal Play release and production readiness before public publishing
+- [ ] Use the product identity BUNYAN | بُنيان in the future Android client
+- [ ] Implement complete Arabic RTL and English LTR localization with persistent language switching
+
+## Local ERP completion pass — 2026-08-28
+- [x] Audit Procurement and HR modules end to end in the local environment and close functional gaps — completed for HR archive metadata/filters and procurement approval preview stages
+- [x] Complete approval archive filters, document preview metadata, rejection reasons, current approver, and reminder actions — HR archive now includes status/date/requester/reviewer/current stage/rejection filters and preview fields
+- [ ] Implement a non-destructive audit trail for edits, approvals, reversals, and deletions with project/company isolation
+- [ ] Verify mandatory document checks are enforced and visible on certificates and payment requests
+- [ ] Finalize detailed RBAC and project-isolation tests for operational and management roles
+- [ ] Reconcile project WIP, supplier payments, administrative allocations, and income/cash-flow reports using one source-of-truth map
+- [x] Run full local TypeScript, Vitest, and production build verification; 131 Vitest tests passed, TypeScript passed, and production build completed; no Railway deployment performed
+- [ ] Perform final browser verification of the local ERP navigation, forms, reports, and bilingual/RTL layout

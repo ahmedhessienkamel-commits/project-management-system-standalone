@@ -42,8 +42,8 @@ export function calculateFinancialSummaryTotals({ sales, collections, expenses, 
   return { revenue, collectionsReceived, expensesPreTax, expensesTax, expensesTotal, expensesPaid, payrollTotal, payrollPaid, payrollOutstanding: Math.max(payrollTotal - payrollPaid, 0) };
 }
 
-export function calculateCashOutFromPaymentVouchers({ certificates, accountingDocuments }: { certificates: Array<{ id: number; paidAmount: string | number }>; accountingDocuments: Array<{ id: number; documentType: string; status: string; totalAmount: string | number; purchaseInvoiceId?: number | null; certificateId?: number | null }> }) {
-  const invoiceCertificateIds = new Map(accountingDocuments.filter((document) => document.documentType === "purchase_invoice" && document.certificateId).map((document) => [document.id, Number(document.certificateId)]));
+export function calculateCashOutFromPaymentVouchers({ certificates, accountingDocuments }: { certificates: Array<{ id: number; paidAmount: string | number }>; accountingDocuments: Array<{ id: number; documentType: string; status: string; totalAmount: string | number; purchaseInvoiceId?: number | null; certificateId?: number | null; relatedDocumentType?: string | null; relatedDocumentId?: number | null }> }) {
+  const invoiceCertificateIds = new Map(accountingDocuments.filter((document) => document.documentType === "purchase_invoice" && (document.certificateId || (document.relatedDocumentType === "certificate" && document.relatedDocumentId))).map((document) => [document.id, Number(document.certificateId || document.relatedDocumentId)]));
   const paymentVouchers = accountingDocuments.filter((document) => document.documentType === "payment_voucher" && document.status === "posted");
   const voucherCertificateId = (voucher: (typeof paymentVouchers)[number]) => voucher.certificateId ? Number(voucher.certificateId) : voucher.purchaseInvoiceId ? invoiceCertificateIds.get(Number(voucher.purchaseInvoiceId)) : undefined;
   const voucherPaidByCertificate = new Map<number, number>();

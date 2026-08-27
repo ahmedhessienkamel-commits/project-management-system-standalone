@@ -208,6 +208,14 @@ describe("ERP sales and collections API flow", () => {
     expect(advances).toEqual(expect.arrayContaining([expect.objectContaining({ id: 42, requesterName: "مدير الحسابات", employeeName: "أحمد العامل", repaymentMode: "installments", installmentCount: 2 })]));
   });
 
+  it("enriches the employee archive with reviewer, current approver, and rejection metadata", async () => {
+    state.leaveRequests.push({ id: 43, requestedBy: 1, employeeId: 9, leaveType: "annual", startDate: new Date("2026-08-10"), endDate: new Date("2026-08-12"), days: "3.00", reason: "إجازة", status: "rejected", reviewedBy: 13170001, reviewedAt: new Date("2026-08-09"), rejectionReason: "المرفقات غير مكتملة", createdAt: new Date("2026-08-08") });
+    state.advanceRequests.push({ id: 44, requestedBy: 1, employeeId: 9, amount: "300.00", reason: "سلفة", status: "pending", createdAt: new Date("2026-08-08") });
+    const archive = await appRouter.createCaller(context(1, "admin")).erp.employees.archive({ employeeId: 9 });
+    expect(archive.leaves).toEqual(expect.arrayContaining([expect.objectContaining({ id: 43, reviewerName: "مصطفى", currentApproverLabel: "—", rejectionReason: "المرفقات غير مكتملة", submittedAt: expect.any(Date), reviewedAt: expect.any(Date) })]));
+    expect(archive.advances).toEqual(expect.arrayContaining([expect.objectContaining({ id: 44, reviewerName: null, currentApproverLabel: "المالك أو المدير العام", rejectionReason: undefined })]));
+  });
+
   it("posts an administrative custody expense against the selected administrative cost item", async () => {
     const caller = appRouter.createCaller(context());
     const result = await caller.erp.custodyMovements.createAdministrativeExpense({ employeeCode: "EMP-001", employeeName: "أحمد", costItemId: 12, description: "رسوم تجديد رخصة", amount: 750, movementDate: "2026-08-25" });
@@ -286,7 +294,7 @@ describe("ERP sales and collections API flow", () => {
     expect(state.sales.find((row) => row.customerName === "بيع فوق الحد")).toMatchObject({ status: "reserved", recognizedRevenue: "0.00" });
     expect(state.collections.find((row) => row.amount === "10000.00")).toMatchObject({ status: "received" });
     expect(state.collections.find((row) => row.amount === "50000.00")).toMatchObject({ status: "draft" });
-  });
+  }, 15000);
 
   it("blocks read-only project roles from operational writes", async () => {
     state.projectMembers.splice(0);

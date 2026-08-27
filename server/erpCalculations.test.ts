@@ -110,6 +110,18 @@ describe("ERP financial rules", () => {
     expect(result.legacyCertificateCashOut).toBe(500);
     expect(result.voucherPaidByCertificate.get(7)).toBe(18630);
   });
+  it("maps a voucher through a purchase invoice linked by relatedDocumentId", () => {
+    const result = calculateCashOutFromPaymentVouchers({
+      certificates: [{ id: 9, paidAmount: 0 }],
+      accountingDocuments: [
+        { id: 41, documentType: "purchase_invoice", status: "posted", totalAmount: 18630, relatedDocumentType: "certificate", relatedDocumentId: 9 },
+        { id: 42, documentType: "payment_voucher", status: "posted", totalAmount: 18630, purchaseInvoiceId: 41 },
+      ],
+    });
+    expect(result.voucherPaidByCertificate.get(9)).toBe(18630);
+    expect(result.legacyCertificateCashOut).toBe(0);
+  });
+
   it("counts supplier voucher payments once and preserves the payable balance", () => {
     const result = calculateSupplierStatementTotals({
       vendorId: 7,
