@@ -162,6 +162,8 @@ describe("ERP sales and collections API flow", () => {
     const cashFlow = await caller.erp.reports.cashFlow({ projectId: 1 });
     expect(cashFlow.stages.find((row) => row.stageId === 2)).toMatchObject({ stageName: "الحفر", cashIn: 75000, cashOut: 1500, net: 73500, cumulativeGap: -73500, fundingRequired: 0, allocation: "stage-linked-sales-and-outflows" });
     expect(cashFlow.stages.find((row) => row.stageId === null)).toBeUndefined();
+    expect(cashFlow.cashOut).toBe(1500);
+    expect(cashFlow.stages.reduce((sum, row) => sum + row.cashOut, 0)).toBe(cashFlow.cashOut);
   });
 
   it("completes procurement from requisition to receipt, invoice, and partial payment", async () => {

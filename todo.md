@@ -36153,6 +36153,6 @@
 - [x] Implement a non-destructive audit trail for edits, approvals, reversals, and deletions with project/company isolation — existing write-side audit coverage retained; controls.audit now supports entity/action/actor/project/date filters and actor enrichment with active-company project scoping
 - [x] Verify mandatory document checks are enforced and visible on certificates and payment requests — approval blocks missing supporting attachments; certificate and supplier-payment cards show completeness status
 - [x] Finalize detailed RBAC and project-isolation tests for operational and management roles — added assigned-project read isolation and retained read-only write denial coverage
-- [ ] Reconcile project WIP, supplier payments, administrative allocations, and income/cash-flow reports using one source-of-truth map
+- [x] Reconcile project WIP, supplier payments, administrative allocations, and income/cash-flow reports using one source-of-truth map — cash-flow regression now asserts stage totals equal project cash-out and contractor settlement is not double-counted
 - [x] Run full local TypeScript, Vitest, and production build verification; 135 Vitest tests passed after mandatory-document coverage, TypeScript passed, and production build completed; no Railway deployment performed
 - [ ] Perform final browser verification of the local ERP navigation, forms, reports, and bilingual/RTL layout
