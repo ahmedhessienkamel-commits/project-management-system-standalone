@@ -36154,14 +36154,20 @@
 - [x] Verify mandatory document checks are enforced and visible on certificates and payment requests — approval blocks missing supporting attachments; certificate and supplier-payment cards show completeness status
 - [x] Finalize detailed RBAC and project-isolation tests for operational and management roles — added assigned-project read isolation and retained read-only write denial coverage
 - [ ] Reconcile project WIP, supplier payments, administrative allocations, and income/cash-flow reports using one source-of-truth map — WIP now falls back to approved stage certificates when no posted WIP lines exist and has a regression test; broader cross-report reconciliation remains
-- [x] Run full local TypeScript, Vitest, and production build verification; 136 Vitest tests passed after WIP fallback coverage, TypeScript passed, and production build completed; no Railway deployment performed
+- [x] Run full local TypeScript, Vitest, and production build verification; 138 Vitest tests passed after role-matrix coverage, TypeScript passed, and production build completed; no Railway deployment performed
 - [ ] Perform final browser verification of the local ERP navigation, forms, reports, and bilingual/RTL layout — Arabic desktop routes reviewed; mobile, interaction, and English verification remain
 
 ## Required gap-closure pass — 2026-08-28
 
-- [ ] Complete a role-permission matrix test for admin, general manager, project manager, finance, HR/employee, approver, and cross-project access restrictions
+- [ ] Complete a role-permission matrix test for admin, general manager, project manager, finance, HR/employee, approver, and cross-project access restrictions — route-level matrix now covers these roles; backend action coverage remains
 - [ ] Run browser interaction tests for core ERP forms and reports, including submit, edit, delete, validation errors, loading states, and empty states at desktop and mobile breakpoints
 - [ ] Audit and document write-side audit logging coverage for key entity edits, approvals, reversals, and deletions, then add regression tests for each action family
 - [ ] Validate Procurement and HR end to end beyond archive/preview UI, including creation, approval progression, final effects, and failure cases
 - [ ] Add broader reconciliation tests proving WIP, supplier payments, administrative allocations, and income/cash-flow derive from one consistent source of truth
 - [ ] Verify Arabic/English behavior explicitly, including RTL/LTR layout and core route labels after language switching
+
+## Railway invitation delivery investigation — 2026-08-28
+
+- [ ] Diagnose why user invitations from the Railway production copy are not arriving, without changing production data or deploying code
+- [ ] Verify the production invitation route, SMTP configuration, sender identity, invite URL, and delivery/error logs
+- [ ] Produce a safe fix plan and a controlled test checklist; deployment remains blocked until the user explicitly writes «انشر»

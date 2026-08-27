@@ -21,6 +21,26 @@ describe("قيود مسؤول المشتريات", () => {
   });
 });
 
+describe("مصفوفة أدوار ERP الأساسية", () => {
+  it("تسمح للأدوار الإدارية والتقريرية بالوصول إلى التقارير والموافقات", () => {
+    for (const role of ["admin", "general_manager", "project_manager", "finance", "hr", "employee", "approver"]) {
+      expect(canAccessRoute(role, "/reports")).toBe(true);
+      expect(canAccessRoute(role, "/approvals")).toBe(true);
+      expect(canAccessRoute(role, "/users")).toBe(true);
+    }
+  });
+
+  it("تحصر الأدوار التشغيلية في المواد وطلباتها ولا تمنحها مسارات المالية", () => {
+    for (const role of ["procurement_manager", "site_worker"]) {
+      expect(canAccessRoute(role, "/material-requests")).toBe(true);
+      expect(canAccessRoute(role, "/inventory?mode=receipt")).toBe(true);
+      expect(canAccessRoute(role, "/reports")).toBe(false);
+      expect(canAccessRoute(role, "/approvals")).toBe(false);
+      expect(canAccessRoute(role, "/users")).toBe(false);
+    }
+  });
+});
+
 describe("حذف المستندات المرجعية", () => {
   it("يقصر حذف ملفات الموردين على المالك", () => {
     expect(canDeleteOwnerManagedDocument("admin")).toBe(true);
