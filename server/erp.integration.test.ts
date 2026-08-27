@@ -296,6 +296,13 @@ describe("ERP sales and collections API flow", () => {
     expect(state.collections.find((row) => row.amount === "50000.00")).toMatchObject({ status: "draft" });
   }, 15000);
 
+  it("filters audit entries by project and enriches the actor name", async () => {
+    state.auditLogs.push({ id: 61, entityType: "expense", entityId: 1, action: "updated", actorId: 1, afterJson: JSON.stringify({ projectId: 1 }), createdAt: new Date("2026-08-20") });
+    state.auditLogs.push({ id: 62, entityType: "expense", entityId: 2, action: "updated", actorId: 13170001, afterJson: JSON.stringify({ projectId: 99 }), createdAt: new Date("2026-08-21") });
+    const rows = await appRouter.createCaller(context(1, "admin")).erp.controls.audit({ projectId: 1 });
+    expect(rows).toEqual([expect.objectContaining({ id: 61, actorName: "مدير الحسابات", projectId: 1 })]);
+  });
+
   it("blocks read-only project roles from operational writes", async () => {
     state.projectMembers.splice(0);
     state.projectMembers.push({ id: 2, projectId: 1, userId: 2, projectRole: "viewer", createdAt: new Date() });

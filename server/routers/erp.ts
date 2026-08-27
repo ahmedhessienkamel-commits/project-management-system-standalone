@@ -2843,10 +2843,31 @@ export const erpRouter = router({
       const policy = input.projectId && supportedEntity ? await findApprovalPolicy(db, input.projectId, supportedEntity) : null;
       return { approval: approvalRows[approvalRows.length - 1] || null, audits: auditRows, approvalPolicy: policy ? { entityType: policy.entityType, thresholdAmount: policy.thresholdAmount } : null };
     }),
-    audit: protectedProcedure.query(async ({ ctx }) => {
+    audit: protectedProcedure.input(z.object({ entityType: z.string().trim().max(64).optional(), action: z.string().trim().max(64).optional(), actorId: z.number().int().positive().optional(), projectId: z.number().int().positive().optional(), from: z.string().optional(), to: z.string().optional() }).optional()).query(async ({ ctx, input }) => {
       if (ctx.user.role !== "admin" && ctx.user.role !== "general_manager") throw new TRPCError({ code: "FORBIDDEN", message: "سجل التدقيق متاح للمدير العام والمالك للعرض فقط" });
       const db = requireDb(await getDb());
-      return db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt)).limit(200);
+      const [rows, userRows, companyId] = await Promise.all([
+        db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt)).limit(500),
+        db.select({ id: users.id, name: users.name, email: users.email }).from(users),
+        resolveActiveCompanyId(db, ctx),
+      ]);
+      const companyProjectIds = companyId ? new Set((await db.select({ id: projects.id }).from(projects).where(eq(projects.companyId, companyId))).map((project) => project.id)) : null;
+      const userMap = new Map(userRows.map((user) => [Number(user.id), user]));
+      const readProjectId = (entry: typeof rows[number]) => {
+        for (const json of [entry.afterJson, entry.beforeJson]) {
+          if (!json) continue;
+          try { const parsed = JSON.parse(json) as { projectId?: number }; if (parsed.projectId) return Number(parsed.projectId); } catch { /* legacy audit snapshots may not be JSON */ }
+        }
+        return null;
+      };
+      return rows.filter((entry) => {
+        const entryProjectId = readProjectId(entry);
+        const date = new Date(entry.createdAt).getTime();
+        return (!input?.entityType || entry.entityType === input.entityType) && (!input?.action || entry.action === input.action) && (!input?.actorId || entry.actorId === input.actorId) && (!input?.projectId || entryProjectId === input.projectId) && (!input?.from || date >= new Date(input.from).getTime()) && (!input?.to || date <= new Date(`${input.to}T23:59:59.999Z`).getTime()) && (!companyProjectIds || !entryProjectId || companyProjectIds.has(entryProjectId));
+      }).map((entry) => {
+        const actor = userMap.get(Number(entry.actorId));
+        return { ...entry, actorName: actor?.name || actor?.email || `المستخدم #${entry.actorId}`, projectId: readProjectId(entry) };
+      });
     }),
     executiveSnapshot: protectedProcedure.query(async ({ ctx }) => {
       if (ctx.user.role !== "admin" && ctx.user.role !== "general_manager") throw new TRPCError({ code: "FORBIDDEN", message: "المؤشرات التنفيذية متاحة للمدير العام والمالك فقط" });
