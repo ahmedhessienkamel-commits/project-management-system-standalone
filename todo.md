@@ -36171,3 +36171,13 @@
 - [ ] Diagnose why user invitations from the Railway production copy are not arriving, without changing production data or deploying code
 - [ ] Verify the production invitation route, SMTP configuration, sender identity, invite URL, and delivery/error logs
 - [ ] Produce a safe fix plan and a controlled test checklist; deployment remains blocked until the user explicitly writes «انشر»
+
+## Authorized Railway deployment — 2026-08-28
+
+- [ ] Deploy the authorized Railway erp-app restart so the saved Gmail SMTP variables reach runtime; preserve the currently active deployment as rollback target
+- [ ] Verify deployment success, `/health`, runtime SMTP behavior, and one Yahoo invitation; rollback if service health or core login fails
+
+## Hosting alternatives review — 2026-08-28
+
+- [x] Compare simpler hosting alternatives for the existing Express/tRPC/MySQL ERP, including email delivery, backups, domains, cost, and operational complexity — documented Render, DigitalOcean App Platform, Railway, and VPS trade-offs with official references
+- [ ] Recommend one safe path and document a no-downtime migration plan; do not move or alter Railway production without explicit approval
