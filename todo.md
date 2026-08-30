@@ -36174,10 +36174,29 @@
 
 ## Authorized Railway deployment — 2026-08-28
 
-- [ ] Deploy the authorized Railway erp-app restart so the saved Gmail SMTP variables reach runtime; preserve the currently active deployment as rollback target
+- [x] Deploy the authorized Railway erp-app restart so the saved Gmail SMTP variables reach runtime; preserve the currently active deployment as rollback target — deployment succeeded and remained healthy
 - [ ] Verify deployment success, `/health`, runtime SMTP behavior, and one Yahoo invitation; rollback if service health or core login fails
 
 ## Hosting alternatives review — 2026-08-28
 
 - [x] Compare simpler hosting alternatives for the existing Express/tRPC/MySQL ERP, including email delivery, backups, domains, cost, and operational complexity — documented Render, DigitalOcean App Platform, Railway, and VPS trade-offs with official references
-- [ ] Recommend one safe path and document a no-downtime migration plan; do not move or alter Railway production without explicit approval
+- [x] Recommend one safe path and document a no-downtime migration plan; do not move or alter Railway production without explicit approval — recommend a separate Render Starter test environment with Railway retained as rollback/backup until full validation
+
+## Payroll preview and approval flow — 2026-08-30
+
+- [ ] Add a full payroll preview with company logo/header, payroll period, employees, earnings, deductions, net pay, and approval metadata
+- [ ] Restrict the current payroll approval action to the owner only, while preserving a visible pending general-manager signature state
+- [ ] Show approved payroll preview to Mustafa with approval details and a PDF download action
+- [ ] Add backend authorization and regression tests for owner-only approval, Mustafa read/preview access, and blocked unauthorized approval
+- [ ] Verify the local payroll flow and prepare a Railway deployment; do not publish to Railway until the user explicitly writes «انشر»
+
+## Payroll preview and approval — local-first round
+
+- [x] Add full payroll-run preview with company branding, payroll period, employee rows, deductions, totals, and approval workflow signature block
+- [x] Show payroll-run preview and PDF/print action to owner, general manager, and Mustafa without granting Mustafa/general-manager decision rights
+- [x] Enforce payroll_run approval in backend for owner/admin at owner stage only; keep general-manager signature as a pending workflow marker
+- [x] Add payrollRuns.getById backend endpoint returning company-scoped run metadata, rows, totals, and settlements
+- [x] Run TypeScript check, 141 Vitest tests, and local production build successfully
+- [ ] Complete authenticated mobile/responsive and bilingual wording audit for payroll preview and approvals
+- [ ] Do not publish this local payroll round to Railway until the user explicitly says «انشر»
+

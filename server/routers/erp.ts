@@ -203,6 +203,10 @@ function canManagePartners(user: { role: string; id: number }) {
   return user.role === "admin" || Number(user.id) === 13170001;
 }
 
+export function canApprovePayrollRun(user: { role: string }, request: { entityType: string; approvalStage?: string | null }) {
+  return request.entityType !== "payroll_run" || (user.role === "admin" && request.approvalStage === "owner");
+}
+
 function canReviewApproval(user: { role: string; id: number }, request: { entityType: string; approvalStage?: string | null }) {
   if (request.entityType === "certificate") return canReviewCertificateApproval(request.approvalStage, user);
   if (user.role === "admin") return request.entityType !== "payroll" && request.entityType !== "payroll_run" || request.approvalStage === "owner";
@@ -2020,6 +2024,7 @@ export const erpRouter = router({
         const request = (await db.select().from(approvalRequests).where(eq(approvalRequests.id, input.id)).limit(1))[0];
         if (!request) throw new TRPCError({ code: "NOT_FOUND", message: "طلب الموافقة غير موجود" });
         if (!canReviewApproval(ctx.user, request)) throw new TRPCError({ code: "FORBIDDEN", message: "لا يملك هذا الدور صلاحية اعتماد هذا النوع من المستندات" });
+        if (!canApprovePayrollRun(ctx.user, request)) throw new TRPCError({ code: "FORBIDDEN", message: "اعتماد المسير متاح للمالك فقط حاليًا" });
         if (input.decision === "approved" && ["certificate", "purchase_payment"].includes(request.entityType)) {
           const source = request.entityType === "certificate"
             ? (await db.select({ projectId: certificates.projectId }).from(certificates).where(eq(certificates.id, request.entityId)).limit(1))[0]
@@ -2176,6 +2181,17 @@ export const erpRouter = router({
           const paid = runRows.reduce((sum, row) => sum + Number(row.paidAmount || 0), 0);
           return { ...run, totalAmount: total, paidAmount: paid, outstandingAmount: Math.max(total - paid, 0), rows: runRows, settlementCount: settlements.filter((settlement) => settlement.payrollRunId === run.id).length };
         }).sort((a, b) => Number(b.id) - Number(a.id));
+      }),
+      getById: protectedProcedure.input(z.object({ id: z.number().int().positive() })).query(async ({ ctx, input }) => {
+        const db = requireDb(await getDb());
+        const companyId = await resolveActiveCompanyId(db, ctx);
+        const run = (await db.select().from(payrollRuns).where(eq(payrollRuns.id, input.id)).limit(1))[0];
+        if (!run || !companyId || run.companyId !== companyId) throw new TRPCError({ code: "NOT_FOUND", message: "مسير الرواتب غير موجود في الشركة الحالية" });
+        const rows = await db.select().from(payroll).where(eq(payroll.payrollRunId, run.id));
+        const settlements = await db.select().from(payrollSettlements).where(eq(payrollSettlements.payrollRunId, run.id));
+        const totalAmount = rows.reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+        const paidAmount = rows.reduce((sum, row) => sum + Number(row.paidAmount || 0), 0);
+        return { ...run, totalAmount, paidAmount, outstandingAmount: Math.max(totalAmount - paidAmount, 0), rows, settlements };
       }),
       createDraft: protectedProcedure.input(z.object({ month: z.number().int().min(1).max(12), year: z.number().int().min(2000).max(2100), rows: z.array(z.object({ projectId: z.number().int().positive().optional(), stageId: z.number().int().positive().optional(), employeeId: z.number().int().positive().optional(), employeeName: z.string().trim().min(2), employeeCode: z.string().trim().max(64).optional(), classification: z.enum(["project", "administrative"]), allocationRatio: z.number().min(0).max(100).default(100), amount: z.number().positive(), absenceDays: z.number().int().nonnegative().default(0), deductionAmount: z.number().nonnegative().default(0), advanceAction: z.enum(["apply", "defer"]).default("defer"), advanceDeductionAmount: z.number().nonnegative().default(0) })).min(1) })).mutation(async ({ ctx, input }) => {
         const db = requireDb(await getDb());
