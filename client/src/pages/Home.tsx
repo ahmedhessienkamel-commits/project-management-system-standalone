@@ -106,10 +106,10 @@ export default function Home() {
             <MetricCard icon={FolderKanban} label="المشاريع النشطة" value={String(summaries.filter((item) => isProjectActive(item.project)).length)} hint={`${summaries.length} إجمالي المشاريع`} tone="blue" onClick={() => setLocation("/projects")} />
             <MetricCard icon={Landmark} label="الميزانية المخططة" value={`${money.format(totalBudget)} ر.س`} hint="من العقد والمراحل" tone="gold" onClick={() => setLocation("/reports")} />
             <MetricCard icon={WalletCards} label="التكلفة الفعلية" value={`${money.format(totalActual)} ر.س`} hint={`${money.format(totalOutstanding)} ر.س مستحق`} tone="rose" onClick={() => setLocation("/finance")} />
-            <MetricCard icon={ReceiptText} label="المصروفات المستحقة" value={`${money.format(totalOutstanding + totalPayrollOutstanding)} ر.س`} hint="تكاليف ورواتب غير مدفوعة" tone="amber" onClick={() => setLocation("/finance")} />
+            <MetricCard icon={ReceiptText} label="المصروفات المستحقة" value={`${money.format(totalOutstanding + totalPayrollOutstanding + Number(companySummary?.administrativePayrollOutstanding ?? 0))} ر.س`} hint="تكاليف ورواتب غير مدفوعة" tone="amber" onClick={() => setLocation("/finance")} />
             <MetricCard icon={CircleDollarSign} label="الإيراد المعترف به" value={`${money.format(totalRevenue)} ر.س`} hint="من مبيعات الوحدات" tone="green" onClick={() => setLocation("/sales")} />
             <MetricCard icon={HandCoins} label="التحصيلات" value={`${money.format(totalCollections)} ر.س`} hint="الدفعات المستلمة" tone="teal" onClick={() => setLocation("/sales")} />
-            <MetricCard icon={Clock3} label="رواتب مستحقة" value={`${money.format(totalPayrollOutstanding)} ر.س`} hint="غير مدفوعة حتى الآن" tone="violet" onClick={() => setLocation("/finance")} />
+            <MetricCard icon={Clock3} label="رواتب مستحقة" value={`${money.format(totalPayrollOutstanding + Number(companySummary?.administrativePayrollOutstanding ?? 0))} ر.س`} hint="رواتب المشاريع والإدارة غير مدفوعة" tone="violet" onClick={() => setLocation("/finance")} />
             <MetricCard icon={WalletCards} label="فجوة السيولة" value={`${money.format(totalCashGap)} ر.س`} hint="تمويل مطلوب" tone="rose" onClick={() => setLocation("/reports")} />
             <MetricCard icon={FileCheck2} label="موافقات معلقة" value={String(totalPendingApprovals)} hint={`${criticalCount} حالة حرجة`} tone="slate" onClick={() => setLocation("/approvals")} />
           </section>
