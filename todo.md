@@ -36200,15 +36200,3 @@
 - [ ] Complete authenticated mobile/responsive and bilingual wording audit for payroll preview and approvals
 - [ ] Do not publish this local payroll round to Railway until the user explicitly says «انشر»
 
-
-## Asset payment vouchers and bank statement ordering — active round
-
-- [x] Add «أصل / Asset» as a payment-voucher classification and show the selected asset card
-- [x] Hide the debit cost-item field for asset vouchers and force the debit line to the selected asset account
-- [x] Make supplier and purchase-invoice linkage optional for asset vouchers
-- [x] Link the posted voucher back to the selected fixed-asset card automatically and expose the source document
-- [x] Add backend project-scope validation and regression tests for asset voucher posting; fixedAssets has no companyId column in the current schema
-- [x] Sort bank account statements ascending by transaction date with stable same-day ordering
-- [x] Run TypeScript, 144 Vitest tests, production build, and unauthenticated responsive route review locally; authenticated visual review remains pending login
-- [ ] Save checkpoint and publish the verified release to Railway, as explicitly authorized by the user
-

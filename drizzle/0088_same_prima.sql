@@ -1,1 +1,0 @@
-ALTER TABLE `accountingDocuments` MODIFY COLUMN `voucherCategory` enum('contractor','supplier','materials','payroll','operating','administrative','petty_cash','asset');
