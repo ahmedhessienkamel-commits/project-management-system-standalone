@@ -12,6 +12,8 @@ describe("certificate approval workflow", () => {
     expect(canReviewCertificateApproval("owner", { id: 3, role: "general_manager" })).toBe(false);
     expect(canReviewCertificateApproval("general_manager", { id: 3, role: "general_manager" })).toBe(true);
     expect(canReviewCertificateApproval("general_manager", { id: MOSTAFA_USER_ID, role: "user" })).toBe(false);
+    expect(canReviewCertificateApproval("mostafa", { id: 99, role: "admin" })).toBe(true);
+    expect(canReviewCertificateApproval("project_manager", { id: 3, role: "general_manager" })).toBe(true);
     expect(canReviewCertificateApproval("project_manager", { id: 2, role: "project_manager" })).toBe(false);
   });
 
