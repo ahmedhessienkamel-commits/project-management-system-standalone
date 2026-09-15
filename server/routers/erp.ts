@@ -84,6 +84,10 @@ async function resolveActiveCompanyId(db: ErpDb, ctx: { user: { id: number; role
   return memberships.find((membership) => membership.companyId === requestedId)?.companyId || memberships[0].companyId;
 }
 
+function projectVisibleInActiveCompany<T extends { companyId?: number | null }>(row: T, activeCompanyId: number | null) {
+  return !activeCompanyId || row.companyId == null || row.companyId === activeCompanyId;
+}
+
 async function ensureProjectWipAccount(db: ErpDb, project: { id: number; code: string; name: string }, actorId: number) {
   const parent = (await db.select().from(accounts).where(and(eq(accounts.code, "1400"), eq(accounts.accountType, "asset"), eq(accounts.isActive, 1))).limit(1))[0];
   if (!parent) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "حساب مشاريع تحت التنفيذ 1400 غير موجود في الشجرة المحاسبية" });
@@ -227,7 +231,7 @@ async function assertProjectAccess(db: NonNullable<Awaited<ReturnType<typeof get
   const activeCompanyId = await resolveActiveCompanyId(db, ctx as any);
   const project = (await db.select({ companyId: projects.companyId }).from(projects).where(eq(projects.id, projectId)).limit(1))[0];
   if (!project) throw new TRPCError({ code: "NOT_FOUND", message: "المشروع غير موجود" });
-  if (activeCompanyId && project.companyId !== activeCompanyId) throw new TRPCError({ code: "FORBIDDEN", message: "المشروع لا يتبع الشركة النشطة" });
+  if (activeCompanyId && project.companyId != null && project.companyId != null && project.companyId !== activeCompanyId) throw new TRPCError({ code: "FORBIDDEN", message: "المشروع لا يتبع الشركة النشطة" });
   const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
   if (!canAccessProject(ctx.user.role, allowed, projectId)) throw new TRPCError({ code: "FORBIDDEN", message: "ليس لديك صلاحية على هذا المشروع" });
 }
@@ -797,8 +801,8 @@ export const erpRouter = router({
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
       const companyId = await resolveActiveCompanyId(db, ctx);
       const rows = await db.select().from(projects).orderBy(projects.createdAt);
-      const companyRows = companyId ? rows.filter((row) => row.companyId === companyId) : [];
-      return allowed ? companyRows.filter((row) => allowed.has(row.id)) : companyRows;
+      const visibleRows = rows.filter((row) => !companyId || row.companyId == null || row.companyId === companyId);
+      return allowed ? visibleRows.filter((row) => allowed.has(row.id)) : visibleRows;
     }),
     auditByName: adminProcedure.input(z.object({ name: z.string().trim().min(2).max(255) })).query(async ({ input }) => {
       const db = requireDb(await getDb());
@@ -1087,12 +1091,12 @@ export const erpRouter = router({
         db.select().from(accountingDocumentLines),
       ]);
       const postedAccountingDocumentIds = new Set(accountingDocumentRows.filter((document) => document.status === "posted").map((document) => document.id));
-      const projectRows = allProjectRows.filter((row) => (!activeCompanyId || row.companyId === activeCompanyId) && (!allowed || allowed.has(row.id)));
+      const projectRows = allProjectRows.filter((row) => projectVisibleInActiveCompany(row, activeCompanyId) && (!allowed || allowed.has(row.id)));
       const approvedExpenseStatuses = new Set(["approved", "posted"]);
-      const sharedAdministrativeExpenseRows = expenseRows.filter((expense) => expense.projectId === null && (!activeCompanyId || expense.companyId === activeCompanyId) && (expense.classification === "administrative" || expense.expenseType === "administrative") && approvedExpenseStatuses.has(expense.status));
-      const sharedPettyCashExpenseRows = expenseRows.filter((expense) => expense.projectId === null && (!activeCompanyId || expense.companyId === activeCompanyId) && expense.classification === "petty_cash" && approvedExpenseStatuses.has(expense.status));
-      const sharedAdministrativeVoucherRows = accountingDocumentRows.filter((document) => document.documentType === "payment_voucher" && document.status === "posted" && document.projectId === null && (!activeCompanyId || document.companyId === activeCompanyId) && document.voucherCategory === "administrative");
-      const sharedPettyCashVoucherRows = accountingDocumentRows.filter((document) => document.documentType === "payment_voucher" && document.status === "posted" && document.projectId === null && (!activeCompanyId || document.companyId === activeCompanyId) && document.voucherCategory === "petty_cash");
+      const sharedAdministrativeExpenseRows = expenseRows.filter((expense) => expense.projectId === null && (!activeCompanyId || expense.companyId == null || expense.companyId === activeCompanyId) && (expense.classification === "administrative" || expense.expenseType === "administrative") && approvedExpenseStatuses.has(expense.status));
+      const sharedPettyCashExpenseRows = expenseRows.filter((expense) => expense.projectId === null && (!activeCompanyId || expense.companyId == null || expense.companyId === activeCompanyId) && expense.classification === "petty_cash" && approvedExpenseStatuses.has(expense.status));
+      const sharedAdministrativeVoucherRows = accountingDocumentRows.filter((document) => document.documentType === "payment_voucher" && document.status === "posted" && document.projectId === null && (!activeCompanyId || document.companyId == null || document.companyId === activeCompanyId) && document.voucherCategory === "administrative");
+      const sharedPettyCashVoucherRows = accountingDocumentRows.filter((document) => document.documentType === "payment_voucher" && document.status === "posted" && document.projectId === null && (!activeCompanyId || document.companyId == null || document.companyId === activeCompanyId) && document.voucherCategory === "petty_cash");
       const sharedAdministrativeExpenses = sharedAdministrativeExpenseRows.reduce((sum, expense) => sum + Number(expense.totalAmount || 0), 0) + sharedAdministrativeVoucherRows.reduce((sum, document) => sum + Number(document.totalAmount || 0), 0);
       const sharedAdministrativePaid = sharedAdministrativeExpenseRows.reduce((sum, expense) => sum + Number(expense.paidAmount || 0), 0) + sharedAdministrativeVoucherRows.reduce((sum, document) => sum + Number(document.totalAmount || 0), 0);
       const sharedPettyCashExpenses = sharedPettyCashExpenseRows.reduce((sum, expense) => sum + Number(expense.totalAmount || 0), 0) + sharedPettyCashVoucherRows.reduce((sum, document) => sum + Number(document.totalAmount || 0), 0);
@@ -1243,7 +1247,7 @@ export const erpRouter = router({
       const project = (await db.select({ id: projects.id, name: projects.name, companyId: projects.companyId }).from(projects).where(eq(projects.id, input.projectId)).limit(1))[0];
       if (!project) throw new TRPCError({ code: "NOT_FOUND", message: "المشروع غير موجود" });
       const activeCompanyId = await resolveActiveCompanyId(db, ctx);
-      if (activeCompanyId && project.companyId !== activeCompanyId) throw new TRPCError({ code: "FORBIDDEN", message: "المشروع لا يتبع الشركة النشطة" });
+      if (activeCompanyId && project.companyId != null && project.companyId !== activeCompanyId) throw new TRPCError({ code: "FORBIDDEN", message: "المشروع لا يتبع الشركة النشطة" });
       const managers = await db.select({ id: users.id, name: users.name, email: users.email }).from(projectMembers).innerJoin(users, eq(projectMembers.userId, users.id)).where(and(eq(projectMembers.projectId, input.projectId), eq(projectMembers.projectRole, "manager")));
       const recipients = managers.filter((manager) => manager.id !== ctx.user.id);
       if (!recipients.length) throw new TRPCError({ code: "BAD_REQUEST", message: "لا يوجد مدير مشروع مسند إلى هذا المشروع" });
@@ -1264,7 +1268,7 @@ export const erpRouter = router({
       const [projectRows, expenseRows, payrollRows, administrativePayrollRows, allocationRows, salesRows, certificateRows, inventoryRows, voucherRows] = await Promise.all([
         db.select().from(projects), db.select().from(expenses), db.select().from(payroll), db.select().from(administrativePayroll), db.select().from(payrollAllocations), db.select().from(sales), db.select().from(certificates), db.select().from(inventoryMovements), db.select().from(accountingDocuments).where(eq(accountingDocuments.documentType, "payment_voucher")),
       ]);
-      const visibleProjects = projectRows.filter((project) => (!activeCompanyId || project.companyId === activeCompanyId) && (!allowed || allowed.has(project.id)));
+      const visibleProjects = projectRows.filter((project) => projectVisibleInActiveCompany(project, activeCompanyId) && (!allowed || allowed.has(project.id)));
       const activeProjects = visibleProjects.filter((project) => project.status !== "archived" && Number(project.contractValue || 0) > 0);
       const approved = (status: string) => ["approved", "posted", "paid"].includes(status);
       const visibleProjectIds = new Set(visibleProjects.map((project) => project.id));
@@ -1275,9 +1279,9 @@ export const erpRouter = router({
       const subcontractorCosts = certificateRows.filter((row) => visibleProjectIds.has(row.projectId) && Boolean(row.vendorId || row.contractId) && row.status !== "rejected").reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
       const inventoryCosts = inventoryRows.filter((row) => row.projectId !== null && visibleProjectIds.has(row.projectId) && row.status === "posted" && ["issue", "adjustment_out"].includes(row.movementType)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
       const projectRevenue = salesRows.filter((row) => visibleProjectIds.has(row.projectId) && row.status === "confirmed").reduce((sum, row) => sum + Number(row.recognizedRevenue || 0), 0);
-              const companyExpenses = expenseRows.filter((row) => row.projectId === null && (!activeCompanyId || row.companyId === activeCompanyId) && (["administrative", "general_cash", "petty_cash"].includes(row.classification) || row.expenseType === "administrative") && approved(row.status));
-        const administrativeExpenses = companyExpenses.filter((row) => row.classification === "administrative" || row.expenseType === "administrative").reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) + postedVouchers.filter((row) => row.projectId === null && (!activeCompanyId || row.companyId === activeCompanyId) && row.voucherCategory === "administrative").reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
-      const pettyCashExpenses = companyExpenses.filter((row) => ["general_cash", "petty_cash"].includes(row.classification)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) + postedVouchers.filter((row) => row.projectId === null && (!activeCompanyId || row.companyId === activeCompanyId) && row.voucherCategory === "petty_cash").reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+              const companyExpenses = expenseRows.filter((row) => row.projectId === null && (!activeCompanyId || row.companyId == null || row.companyId === activeCompanyId) && (["administrative", "general_cash", "petty_cash"].includes(row.classification) || row.expenseType === "administrative") && approved(row.status));
+        const administrativeExpenses = companyExpenses.filter((row) => row.classification === "administrative" || row.expenseType === "administrative").reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) + postedVouchers.filter((row) => row.projectId === null && (!activeCompanyId || row.companyId == null || row.companyId === activeCompanyId) && row.voucherCategory === "administrative").reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+      const pettyCashExpenses = companyExpenses.filter((row) => ["general_cash", "petty_cash"].includes(row.classification)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) + postedVouchers.filter((row) => row.projectId === null && (!activeCompanyId || row.companyId == null || row.companyId === activeCompanyId) && row.voucherCategory === "petty_cash").reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
       const legacyAdministrativePayroll = payrollRows.filter((row) => row.projectId === null && row.classification === "administrative" && approved(row.status)).reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
       const administrativePayrollTotal = administrativePayrollRows.filter((row: typeof administrativePayrollRows[number]) => ["approved", "paid"].includes(row.status)).reduce((sum: number, row: typeof administrativePayrollRows[number]) => sum + Number(row.totalAmount || 0), 0) + legacyAdministrativePayroll + postedVouchers.filter((row) => row.projectId === null && row.voucherCategory === "payroll").reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
       const sharedTotal = administrativeExpenses + pettyCashExpenses + administrativePayrollTotal;
@@ -3326,10 +3330,10 @@ export const erpRouter = router({
       const vendorName = (ids: Array<number | null>) => Array.from(new Set(ids.filter((id): id is number => Boolean(id)).map((id) => vendorRows.find((vendor) => vendor.id === id)?.name).filter((name): name is string => Boolean(name)))).join("، ");
       const projectExpenseRows = expenseRows.filter((row) => row.projectId === input.projectId);
       const activeExpenses = projectExpenseRows.filter((row) => row.status !== "rejected" && row.status !== "draft");
-      const approvedShared = (row: typeof expenseRows[number]) => row.projectId === null && (!activeCompanyId || row.companyId === activeCompanyId) && ["approved", "posted"].includes(row.status);
+      const approvedShared = (row: typeof expenseRows[number]) => row.projectId === null && (!activeCompanyId || row.companyId == null || row.companyId === activeCompanyId) && ["approved", "posted"].includes(row.status);
       const sharedAdministrativeExpenseRows = expenseRows.filter((row) => approvedShared(row) && (row.classification === "administrative" || row.expenseType === "administrative"));
       const sharedPettyCashExpenseRows = expenseRows.filter((row) => approvedShared(row) && row.classification === "petty_cash");
-      const sharedVoucherRows = accountingDocumentRows.filter((row) => row.documentType === "payment_voucher" && row.status === "posted" && row.projectId === null && (!activeCompanyId || row.companyId === activeCompanyId));
+      const sharedVoucherRows = accountingDocumentRows.filter((row) => row.documentType === "payment_voucher" && row.status === "posted" && row.projectId === null && (!activeCompanyId || row.companyId == null || row.companyId === activeCompanyId));
       const sharedAdministrativeTotal = sharedAdministrativeExpenseRows.reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) + sharedVoucherRows.filter((row) => row.voucherCategory === "administrative").reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
       const sharedAdministrativePaid = sharedAdministrativeExpenseRows.reduce((sum, row) => sum + Number(row.paidAmount || 0), 0) + sharedVoucherRows.filter((row) => row.voucherCategory === "administrative").reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
       const sharedPettyCashTotal = sharedPettyCashExpenseRows.reduce((sum, row) => sum + Number(row.totalAmount || 0), 0) + sharedVoucherRows.filter((row) => row.voucherCategory === "petty_cash").reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
@@ -3472,7 +3476,7 @@ export const erpRouter = router({
       const [projectRows, stageRows, vendorRows, employeeRows, expenseRows, certificateRows, payrollRows, salesRows, costItemRows] = await Promise.all([db.select().from(projects), db.select().from(stages), db.select().from(vendors), db.select().from(employees), db.select().from(expenses), db.select().from(certificates), db.select().from(payroll), db.select().from(sales), db.select().from(costItems)]);
       const activeCompanyId = await resolveActiveCompanyId(db, ctx);
       const allowed = await getAllowedProjectIds(db, ctx.user.id, ctx.user.role);
-      const visibleProjects = projectRows.filter((row) => (!activeCompanyId || row.companyId === activeCompanyId) && (!allowed || allowed.has(row.id)));
+      const visibleProjects = projectRows.filter((row) => projectVisibleInActiveCompany(row, activeCompanyId) && (!allowed || allowed.has(row.id)));
       const visibleProjectIds = new Set(visibleProjects.map((row) => row.id));
       const issues: Array<{ id: string; entityType: string; entityId: number; title: string; detail: string; severity: "critical" | "warning" | "info"; action: string }> = [];
       const visible = (projectId: number | null) => projectId === null || visibleProjectIds.has(projectId);

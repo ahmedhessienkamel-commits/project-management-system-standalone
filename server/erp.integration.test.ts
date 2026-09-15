@@ -111,6 +111,20 @@ describe("ERP sales and collections API flow", () => {
     state.costItems.push({ id: 12, code: "ADM-01", name: "مصروفات إدارية عامة", category: "administrative", isActive: 1 });
   });
 
+  it("keeps legacy projects visible even when their company is not assigned", async () => {
+    state.projects.splice(0, state.projects.length, { id: 11, code: "NMR-001", name: "نمار", companyId: null, classification: "operational", status: "active", location: "الرياض", wipAccountId: 1002, createdAt: new Date(), updatedAt: new Date() });
+    state.companyMembers = [{ id: 1, companyId: 1, userId: 1, role: "owner", status: "active", createdAt: new Date(), updatedAt: new Date() }];
+    state.accounts.push({ id: 1002, code: "1400-NMR-001", name: "مشاريع تحت التنفيذ — نمار", accountType: "asset", isActive: 1, isPostable: 1 });
+    const caller = appRouter.createCaller({
+      user: { id: 1, openId: "integration-user-1", email: "owner@example.com", name: "Integration User", loginMethod: "password", role: "admin", createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() },
+      req: { protocol: "https", headers: {}, cookies: { active_company_id: "1" } },
+      res: {}
+    } as any);
+
+    const list = await caller.erp.projects.list();
+    expect(list).toEqual(expect.arrayContaining([expect.objectContaining({ id: 11, name: "نمار" })]));
+  });
+
   it("creates a confirmed unit sale, received collection, and dashboard summary from the same state", async () => {
     const caller = appRouter.createCaller(context());
     const memberships = await caller.erp.members.mine();
