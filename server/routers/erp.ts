@@ -2117,6 +2117,7 @@ export const erpRouter = router({
             const nextStage = nextCertificateApproval(request.stageOrder)!;
             const certificate = (await db.select().from(certificates).where(eq(certificates.id, request.entityId)).limit(1))[0];
             await db.insert(approvalRequests).values({ projectId: request.projectId, entityType: "certificate", entityId: request.entityId, requestedBy: certificate?.createdBy || ctx.user.id, status: "pending", approvalStage: nextStage.approvalStage, stageOrder: nextStage.stageOrder });
+            await notifyApprovalUsers(db, { type: "certificate_general_manager_pending", title: "مستخلص بانتظار توقيع المدير العام", message: "تم اعتماد المستخلص من رئيس الحسابات، وهو الآن بانتظار اعتماد وتوقيع المدير العام.", roles: ["general_manager"], userIds: [] });
           } else {
             await db.update(certificates).set({ status: "approved" }).where(eq(certificates.id, request.entityId));
           }
@@ -2599,13 +2600,13 @@ export const erpRouter = router({
         const approvals = approvalRows.filter((approval) => certificateIds.includes(approval.entityId));
         const preparedBy = userMap.get(Number(row.createdBy));
         const stage = (name: string) => approvals.filter((approval) => approval.entityId === row.id && approval.approvalStage === name && (approval.status !== "rejected" || approval.reviewedBy)).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
-        const projectManager = stage("project_manager");
+        const owner = stage("owner");
         const generalManager = stage("general_manager");
-        const signer = (approval: typeof projectManager) => approval ? { status: approval.status, name: approval.reviewedBy ? userMap.get(Number(approval.reviewedBy))?.name || `مستخدم #${approval.reviewedBy}` : null, userId: approval.reviewedBy ?? null, reviewedAt: approval.reviewedAt, approvalId: approval.id } : null;
+        const signer = (approval: typeof owner) => approval ? { status: approval.status, name: approval.reviewedBy ? userMap.get(Number(approval.reviewedBy))?.name || `مستخدم #${approval.reviewedBy}` : null, userId: approval.reviewedBy ?? null, reviewedAt: approval.reviewedAt, approvalId: approval.id } : null;
         const documentCompleteness = calculateLinkedAttachmentCompleteness({ attachments: attachmentRows, entityType: "certificate", entityId: row.id });
         return { ...row, documentCompleteness, signatureWorkflow: {
           preparedBy: { userId: row.createdBy, name: preparedBy?.name || `مستخدم #${row.createdBy}`, preparedAt: row.createdAt },
-          projectManager: signer(projectManager),
+          owner: signer(owner),
           generalManager: signer(generalManager),
         } };
       });
@@ -2633,7 +2634,7 @@ export const erpRouter = router({
       const initialApproval = getCertificateInitialApproval(Number(ctx.user.id));
       await db.insert(approvalRequests).values({ projectId: input.projectId, entityType: "certificate", entityId: id, requestedBy: ctx.user.id, status: "pending", approvalStage: initialApproval.approvalStage, stageOrder: initialApproval.stageOrder });
       await db.insert(auditLogs).values({ entityType: "certificate", entityId: id, action: `created_pending_${initialApproval.approvalStage}`, actorId: ctx.user.id, afterJson: JSON.stringify({ ...input, ...totals }) });
-      await notifyApprovalUsers(db, initialApproval.approvalStage === "mostafa" ? { type: "certificate_mostafa_pending", title: "مستخلص جديد يحتاج اعتماد مصطفى", message: `المستخلص ${input.certificateNumber} ينتظر اعتماد مصطفى كأول مرحلة.`, roles: [], userIds: [13170001] } : { type: "certificate_owner_pending", title: "مستخلص جديد يحتاج اعتماد المالك", message: `سجّل مصطفى المستخلص ${input.certificateNumber} وهو بانتظار اعتماد المالك.`, roles: ["admin"], userIds: [] });
+      await notifyApprovalUsers(db, { type: "certificate_owner_pending", title: "مستخلص جديد يحتاج اعتماد رئيس الحسابات", message: "تم إرسال مستخلص جديد بانتظار اعتماد رئيس الحسابات.", roles: ["admin"], userIds: [] });
       return { id, totalAmount: totals.totalAmount, status: "pending" as const };
     }),
     update: protectedProcedure.input(z.object({ id: z.number().int().positive(), projectId: z.number().int().positive(), contractId: z.number().int().positive().optional(), stageId: z.number().int().positive().optional(), vendorId: z.number().int().positive().optional(), certificateNumber: z.string().trim().min(1), description: z.string().max(2000).optional(), technicalSpecifications: z.string().max(10000).optional(), certificateItems: z.array(z.object({ contractItemIndex: z.number().int().nonnegative(), suppliedQty: z.number().nonnegative().default(0), installedQty: z.number().nonnegative().default(0), approvedQty: z.number().nonnegative().default(0), unitPrice: z.number().nonnegative().optional() })).default([]), preTaxAmount: z.number().nonnegative(), taxRate: z.number().min(0).max(100).default(15), paidAmount: z.number().nonnegative().default(0), certificateDate: z.string().optional() })).mutation(async ({ ctx, input }) => {
