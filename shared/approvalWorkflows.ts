@@ -1,5 +1,3 @@
-import { z } from "zod";
-
 export const MOSTAFA_USER_ID = 13170001;
 
 export type CertificateApprovalStage = "owner" | "general_manager";
