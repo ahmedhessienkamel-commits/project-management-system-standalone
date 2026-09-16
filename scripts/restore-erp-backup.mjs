@@ -1,7 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
 import mysql from "mysql2/promise";
-import * as crypto from "crypto";
 import "dotenv/config";
 
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -25,58 +24,102 @@ function readBackupFile(filePath) {
   return JSON.parse(data);
 }
 
+// ✅ حذف جميع البيانات القديمة
+async function clearAllData(connection) {
+  console.log("\n🗑️ جاري حذف البيانات القديمة...\n");
+
+  const tablesToClear = [
+    "expenses",
+    "collections",
+    "sales",
+    "units",
+    "custodyMovements",
+    "custody",
+    "serviceContractEntries",
+    "certificates",
+    "contractorContracts",
+    "payrollAllocations",
+    "administrativePayroll",
+    "payrollSettlements",
+    "payroll",
+    "payrollRuns",
+    "employeeWorkStarts",
+    "employees",
+    "attendance",
+    "advanceRepayments",
+    "advanceRequests",
+    "leaveRequests",
+    "dailyTasks",
+    "complianceDocuments",
+    "notifications",
+    "attachments",
+    "accountingDocumentLines",
+    "accountingDocuments",
+    "costItems",
+    "accounts",
+    "cashTransfers",
+    "cashAccounts",
+    "companyProfiles",
+    "approvalPolicies",
+    "purchaseReceiptItems",
+    "purchaseReceipts",
+    "purchaseOrderItems",
+    "purchaseOrders",
+    "materialRequisitionItems",
+    "materialRequisitions",
+    "periodLocks",
+    "auditLogs",
+    "approvalRequests",
+    "userOperationPermissions",
+    "projectMembers",
+    "stages",
+    "vendors",
+    "projects",
+    "companyMembers",
+    "passwordResetTokens",
+    "userInvitations",
+    "users",
+  ];
+
+  for (const table of tablesToClear) {
+    try {
+      await connection.execute(`DELETE FROM \`${table}\``);
+      console.log(`✅ تم حذف بيانات جدول: ${table}`);
+    } catch (error) {
+      // الجدول قد لا يكون موجود، تجاهل الخطأ
+      // console.log(`⏭️ جدول ${table} غير موجود أو فارغ`);
+    }
+  }
+
+  console.log("\n✨ تم حذف جميع البيانات القديمة بنجاح!\n");
+}
+
 // استعادة المستخدمين
 async function restoreUsers(connection, users) {
   console.log(`📥 جاري استعادة ${users.length} مستخدم...`);
 
   for (const user of users) {
     try {
-      const existingUser = await connection.execute(
-        "SELECT id FROM users WHERE openId = ?",
-        [user.openId]
+      await connection.execute(
+        `INSERT INTO users (id, openId, name, email, loginMethod, role, jobTitle, 
+         defaultProjectId, createdAt, updatedAt, lastSignedIn, passwordHash, mustChangePassword)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          user.id,
+          user.openId,
+          user.name || "",
+          user.email || "",
+          user.loginMethod || "password",
+          user.role || "user",
+          user.jobTitle || null,
+          user.defaultProjectId || null,
+          new Date(user.createdAt),
+          new Date(user.updatedAt),
+          user.lastSignedIn ? new Date(user.lastSignedIn) : new Date(),
+          user.passwordHash || null,
+          user.mustChangePassword || 0,
+        ]
       );
-
-      if (existingUser[0].length > 0) {
-        // تحديث المستخدم الموجود
-        await connection.execute(
-          `UPDATE users SET name = ?, email = ?, role = ?, jobTitle = ?, 
-           defaultProjectId = ?, lastSignedIn = ?, passwordHash = ?, 
-           mustChangePassword = ?, updatedAt = NOW() 
-           WHERE openId = ?`,
-          [
-            user.name || "",
-            user.email || "",
-            user.role || "user",
-            user.jobTitle || null,
-            user.defaultProjectId || null,
-            user.lastSignedIn ? new Date(user.lastSignedIn) : new Date(),
-            user.passwordHash || null,
-            user.mustChangePassword || 0,
-            user.openId,
-          ]
-        );
-      } else {
-        // إدراج مستخدم جديد
-        await connection.execute(
-          `INSERT INTO users (openId, name, email, loginMethod, role, jobTitle, 
-           defaultProjectId, createdAt, updatedAt, lastSignedIn, passwordHash, mustChangePassword)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            user.openId,
-            user.name || "",
-            user.email || "",
-            user.loginMethod || "password",
-            user.role || "user",
-            user.jobTitle || null,
-            user.defaultProjectId || null,
-            new Date(user.createdAt),
-            new Date(user.updatedAt),
-            user.lastSignedIn ? new Date(user.lastSignedIn) : new Date(),
-            user.passwordHash || null,
-            user.mustChangePassword || 0,
-          ]
-        );
-      }
     } catch (error) {
       console.warn(
         `⚠️ خطأ في استعادة المستخدم ${user.name}: ${error.message}`
@@ -84,17 +127,17 @@ async function restoreUsers(connection, users) {
     }
   }
 
-  console.log("✅ تمت استعادة المستخدمين");
+  console.log("✅ تمت استعادة المستخدمين\n");
 }
 
 // استعادة الشركات
 async function restoreCompanyProfiles(connection, companyProfiles) {
-  console.log(`📥 جاري استعادة ${companyProfiles.length} ملف ملف الشركة...`);
+  console.log(`📥 جاري استعادة ${companyProfiles.length} ملف شركة...`);
 
   for (const profile of companyProfiles) {
     try {
       await connection.execute(
-        `INSERT IGNORE INTO companyProfiles 
+        `INSERT INTO companyProfiles 
          (id, companyId, legalName, tradeName, commercialRegistration, taxNumber, 
           nationalAddress, phone, email, website, logoUrl, notes, createdBy, createdAt, updatedAt)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -123,7 +166,7 @@ async function restoreCompanyProfiles(connection, companyProfiles) {
     }
   }
 
-  console.log("✅ تمت استعادة ملفات الشركات");
+  console.log("✅ تمت استعادة ملفات الشركات\n");
 }
 
 // استعادة المشاريع
@@ -133,12 +176,12 @@ async function restoreProjects(connection, projects) {
   for (const project of projects) {
     try {
       await connection.execute(
-        `INSERT IGNORE INTO projects 
+        `INSERT INTO projects 
          (id, companyId, code, name, status, classification, projectType, 
           escrowCashAccountId, escrowTrusteeName, escrowStatementReference, 
-          wipAccountId, contractValue, location, plannedStart, plannedEnd, 
+          wipAccountId, contractValue, estimatedTotalCost, location, plannedStart, plannedEnd, 
           createdBy, createdAt, updatedAt)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           project.id,
           project.companyId || 1,
@@ -152,6 +195,7 @@ async function restoreProjects(connection, projects) {
           project.escrowStatementReference || null,
           project.wipAccountId || null,
           project.contractValue || "0",
+          project.estimatedTotalCost || "0",
           project.location || null,
           project.plannedStart ? new Date(project.plannedStart) : null,
           project.plannedEnd ? new Date(project.plannedEnd) : null,
@@ -165,7 +209,7 @@ async function restoreProjects(connection, projects) {
     }
   }
 
-  console.log("✅ تمت استعادة المشاريع");
+  console.log("✅ تمت استعادة المشاريع\n");
 }
 
 // استعادة المراحل
@@ -175,7 +219,7 @@ async function restoreStages(connection, stages) {
   for (const stage of stages) {
     try {
       await connection.execute(
-        `INSERT IGNORE INTO stages 
+        `INSERT INTO stages 
          (id, projectId, code, name, status, plannedBudget, plannedBudgetTaxBasis, 
           plannedStart, plannedEnd, actualProgress, createdAt)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -198,7 +242,7 @@ async function restoreStages(connection, stages) {
     }
   }
 
-  console.log("✅ تمت استعادة المراحل");
+  console.log("✅ تمت استعادة المراحل\n");
 }
 
 // استعادة الموردين
@@ -208,7 +252,7 @@ async function restoreVendors(connection, vendors) {
   for (const vendor of vendors) {
     try {
       await connection.execute(
-        `INSERT IGNORE INTO vendors 
+        `INSERT INTO vendors 
          (id, companyId, projectId, name, partyType, entityType, taxNumber, 
           commercialRegistration, nationalAddress, address, phone, email, iban, contact, createdAt)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -235,7 +279,7 @@ async function restoreVendors(connection, vendors) {
     }
   }
 
-  console.log("✅ تمت استعادة الموردين");
+  console.log("✅ تمت استعادة الموردين\n");
 }
 
 // استعادة الموظفين
@@ -245,7 +289,7 @@ async function restoreEmployees(connection, employees) {
   for (const employee of employees) {
     try {
       await connection.execute(
-        `INSERT IGNORE INTO employees 
+        `INSERT INTO employees 
          (id, employeeCode, employmentType, fullName, jobTitle, department, 
           managerName, managerUserId, generalManagerUserId, phone, email, nationalId, 
           nationality, birthDate, hireDate, workLocation, address, nationalAddress, 
@@ -294,7 +338,7 @@ async function restoreEmployees(connection, employees) {
     }
   }
 
-  console.log("✅ تمت استعادة الموظفين");
+  console.log("✅ تمت استعادة الموظفين\n");
 }
 
 // استعادة الحسابات المالية
@@ -304,7 +348,7 @@ async function restoreCashAccounts(connection, cashAccounts) {
   for (const account of cashAccounts) {
     try {
       await connection.execute(
-        `INSERT IGNORE INTO cashAccounts 
+        `INSERT INTO cashAccounts 
          (id, companyId, code, name, accountType, bankName, accountNumber, iban, 
           currency, accountId, openingBalance, isActive, createdBy, createdAt, updatedAt)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -333,7 +377,7 @@ async function restoreCashAccounts(connection, cashAccounts) {
     }
   }
 
-  console.log("✅ تمت استعادة الحسابات المالية");
+  console.log("✅ تمت استعادة الحسابات المالية\n");
 }
 
 // استعادة الحسابات المحاسبية
@@ -343,7 +387,7 @@ async function restoreAccounts(connection, accounts) {
   for (const account of accounts) {
     try {
       await connection.execute(
-        `INSERT IGNORE INTO accounts 
+        `INSERT INTO accounts 
          (id, companyId, code, name, accountType, parentId, isPostable, isActive, createdAt, updatedAt)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
@@ -366,7 +410,7 @@ async function restoreAccounts(connection, accounts) {
     }
   }
 
-  console.log("✅ تمت استعادة الحسابات المحاسبية");
+  console.log("✅ تمت استعادة الحسابات المحاسبية\n");
 }
 
 // استعادة عناصر التكاليف
@@ -376,7 +420,7 @@ async function restoreCostItems(connection, costItems) {
   for (const item of costItems) {
     try {
       await connection.execute(
-        `INSERT IGNORE INTO costItems 
+        `INSERT INTO costItems 
          (id, projectId, parentId, code, name, category, accountId, isActive, createdBy, createdAt, updatedAt)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
@@ -400,7 +444,7 @@ async function restoreCostItems(connection, costItems) {
     }
   }
 
-  console.log("✅ تمت استعادة عناصر التكاليف");
+  console.log("✅ تمت استعادة عناصر التكاليف\n");
 }
 
 // استعادة الوحدات
@@ -410,7 +454,7 @@ async function restoreUnits(connection, units) {
   for (const unit of units) {
     try {
       await connection.execute(
-        `INSERT IGNORE INTO units 
+        `INSERT INTO units 
          (id, projectId, code, name, type, status, listPrice, createdAt)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [
@@ -429,7 +473,7 @@ async function restoreUnits(connection, units) {
     }
   }
 
-  console.log("✅ تمت استعادة الوحدات");
+  console.log("✅ تمت استعادة الوحدات\n");
 }
 
 // استعادة المصروفات
@@ -439,7 +483,7 @@ async function restoreExpenses(connection, expenses) {
   for (const expense of expenses) {
     try {
       await connection.execute(
-        `INSERT IGNORE INTO expenses 
+        `INSERT INTO expenses 
          (id, companyId, projectId, stageId, vendorId, costItemId, reference, description, 
           unit, quantity, expenseType, payrollBeneficiaryType, payrollEmployeeId, 
           payrollBeneficiaryName, classification, allocationRatio, preTaxAmount, taxRate, 
@@ -481,7 +525,7 @@ async function restoreExpenses(connection, expenses) {
     }
   }
 
-  console.log("✅ تمت استعادة المصروفات");
+  console.log("✅ تمت استعادة المصروفات\n");
 }
 
 // الدالة الرئيسية
@@ -489,7 +533,9 @@ async function restoreBackup() {
   const connection = await getConnection();
 
   try {
-    console.log("\n🔄 بدء استعادة النسخة الاحتياطية للنظام...\n");
+    console.log("\n" + "=".repeat(60));
+    console.log("🔄 بدء استعادة النسخة الاحتياطية للنظام (استبدال كامل)");
+    console.log("=".repeat(60) + "\n");
 
     // قراءة الملف
     const backupPath = process.argv[2] || "./erp-backup.json";
@@ -501,57 +547,57 @@ async function restoreBackup() {
       throw new Error("ملف النسخة الاحتياطية لا يحتوي على جداول");
     }
 
-    // حذف البيانات القديمة (خياري - قم بإلغاء التعليق إذا أردت)
-    console.log(
-      "⚠️ ملاحظة: البيانات الموجودة سيتم دمجها مع البيانات الجديدة\n"
-    );
+    // ✅ حذف جميع البيانات القديمة
+    await clearAllData(connection);
 
-    // استعادة البيانات
-    if (backup.tables.users) {
+    // استعادة البيانات بالترتيب الصحيح
+    if (backup.tables.users && backup.tables.users.length > 0) {
       await restoreUsers(connection, backup.tables.users);
     }
 
-    if (backup.tables.companyProfiles) {
+    if (backup.tables.companyProfiles && backup.tables.companyProfiles.length > 0) {
       await restoreCompanyProfiles(connection, backup.tables.companyProfiles);
     }
 
-    if (backup.tables.projects) {
+    if (backup.tables.projects && backup.tables.projects.length > 0) {
       await restoreProjects(connection, backup.tables.projects);
     }
 
-    if (backup.tables.stages) {
+    if (backup.tables.stages && backup.tables.stages.length > 0) {
       await restoreStages(connection, backup.tables.stages);
     }
 
-    if (backup.tables.vendors) {
+    if (backup.tables.vendors && backup.tables.vendors.length > 0) {
       await restoreVendors(connection, backup.tables.vendors);
     }
 
-    if (backup.tables.employees) {
+    if (backup.tables.employees && backup.tables.employees.length > 0) {
       await restoreEmployees(connection, backup.tables.employees);
     }
 
-    if (backup.tables.cashAccounts) {
+    if (backup.tables.cashAccounts && backup.tables.cashAccounts.length > 0) {
       await restoreCashAccounts(connection, backup.tables.cashAccounts);
     }
 
-    if (backup.tables.accounts) {
+    if (backup.tables.accounts && backup.tables.accounts.length > 0) {
       await restoreAccounts(connection, backup.tables.accounts);
     }
 
-    if (backup.tables.costItems) {
+    if (backup.tables.costItems && backup.tables.costItems.length > 0) {
       await restoreCostItems(connection, backup.tables.costItems);
     }
 
-    if (backup.tables.units) {
+    if (backup.tables.units && backup.tables.units.length > 0) {
       await restoreUnits(connection, backup.tables.units);
     }
 
-    if (backup.tables.expenses) {
+    if (backup.tables.expenses && backup.tables.expenses.length > 0) {
       await restoreExpenses(connection, backup.tables.expenses);
     }
 
-    console.log("\n✨ تمت استعادة النسخة الاحتياطية بنجاح!\n");
+    console.log("\n" + "=".repeat(60));
+    console.log("✨ تمت استعادة النسخة الاحتياطية بنجاح (استبدال كامل)!");
+    console.log("=".repeat(60) + "\n");
   } catch (error) {
     console.error("❌ خطأ أثناء استعادة النسخة الاحتياطية:", error.message);
     process.exit(1);
