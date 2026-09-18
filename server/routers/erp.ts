@@ -75,7 +75,7 @@ type ErpDb = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
 async function resolveActiveCompanyId(db: ErpDb, ctx: { user: { id: number; role: string }; req: { cookies?: Record<string, string> } }) {
   const requestedId = Number(ctx.req.cookies?.active_company_id || 0);
-  if (ctx.user.role === "admin" || ctx.user.role === "general_manager" || Number(ctx.user.id) === 13170001) {
+  if (ctx.user.role === "admin" || ctx.user.role === "owner" || ctx.user.role === "general_manager" || Number(ctx.user.id) === 13170001) {
     const rows = await db.select({ id: companies.id }).from(companies).where(eq(companies.isActive, 1));
     return rows.find((row) => row.id === requestedId)?.id || rows[0]?.id || null;
   }
@@ -204,16 +204,16 @@ async function postInventoryLinkedDocuments(db: ErpDb, movement: { id?: number; 
 }
 
 function canManagePartners(user: { role: string; id: number }) {
-  return user.role === "admin" || Number(user.id) === 13170001;
+  return user.role === "admin" || user.role === "owner" || Number(user.id) === 13170001;
 }
 
 export function canApprovePayrollRun(user: { role: string }, request: { entityType: string; approvalStage?: string | null }) {
-  return request.entityType !== "payroll_run" || (user.role === "admin" && request.approvalStage === "owner");
+  return request.entityType !== "payroll_run" || ((user.role === "admin" || user.role === "owner") && request.approvalStage === "owner");
 }
 
 function canReviewApproval(user: { role: string; id: number }, request: { entityType: string; approvalStage?: string | null }) {
   if (request.entityType === "certificate") return canReviewCertificateApproval(request.approvalStage, user);
-  if (user.role === "admin") return request.entityType !== "payroll" && request.entityType !== "payroll_run" || request.approvalStage === "owner";
+  if (user.role === "admin" || user.role === "owner") return request.entityType !== "payroll" && request.entityType !== "payroll_run" || request.approvalStage === "owner";
   if (user.role === "general_manager") return ((request.entityType === "payroll" || request.entityType === "payroll_run") && request.approvalStage === "general_manager") || (request.entityType === "purchase_payment" && request.approvalStage === "general_manager") || (request.entityType === "certificate" && request.approvalStage === "general_manager");
   if (user.role === "project_manager") return (request.entityType === "certificate" && request.approvalStage === "project_manager") || request.approvalStage === "project_manager";
   return false;
@@ -222,7 +222,7 @@ function canReviewApproval(user: { role: string; id: number }, request: { entity
 async function getAllowedProjectIds(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, userId: number, role: string) {
   // General managers have read access across the active company; write access
   // remains blocked by assertProjectWrite and operation permissions.
-  if (role === "admin" || role === "general_manager") return null;
+  if (role === "admin" || role === "owner" || role === "general_manager") return null;
   const rows = await db.select({ projectId: projectMembers.projectId }).from(projectMembers).where(eq(projectMembers.userId, userId));
   return new Set(rows.map((row) => row.projectId));
 }
@@ -238,7 +238,7 @@ async function assertProjectAccess(db: NonNullable<Awaited<ReturnType<typeof get
 
 async function assertProjectWrite(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, ctx: { user: { id: number; role: string }; req?: any }, projectId: number) {
   await assertProjectAccess(db, ctx, projectId);
-  if (ctx.user.role === "admin") return;
+  if (ctx.user.role === "admin" || ctx.user.role === "owner") return;
   const member = (await db.select({ projectRole: projectMembers.projectRole }).from(projectMembers).where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, ctx.user.id))).limit(1))[0];
   if (!member || !canWriteProject(ctx.user.role, member.projectRole)) throw new TRPCError({ code: "FORBIDDEN", message: "دور المستخدم لا يسمح بتسجيل حركة جديدة في هذا المشروع" });
 }
@@ -275,7 +275,7 @@ async function resolveMaterialPlanning(db: ErpDb, input: { projectId: number; st
 }
 
 async function assertOperationPermission(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, ctx: { user: { id: number; role: string } }, key: z.infer<typeof operationKey>) {
-  if (ctx.user.role === "admin") return "allow" as const;
+  if (ctx.user.role === "admin" || ctx.user.role === "owner") return "allow" as const;
   const restrictedRoleRules: Record<string, Set<string>> = {
     general_manager: new Set(["approve", "task_assignment"]),
     project_manager: new Set(["certificate", "approve"]),
@@ -292,7 +292,7 @@ async function assertOperationPermission(db: NonNullable<Awaited<ReturnType<type
   return mode;
 }
 async function assertPeriodOpen(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, ctx: { user: { role: string } }, projectId: number, date: Date) {
-  if (ctx.user.role === "admin") return;
+  if (ctx.user.role === "admin" || ctx.user.role === "owner") return;
   const year = date.getFullYear();
   const month = date.getMonth() + 1;
   const matching = await db.select().from(periodLocks).where(eq(periodLocks.projectId, projectId));
@@ -329,7 +329,7 @@ export const erpRouter = router({
   companies: router({
     list: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
-      if (ctx.user.role === "admin" || ctx.user.role === "general_manager") return db.select().from(companies).where(eq(companies.isActive, 1)).orderBy(companies.legalName);
+      if (ctx.user.role === "admin" || ctx.user.role === "owner" || ctx.user.role === "general_manager") return db.select().from(companies).where(eq(companies.isActive, 1)).orderBy(companies.legalName);
       const memberships = await db.select({ companyId: companyMembers.companyId }).from(companyMembers).where(and(eq(companyMembers.userId, ctx.user.id), eq(companyMembers.status, "active")));
       const rows = await db.select().from(companies).where(eq(companies.isActive, 1));
       return rows.filter((row) => memberships.some((membership) => membership.companyId === row.id));
@@ -337,8 +337,8 @@ export const erpRouter = router({
     current: protectedProcedure.query(async ({ ctx }) => {
       const db = requireDb(await getDb());
       const requestedId = Number(ctx.req.cookies?.active_company_id || 0);
-      const memberships = ctx.user.role === "admin" || ctx.user.role === "general_manager" ? [] : await db.select().from(companyMembers).where(and(eq(companyMembers.userId, ctx.user.id), eq(companyMembers.status, "active")));
-      const permittedIds = ctx.user.role === "admin" || ctx.user.role === "general_manager" ? null : memberships.map((membership) => membership.companyId);
+      const memberships = ctx.user.role === "admin" || ctx.user.role === "owner" || ctx.user.role === "general_manager" ? [] : await db.select().from(companyMembers).where(and(eq(companyMembers.userId, ctx.user.id), eq(companyMembers.status, "active")));
+      const permittedIds = ctx.user.role === "admin" || ctx.user.role === "owner" || ctx.user.role === "general_manager" ? null : memberships.map((membership) => membership.companyId);
       const rows = await db.select().from(companies).where(eq(companies.isActive, 1));
       const company = rows.find((row) => row.id === requestedId && (!permittedIds || permittedIds.includes(row.id))) || rows.find((row) => !permittedIds || permittedIds.includes(row.id)) || null;
       const membership = company && permittedIds ? memberships.find((item) => item.companyId === company.id) || null : null;
@@ -348,7 +348,7 @@ export const erpRouter = router({
       const db = requireDb(await getDb());
       const company = (await db.select().from(companies).where(and(eq(companies.id, input.companyId), eq(companies.isActive, 1))).limit(1))[0];
       if (!company) throw new TRPCError({ code: "NOT_FOUND", message: "الشركة غير موجودة أو غير نشطة" });
-      if (ctx.user.role !== "admin" && ctx.user.role !== "general_manager") {
+      if (ctx.user.role !== "admin" && ctx.user.role !== "owner" && ctx.user.role !== "general_manager") {
         const membership = (await db.select().from(companyMembers).where(and(eq(companyMembers.companyId, input.companyId), eq(companyMembers.userId, ctx.user.id), eq(companyMembers.status, "active"))).limit(1))[0];
         if (!membership) throw new TRPCError({ code: "FORBIDDEN", message: "لا تملك صلاحية الدخول إلى هذه الشركة" });
       }
@@ -695,7 +695,7 @@ export const erpRouter = router({
       const db = requireDb(await getDb());
       const task = (await db.select().from(dailyTasks).where(eq(dailyTasks.id, input.id)).limit(1))[0];
       if (!task) throw new TRPCError({ code: "NOT_FOUND", message: "المهمة غير موجودة" });
-      if (ctx.user.role !== "admin" && ctx.user.role !== "general_manager") {
+      if (ctx.user.role !== "admin" && ctx.user.role !== "owner" && ctx.user.role !== "general_manager") {
         const employee = ctx.user.email ? (await db.select({ id: employees.id }).from(employees).where(eq(employees.email, ctx.user.email)).limit(1))[0] : undefined;
         let teamIds: number[] = []; try { teamIds = task.assignedEmployeeIds ? JSON.parse(task.assignedEmployeeIds) : []; } catch { teamIds = []; } if (!employee || (task.assignedEmployeeId !== employee.id && !teamIds.includes(employee.id))) throw new TRPCError({ code: "FORBIDDEN", message: "لا يمكنك تحديث مهمة غير مسندة إليك" });
       }
