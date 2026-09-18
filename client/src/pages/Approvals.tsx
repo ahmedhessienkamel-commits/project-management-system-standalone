@@ -128,7 +128,7 @@ export default function Approvals() {
   const decideAdvance = trpc.erp.advanceRequests.decide.useMutation({ onSuccess: () => utils.erp.advanceRequests.list.invalidate() });
   const decideRequisition = trpc.erp.procurement.requisitions.decide.useMutation({ onSuccess: () => { utils.erp.approvals.list.invalidate(); utils.erp.procurement.requisitions.list.invalidate(); } });
   const role = me?.role;
-  const isOwner = isOwner || role === "owner";
+  const isOwner = role === "admin" || role === "owner";
   const isMostafa = Number(me?.id) === 13170001;
   const { data: pendingElsewhere = [], isLoading: pendingElsewhereLoading } = trpc.erp.approvals.pendingElsewhere.list.useQuery();
   const { data: approvalHistory = [], isLoading: approvalHistoryLoading } = trpc.erp.approvals.history.useQuery(undefined, { enabled: isOwner || role === "general_manager" || isMostafa });
