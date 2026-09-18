@@ -7,7 +7,7 @@ export function getCertificateInitialApproval(_creatorId: number) {
 }
 
 export function canReviewCertificateApproval(stage: string | null | undefined, user: { id: number; role: string }) {
-  if (stage === "owner" || stage === "mostafa") return user.role === "admin";
+  if (stage === "owner" || stage === "mostafa") return user.role === "admin" || user.role === "owner";
   if (stage === "general_manager" || stage === "project_manager") return user.role === "general_manager";
   return false;
 }
